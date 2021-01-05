@@ -53,9 +53,7 @@ def return_config_dict():
 
 def create_directory_paths(CONFIG, args, results_str):
     # Format directory logistics
-    CONV_DIRS = [
-        CONFIG["data_dir"] + '/%s/' % i for i in args.subjects
-    ]
+    CONV_DIRS = [CONFIG["data_dir"] + '/%s/' % i for i in args.subjects]
     META_DIRS = [
         CONFIG["data_dir"] + '/%s-metadata/' % i for i in args.subjects
     ]

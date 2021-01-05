@@ -27,7 +27,8 @@ def save_pickle(args, item, file_name):
     """
     add_ext = '' if file_name.endswith('.pkl') else '.pkl'
 
-    file_name = os.path.join(os.getcwd(), 'results', args.subjects[0]), file_name) + add_ext
+    file_name = os.path.join(os.getcwd(), 'results', args.subjects[0],
+                             file_name) + add_ext
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
 
     with open(file_name, 'wb') as fh:
@@ -172,7 +173,7 @@ def process_labels(trimmed_stitch_index, labels):
 
 def inclass_word_freq(df):
     df['word_freq_phase'] = df.groupby(['word', 'production'
-                                          ])['word'].transform('count')
+                                        ])['word'].transform('count')
     return df
 
 
@@ -224,6 +225,7 @@ def create_folds(args, df):
         df.loc[test_ixs, fold_col] = 'test'
 
     return df
+
 
 @profile(sort_by='cumulative', strip_dirs=True)
 def main():

@@ -1,9 +1,9 @@
 CMD := echo
 CMD := python
-# CMD := sbatch submit1.sh
+CMD := sbatch submit1.sh
 
-EMB_TYPE := glove50
-# EMB_TYPE := bert
+# EMB_TYPE := glove50
+EMB_TYPE := bert
 # EMB_TYPE := gpt2
 
 SID := 676
