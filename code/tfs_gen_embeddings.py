@@ -20,7 +20,7 @@ def save_pickle(item, file_name):
     """
     add_ext = '' if file_name.endswith('.pkl') else '.pkl'
 
-    file_name = os.path.join(os.getcwd(), 'pickles', file_name) + add_ext
+    file_name = file_name + add_ext
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
 
     with open(file_name, 'wb') as fh:
@@ -232,19 +232,23 @@ def gen_word2vec_embeddings(args, df):
 def setup_environ(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     args.device = device
-    args.pickle_name = os.path.join(os.getcwd(), 'pickles',
+    args.pickle_name = os.path.join(os.getcwd(), 'results', args.subject,
                                     args.subject + '_labels.pkl')
 
     args.gpus = torch.cuda.device_count()
     if args.gpus > 1:
         args.model = nn.DataParallel(args.model)
 
+    args.output_dir = os.path.join(os.getcwd(), 'results', args.subject)
+
     if args.history:
-        args.output_file = '_'.join(
+        output_file = '_'.join(
             [args.subject, args.embedding_type, 'contextual_embeddings'])
     else:
-        args.output_file = '_'.join(
+        output_file = '_'.join(
             [args.subject, args.embedding_type, 'embeddings'])
+
+    args.output_file = os.path.join(args.output_dir, output_file)
 
     return
 
