@@ -31,7 +31,7 @@ def return_config_dict():
         "log_interval":
         32,
         "data_dir":
-        os.path.join(os.path.dirname(os.getcwd()), 'data'),
+        os.path.join(os.getcwd(), 'data'),
         "num_cpus":
         8,
         "oov_token":

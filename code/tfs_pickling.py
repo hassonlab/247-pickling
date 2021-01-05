@@ -22,12 +22,12 @@ from config import build_config
 from profile_dec import profile
 
 
-def save_pickle(item, file_name):
+def save_pickle(args, item, file_name):
     """Write 'item' to 'file_name.pkl'
     """
     add_ext = '' if file_name.endswith('.pkl') else '.pkl'
 
-    file_name = os.path.join(os.getcwd(), 'pickles', file_name) + add_ext
+    file_name = os.path.join(os.getcwd(), 'results', args.subjects[0]), file_name) + add_ext
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
 
     with open(file_name, 'wb') as fh:
@@ -241,19 +241,19 @@ def main():
         full_signal_dict = dict(full_signal=full_signal,
                                 full_stitch_index=full_stitch_index,
                                 electrodes=electrodes)
-        save_pickle(full_signal_dict, subject_id + '_full_signal')
+        save_pickle(args, full_signal_dict, subject_id + '_full_signal')
 
         # Create pickle with trimmed signal
         trimmed_signal_dict = dict(trimmed_signal=trimmed_signal,
                                    trimmed_stitch_index=trimmed_stitch_index,
                                    electrodes=electrodes)
-        save_pickle(trimmed_signal_dict, subject_id + '_trimmed_signal')
+        save_pickle(args, trimmed_signal_dict, subject_id + '_trimmed_signal')
 
         # Create pickle with binned signal
         binned_signal_dict = dict(binned_signal=binned_signal,
                                   bin_stitch_index=bin_stitch_index,
                                   electrodes=electrodes)
-        save_pickle(binned_signal_dict, subject_id + '_binned_signal')
+        save_pickle(args, binned_signal_dict, subject_id + '_binned_signal')
 
         # Create pickle with all labels
         labels_df = process_labels(trimmed_stitch_index, labels)
@@ -263,13 +263,13 @@ def main():
 
         labels_dict = dict(labels=labels_df.to_dict('records'),
                            convo_label_size=convo_example_size)
-        save_pickle(labels_dict, subject_id + '_labels')
+        save_pickle(args, labels_dict, subject_id + '_labels')
 
         labels_df = filter_on_freq(args, labels_df)
         labels_df = create_folds(args, labels_df)
 
         label_folds = labels_df.to_dict('records')
-        save_pickle(label_folds,
+        save_pickle(args, label_folds,
                     subject_id + '_labels_MWF' + str(args.vocab_min_freq))
 
     return
