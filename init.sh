@@ -1,12 +1,8 @@
 # create 'data' and 'results' folders (note: case sensitive)
 mkdir -p data results
 
-cd data
-
 # delete bad symlinks
-find . -xtype l -delete
-
-cd ..
+find data/ -xtype l -delete
 
 # rm data/*
 

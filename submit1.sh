@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --time=04:00:00
-#SBATCH --mem=128GB
+#SBATCH --time=03:00:00
+#SBATCH --mem=64GB
 ##SBATCH --gres=gpu:1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=4
 #SBATCH -o './logs/%A.out'
 #SBATCH -e './logs/%A.err'
 #SBATCH --mail-type=begin
