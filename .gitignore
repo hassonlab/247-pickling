@@ -4,6 +4,8 @@ __pycache__
 *.pyc
 
 Results
-results
+results/*
 logs
-data
+data/*
+
+!.gitkeep
