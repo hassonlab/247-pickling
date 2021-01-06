@@ -132,9 +132,6 @@ def generate_embeddings_with_context(args, df):
     model = args.model
     device = args.device
 
-    if args.gpus > 1:
-        model = nn.DataParallel(model)
-
     df = tokenize_and_explode(args, df, tokenizer)
 
     if args.embedding_type == 'gpt2':
