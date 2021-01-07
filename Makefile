@@ -13,6 +13,15 @@ MINF := 30
 # setting a very large number for MEL
 # will extract all common electrodes across all conversations
 
+
+link-data:
+	# delete bad symlinks
+	find data/ -xtype l -delete
+
+	# create symlinks from original data store
+	ln -sf /projects/HASSON/247/data/conversations-car/* data/
+
+
 create-pickle:
 	mkdir -p logs
 	$(CMD) code/tfs_pickling.py \
