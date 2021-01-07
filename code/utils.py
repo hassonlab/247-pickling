@@ -3,6 +3,7 @@ import math
 import os
 import random
 
+import mat73
 import numpy as np
 import torch
 
@@ -64,18 +65,27 @@ def update_convs(convs):
         [type]: [description]
     """
     all_elec_ids_list = []
+    all_elec_labels_list = []
     for conversation, *_, electrodes in convs:
 
         elect_ids_list = extract_elec_ids(conversation)
+        elect_labels_list = load_header(conversation)
 
         if not electrodes or len(electrodes) > len(elect_ids_list):
             electrodes = elect_ids_list
 
         all_elec_ids_list.append(electrodes)
+        all_elec_labels_list.append(elect_labels_list)
 
     common_electrodes = list(set.intersection(*map(set, all_elec_ids_list)))
+    # raise Exception(all_elec_labels_list)
+    common_labels = sorted(list(
+        set.intersection(*map(set, all_elec_labels_list))),
+                           key=lambda x: all_elec_labels_list[0].index(x))
 
-    convs = [(*conv[:3], common_electrodes) for conv in convs]
+    common_labels = [common_labels[elec - 1] for elec in common_electrodes]
+
+    convs = [(*conv[:3], common_electrodes, common_labels) for conv in convs]
     return convs
 
 
@@ -238,3 +248,23 @@ def print_cuda_usage(CONFIG):
         max_alloc = round(torch.cuda.max_memory_allocated(i) / 1024**3, 1)
         cached = round(torch.cuda.memory_cached(i) / 1024**3, 1)
         print(f'GPU: {i} Allocated: {max_alloc}G Cached: {cached}G')
+
+
+def load_header(conversation_dir):
+    """[summary]
+    Args:
+        conversation_dir ([type]): [description]
+        subject_id (string): Subject ID
+    Returns:
+        list: labels
+    """
+    misc_dir = os.path.join(conversation_dir, 'misc')
+
+    # TODO: Assuming name of mat file is the same conversation_dir
+    # TODO: write a condition to check this
+    header_file = glob.glob(os.path.join(misc_dir, '*_header.mat'))[0]
+    if not os.path.exists(header_file):
+        return
+    header = mat73.loadmat(header_file)
+    labels = header.header.label
+    return labels

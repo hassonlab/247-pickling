@@ -42,7 +42,7 @@ def build_design_matrices(CONFIG,
     full_stitch_index, trimmed_stitch_index, bin_stitch_index = [], [], []
     all_examples = []
     convo_example_size = []
-    for conversation, suffix, idx, electrodes in convs:
+    for conversation, suffix, idx, electrodes, electrode_names in convs:
         try:  # Check if files exists
             datum_fn = glob.glob(conversation + suffix)[0]
         except IndexError:
@@ -154,7 +154,7 @@ def build_design_matrices(CONFIG,
         bin_stitch_index = np.cumsum(bin_stitch_index).tolist()
         return (full_signal, full_stitch_index, trimmed_signal,
                 trimmed_stitch_index, binned_signal, bin_stitch_index,
-                all_examples, convo_example_size, electrodes)
+                all_examples, convo_example_size, electrodes, electrode_names)
 
     print(f'Total number of conversations: {len(convs)}')
     print(f'Number of samples is: {len(signals)}')

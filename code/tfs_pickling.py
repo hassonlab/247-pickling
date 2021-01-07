@@ -242,24 +242,28 @@ def main():
     if CONFIG['pickle']:
         (full_signal, full_stitch_index, trimmed_signal, trimmed_stitch_index,
          binned_signal, bin_stitch_index, labels, convo_example_size,
-         electrodes) = build_design_matrices(CONFIG, delimiter=" ")
+         electrodes, electrode_names) = build_design_matrices(CONFIG,
+                                                              delimiter=" ")
 
         # Create pickle with full signal
         full_signal_dict = dict(full_signal=full_signal,
                                 full_stitch_index=full_stitch_index,
-                                electrodes=electrodes)
+                                electrode_ids=electrodes,
+                                electrode_names=electrode_names)
         save_pickle(args, full_signal_dict, subject_id + '_full_signal')
 
         # Create pickle with trimmed signal
         trimmed_signal_dict = dict(trimmed_signal=trimmed_signal,
                                    trimmed_stitch_index=trimmed_stitch_index,
-                                   electrodes=electrodes)
+                                   electrode_ids=electrodes,
+                                   electrode_names=electrode_names)
         save_pickle(args, trimmed_signal_dict, subject_id + '_trimmed_signal')
 
         # Create pickle with binned signal
         binned_signal_dict = dict(binned_signal=binned_signal,
                                   bin_stitch_index=bin_stitch_index,
-                                  electrodes=electrodes)
+                                  electrode_ids=electrodes,
+                                  electrode_names=electrode_names)
         save_pickle(args, binned_signal_dict, subject_id + '_binned_signal')
 
         # Create pickle with all labels
