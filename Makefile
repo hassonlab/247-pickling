@@ -1,17 +1,21 @@
 CMD := echo
 CMD := python
-CMD := sbatch submit1.sh
+# CMD := sbatch submit1.sh
 
-# EMB_TYPE := glove50
+EMB_TYPE := glove50
 EMB_TYPE := bert
-# EMB_TYPE := gpt2
+EMB_TYPE := gpt2
 
-SID := 676
+SID := 625
+# SID := 676
+
+# a very large number for MEL will extract all common...
+# ...electrodes across all conversations
 MEL := 500
 MINF := 30
-# HIST := --history
-# setting a very large number for MEL
-# will extract all common electrodes across all conversations
+
+HIST := history
+CNXT_LEN := 0
 
 
 link-data:
@@ -38,4 +42,5 @@ generate-embeddings:
 	$(CMD) code/tfs_gen_embeddings.py \
 				--subject $(SID) \
 				--embedding-type $(EMB_TYPE) \
-				$(HIST);
+				--$(HIST) \
+				--context-length $(CNXT_LEN);

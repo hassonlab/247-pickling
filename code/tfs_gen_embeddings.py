@@ -155,7 +155,7 @@ def generate_embeddings_with_context(args, df):
     for conversation in df.conversation_id.unique():
         token_list = df[df.conversation_id ==
                         conversation]['token_id'].tolist()
-        sliding_windows = list(window(token_list, 1024))
+        sliding_windows = list(window(token_list, args.context_length))
         print(
             f'conversation: {conversation}, tokens: {len(token_list)}, #sliding: {len(sliding_windows)}'
         )
@@ -252,12 +252,9 @@ def setup_environ(args):
 
     args.output_dir = os.path.join(os.getcwd(), 'results', args.subject)
 
-    if args.history:
-        output_file = '_'.join(
-            [args.subject, args.embedding_type, 'contextual_embeddings'])
-    else:
-        output_file = '_'.join(
-            [args.subject, args.embedding_type, 'embeddings'])
+    stra = 'cnxt_' + str(args.context_length)
+    output_file = '_'.join(
+            [args.subject, args.embedding_type, stra, 'embeddings'])
 
     args.output_file = os.path.join(args.output_dir, output_file)
 
@@ -307,7 +304,7 @@ def parse_arguments():
                         type=str,
                         default='bert-large-uncased-whole-word-masking')
     parser.add_argument('--embedding-type', type=str, default='glove')
-    parser.add_argument('--context-length', type=int, default=512)
+    parser.add_argument('--context-length', type=int, default=0)
     parser.add_argument('--save-predictions',
                         action='store_true',
                         default=False)

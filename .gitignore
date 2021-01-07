@@ -1,11 +1,10 @@
 __pycache__
 
-*.prof
 *.pyc
 
 Results
 results/*
-logs
+logs/*
 data/*
 
 !.gitkeep
