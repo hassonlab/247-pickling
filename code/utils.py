@@ -93,12 +93,11 @@ def return_conversations(CONFIG):
 
     for conv_dir in CONFIG["CONV_DIRS"]:
         conversation_list = [
-            os.path.basename(x)
-            for x in glob.glob(os.path.join(conv_dir, '*conversation*'))
+            os.path.basename(x) for x in sorted(
+                glob.glob(os.path.join(conv_dir, '*conversation*')))
         ]
         conversations.append(conversation_list)
 
-    
     convs = [
         (conv_dir + conv_name, '/misc/*datum_%s.txt' % ds, idx, electrode_list)
         for idx, (conv_dir, convs, ds, electrode_list) in enumerate(

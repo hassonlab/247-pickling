@@ -14,12 +14,11 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 from nltk.stem import PorterStemmer
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import KFold, StratifiedKFold
 
 from arg_parser import arg_parser
 from build_matrices import build_design_matrices
 from config import build_config
-from profile_dec import profile
 
 
 def save_pickle(args, item, file_name):
@@ -100,7 +99,7 @@ def process_sections(section_list):
         section = append_num_words(section)
         section = append_sentence_idx(section, idx)
         my_labels.append(section)
-    return pd.concat(my_labels)
+    return pd.concat(my_labels, ignore_index=True)
 
 
 def create_sentence(conversation):
@@ -168,7 +167,7 @@ def process_labels(trimmed_stitch_index, labels):
 
         new_labels.append(sub_list)
 
-    return pd.concat(new_labels)
+    return pd.concat(new_labels, ignore_index=True)
 
 
 def inclass_word_freq(df):
@@ -193,14 +192,20 @@ def filter_on_freq(args, df):
     return df
 
 
-def stratify_split(df):
+def stratify_split(df, split_str=None):
     # Extract only test folds
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+    if split_str is None:
+        skf = KFold(n_splits=5, shuffle=True, random_state=0)
+    elif split_str == 'stratify':
+        skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+    else:
+        raise Exception('wrong string')
+
     folds = [t[1] for t in skf.split(df, df.word)]
     return folds
 
 
-def create_folds(args, df):
+def create_folds(args, df, split_str=None):
     """create new columns in the df with the folds labeled
 
     Args:
@@ -208,7 +213,7 @@ def create_folds(args, df):
         df (DataFrame): labels
     """
     fold_column_names = ['fold' + str(i) for i in range(5)]
-    folds = stratify_split(df)
+    folds = stratify_split(df, split_str=split_str)
 
     # Go through each fold, and split
     for i, fold_col in enumerate(fold_column_names):
@@ -217,6 +222,7 @@ def create_folds(args, df):
         #                       ^ dev fold
         #                         ^ test fold
         #                 | - | <- train folds
+
         folds_ixs = np.roll(folds, i)
         *_, dev_ixs, test_ixs = folds_ixs
 
@@ -227,7 +233,6 @@ def create_folds(args, df):
     return df
 
 
-@profile(sort_by='cumulative', strip_dirs=True)
 def main():
     args = arg_parser()
     CONFIG = build_config(args, results_str='pickles_new')
@@ -262,13 +267,14 @@ def main():
         labels_df = create_production_flag(labels_df)
         labels_df = inclass_word_freq(labels_df)
         labels_df = total_word_freq(labels_df)
+        labels_df = create_folds(args, labels_df)
 
         labels_dict = dict(labels=labels_df.to_dict('records'),
                            convo_label_size=convo_example_size)
         save_pickle(args, labels_dict, subject_id + '_labels')
 
         labels_df = filter_on_freq(args, labels_df)
-        labels_df = create_folds(args, labels_df)
+        labels_df = create_folds(args, labels_df, 'stratify')
 
         label_folds = labels_df.to_dict('records')
         save_pickle(args, label_folds,

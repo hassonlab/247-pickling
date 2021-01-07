@@ -67,7 +67,20 @@ def tokenize_and_explode(args, df, tokenizer):
     return df
 
 
-def map_embeddings_to_tokens(df, embed):
+def get_token_indices(args, num_tokens):
+    if args.embedding_type == 'gpt2':
+        start = 0
+        stop = num_tokens
+    elif args.embedding_type == 'bert':
+        start = 1
+        stop = num_tokens + 1
+    else:
+        raise Exception('wrong model')
+
+    return (start, stop)
+
+
+def map_embeddings_to_tokens(args, df, embed):
 
     multi = df.set_index(['conversation_id', 'sentence_idx', 'sentence'])
     unique_sentence_idx = multi.index.unique().values
@@ -80,7 +93,8 @@ def map_embeddings_to_tokens(df, embed):
         a = df['conversation_id'] == unique_idx[0]
         b = df['sentence_idx'] == unique_idx[1]
         num_tokens = sum(a & b)
-        c.append(pd.Series(sentence_embedding[1:num_tokens + 1, :].tolist()))
+        start, stop = get_token_indices(args, num_tokens)
+        c.append(pd.Series(sentence_embedding[start:stop, :].tolist()))
 
     df['embeddings'] = pd.concat(c, ignore_index=True)
     return df
@@ -205,7 +219,7 @@ def generate_embeddings(args, df):
             concat_output.append(model_output[-1][-1].detach().cpu().numpy())
 
     embeddings = np.concatenate(concat_output, axis=0)
-    emb_df = map_embeddings_to_tokens(df, embeddings)
+    emb_df = map_embeddings_to_tokens(args, df, embeddings)
 
     save_pickle(emb_df.to_dict('records'), args.output_file)
 
