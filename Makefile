@@ -14,7 +14,7 @@ SID := 625
 MEL := 500
 MINF := 30
 
-HIST := history
+HIST := --history
 CNXT_LEN := 0
 
 
@@ -42,5 +42,5 @@ generate-embeddings:
 	$(CMD) code/tfs_gen_embeddings.py \
 				--subject $(SID) \
 				--embedding-type $(EMB_TYPE) \
-				--$(HIST) \
+				$(HIST) \
 				--context-length $(CNXT_LEN);
