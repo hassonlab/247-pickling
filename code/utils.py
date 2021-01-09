@@ -5,6 +5,7 @@ import random
 
 import mat73
 import numpy as np
+import pandas as pd
 import torch
 
 
@@ -153,6 +154,18 @@ def return_examples(file, delim, ex_words, vocab_str='std'):
         else:
             print("Bad vocabulary string")
         return list(examples)
+
+
+def return_examples_new(file, delim, ex_words, vocab_str='std'):
+    df = pd.read_csv(file,
+                     sep=' ',
+                     header=None,
+                     names=['word', 'onset', 'offset', 'accuracy', 'speaker'])
+    df['word'] = df['word'].str.split()
+    df = df.explode('word', ignore_index=True)
+    df = df[~df['word'].isin(ex_words)]
+
+    return df.values.tolist()
 
 
 def calculate_windows_params(CONFIG, gram, param_dict):

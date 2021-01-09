@@ -1,6 +1,7 @@
 import argparse
 import os
 import pickle
+import string
 from datetime import datetime
 from itertools import islice
 
@@ -57,6 +58,7 @@ def tokenize_and_explode(args, df, tokenizer):
     """
     df['token'] = df.word.apply(tokenizer.tokenize)
     df = df.explode('token', ignore_index=True)
+    df = df[~df.token.isin(list(string.punctuation))]
     df['token_id'] = df['token'].apply(tokenizer.convert_tokens_to_ids)
 
     if args.embedding_type == 'gpt2':
@@ -160,7 +162,7 @@ def generate_embeddings_with_context(args, df):
             f'conversation: {conversation}, tokens: {len(token_list)}, #sliding: {len(sliding_windows)}'
         )
         input_ids = torch.tensor(sliding_windows)
-        data_dl = data.DataLoader(input_ids, batch_size=16, shuffle=True)
+        data_dl = data.DataLoader(input_ids, batch_size=8, shuffle=True)
 
         with torch.no_grad():
             model = model.to(device)
@@ -168,11 +170,10 @@ def generate_embeddings_with_context(args, df):
 
             concat_output = []
             for i, batch in enumerate(data_dl):
-                print(f'batch: {i}')
                 batch = batch.to(args.device)
                 model_output = model(batch)
                 concat_output.append(
-                    model_output[-1][-1].detach().cpu().numpy())
+                    model_output.hidden_states[-1].detach().cpu().numpy())
 
         extracted_embeddings = extract_token_embeddings(concat_output)
         assert extracted_embeddings.shape[0] == len(token_list)
@@ -191,6 +192,9 @@ def generate_embeddings(args, df):
     model = args.model
     device = args.device
 
+    model = model.to(device)
+    model.eval()
+
     df = tokenize_and_explode(args, df, tokenizer)
     unique_sentence_list = get_unique_sentences(df)
 
@@ -202,12 +206,9 @@ def generate_embeddings(args, df):
     attention_masks_val = tokens['attention_mask']
 
     dataset = data.TensorDataset(input_ids_val, attention_masks_val)
-    data_dl = data.DataLoader(dataset, batch_size=16, shuffle=True)
+    data_dl = data.DataLoader(dataset, batch_size=8, shuffle=True)
 
     with torch.no_grad():
-        model = model.to(device)
-        model.eval()
-
         concat_output = []
         for batch in data_dl:
             batch = tuple(b.to(device) for b in batch)
@@ -266,7 +267,7 @@ def select_tokenizer_and_model(args):
     if args.embedding_type == 'gpt2':
         tokenizer_class = GPT2Tokenizer
         model_class = GPT2LMHeadModel
-        model_name = 'gpt2'
+        model_name = 'gpt2-xl'
     elif args.embedding_type == 'roberta':
         tokenizer_class = RobertaTokenizer
         model_class = RobertaForMaskedLM
@@ -285,15 +286,18 @@ def select_tokenizer_and_model(args):
         print('No model found for', args.model_name)
         exit(1)
 
+    CACHE_DIR = '/scratch/gpfs/hgazula/.cache/'
     args.model = model_class.from_pretrained(model_name,
-                                             output_hidden_states=True)
+                                             output_hidden_states=True,
+                                             cache_dir=CACHE_DIR)
     args.tokenizer = tokenizer_class.from_pretrained(model_name,
-                                                     add_prefix_space=True)
+                                                     add_prefix_space=True,
+                                                     cache_dir=CACHE_DIR)
 
-    # if args.context_length <= 0:
-    #     args.context_length = args.tokenizer.max_len
-    # assert args.context_length <= args.tokenizer.max_len, \
-    #     'given length is greater than max length'
+    if args.context_length <= 0:
+        args.context_length = args.tokenizer.max_len_single_sentence
+    assert args.context_length <= args.tokenizer.max_len_single_sentence, \
+        'given length is greater than max length'
 
     return
 
