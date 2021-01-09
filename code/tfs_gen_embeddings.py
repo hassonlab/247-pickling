@@ -56,6 +56,10 @@ def tokenize_and_explode(args, df, tokenizer):
     Returns:
         DataFrame: a new dataframe object with the words tokenized
     """
+
+    glove = api.load('glove-wiki-gigaword-50')
+    df['glove50_embeddings'] = df['word'].apply(lambda x: get_vector(x, glove))
+
     df['token'] = df.word.apply(tokenizer.tokenize)
     df = df.explode('token', ignore_index=True)
     df = df[~df.token.isin(list(string.punctuation))]
