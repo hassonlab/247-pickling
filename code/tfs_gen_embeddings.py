@@ -127,7 +127,7 @@ def extract_token_embeddings(concat_output):
         return np.squeeze(concatenated_embeddings, axis=0)
 
     # the first token is always empty
-    init_token_embedding = np.empty((1, 768)) * np.nan
+    init_token_embedding = np.empty((1, 1600)) * np.nan
 
     # From the first example take all embeddings except the last one
     first_window_all_tokens = concatenated_embeddings[0, :-1, :]
@@ -162,7 +162,7 @@ def generate_embeddings_with_context(args, df):
             f'conversation: {conversation}, tokens: {len(token_list)}, #sliding: {len(sliding_windows)}'
         )
         input_ids = torch.tensor(sliding_windows)
-        data_dl = data.DataLoader(input_ids, batch_size=8, shuffle=True)
+        data_dl = data.DataLoader(input_ids, batch_size=2, shuffle=True)
 
         with torch.no_grad():
             model = model.to(device)
@@ -255,7 +255,7 @@ def setup_environ(args):
 
     stra = 'cnxt_' + str(args.context_length)
     output_file = '_'.join(
-            [args.subject, args.embedding_type, stra, 'embeddings'])
+        [args.subject, args.embedding_type, stra, 'embeddings'])
 
     args.output_file = os.path.join(args.output_dir, output_file)
 

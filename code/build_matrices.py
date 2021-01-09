@@ -6,7 +6,8 @@ import numpy as np
 from electrode_utils import return_electrode_array
 # from gram_utils import generate_bigrams, generate_unigrams, remove_duplicates
 from utils import (calculate_windows_params, convert_ms_to_fs,
-                   return_conversations, return_examples_new, test_for_bad_window)
+                   return_conversations, return_examples_new,
+                   test_for_bad_window)
 
 
 def build_design_matrices(CONFIG,
@@ -67,7 +68,7 @@ def build_design_matrices(CONFIG,
             a = ecogs.shape[0]
 
             examples = return_examples_new(datum_fn, delimiter, exclude_words,
-                                       CONFIG["vocabulary"])
+                                           CONFIG["vocabulary"])
             b = len(examples)
 
             cutoff_portion = signal_length % bin_size

@@ -161,8 +161,7 @@ def return_examples_new(file, delim, ex_words, vocab_str='std'):
                      sep=' ',
                      header=None,
                      names=['word', 'onset', 'offset', 'accuracy', 'speaker'])
-    df['word'] = df['word'].str.split()
-    df = df.explode('word', ignore_index=True)
+    df['word'] = df['word'].str.strip()
     df = df[~df['word'].isin(ex_words)]
 
     return df.values.tolist()
