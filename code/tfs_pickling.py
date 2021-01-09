@@ -79,7 +79,6 @@ def append_sentence_idx(section, idx):
 def convert_labels_to_df(labels):
     convo_df = pd.DataFrame(
         labels, columns=['word', 'speaker', 'onset', 'offset', 'accuracy'])
-    convo_df.word = convo_df['word'].apply(' '.join)
     return convo_df
 
 
