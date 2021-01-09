@@ -123,22 +123,27 @@ def extract_token_embeddings(concat_output):
     """(batch_size, max_len, embedding_size)"""
     # concatenate all batches
     concatenated_embeddings = np.concatenate(concat_output, axis=0)
-    if concatenated_embeddings.shape[0] == 1:
-        return np.squeeze(concatenated_embeddings, axis=0)
+
+    emb_dim = concatenated_embeddings.shape[-1]
 
     # the first token is always empty
-    init_token_embedding = np.empty((1, 1600)) * np.nan
+    init_token_embedding = np.empty((1, emb_dim)) * np.nan
 
     # From the first example take all embeddings except the last one
-    first_window_all_tokens = concatenated_embeddings[0, :-1, :]
+    first_example_all_tokens = concatenated_embeddings[0, :-1, :]
 
-    # From all other examples take the penultimate embeddings
-    other_windows_last_token = concatenated_embeddings[1:, -2, :]
+    if concatenated_embeddings.shape[0] == 1:
+        extracted_embeddings = np.concatenate(
+            [init_token_embedding, first_example_all_tokens], axis=0)
+    else:
+        # From all other examples take the penultimate embeddings
+        rem_examples_last_token = concatenated_embeddings[1:, -2, :]
 
-    extracted_embeddings = np.concatenate([
-        init_token_embedding, first_window_all_tokens, other_windows_last_token
-    ],
-                                          axis=0)
+        extracted_embeddings = np.concatenate([
+            init_token_embedding, first_example_all_tokens,
+            rem_examples_last_token
+        ],
+                                              axis=0)
 
     return extracted_embeddings
 
@@ -327,6 +332,7 @@ def main():
     args = parse_arguments()
     select_tokenizer_and_model(args)
     setup_environ(args)
+
     utterance_df = load_pickle(args.pickle_name)
 
     if args.history:

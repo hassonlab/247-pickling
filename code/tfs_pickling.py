@@ -13,7 +13,6 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-# from nltk.stem import PorterStemmer
 from sklearn.model_selection import KFold, StratifiedKFold
 
 from arg_parser import arg_parser
@@ -152,14 +151,12 @@ def process_labels(trimmed_stitch_index, labels):
     trimmed_stitch_index.pop(-1)
 
     new_labels = []
-    # ps = PorterStemmer()
 
     len_to_add = 0
     for conv_id, (start,
                   sub_list) in enumerate(zip(trimmed_stitch_index, labels), 1):
 
         sub_list = create_sentence(sub_list)
-        # sub_list = word_stemming(sub_list, ps)
         sub_list = shift_onsets(sub_list, start)
         sub_list = add_conversation_id(sub_list, conv_id)
         sub_list, len_to_add = add_sentence_index(sub_list, len_to_add)
