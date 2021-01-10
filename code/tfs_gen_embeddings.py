@@ -64,6 +64,8 @@ def check_token_is_root(df, emb_type=None):
         df['bert_token_is_root'] = df['word'] == df['token']
     else:
         raise Exception("embedding type doesn't exist")
+    
+    return df
 
 
 def remove_punctuation(df):
