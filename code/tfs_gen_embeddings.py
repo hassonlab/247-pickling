@@ -46,6 +46,35 @@ def load_pickle(file):
     return df
 
 
+def add_glove_embeddings(df, dim=None):
+    if dim == 50:
+        glove = api.load('glove-wiki-gigaword-50')
+        df['glove50_embeddings'] = df['word'].apply(
+            lambda x: get_vector(x, glove))
+    else:
+        raise Exception("Incorrect glove dimension")
+
+    return df
+
+
+def check_token_is_root(df, emb_type=None):
+    if emb_type == 'gpt2':
+        df['gpt2_token_is_root'] = chr(288) + df['word'] == df['token']
+    elif emb_type == 'bert':
+        df['bert_token_is_root'] = df['word'] == df['token']
+    else:
+        raise Exception("embedding type doesn't exist")
+
+
+def remove_punctuation(df):
+    return df[~df.token.isin(list(string.punctuation))]
+
+
+def convert_token_to_idx(df, tokenizer):
+    df['token_id'] = df['token'].apply(tokenizer.convert_tokens_to_ids)
+    return df
+
+
 def tokenize_and_explode(args, df, tokenizer):
     """Tokenizes the words/labels and creates a row for each token
 
@@ -57,29 +86,23 @@ def tokenize_and_explode(args, df, tokenizer):
         DataFrame: a new dataframe object with the words tokenized
     """
 
-    glove = api.load('glove-wiki-gigaword-50')
-    df['glove50_embeddings'] = df['word'].apply(lambda x: get_vector(x, glove))
+    df = add_glove_embeddings(df, dim=50)
 
     df['token'] = df.word.apply(tokenizer.tokenize)
     df = df.explode('token', ignore_index=True)
-    df = df[~df.token.isin(list(string.punctuation))]
-    df['token_id'] = df['token'].apply(tokenizer.convert_tokens_to_ids)
 
-    if args.embedding_type == 'gpt2':
-        df['gpt2_token_is_root'] = chr(288) + df['word'] == df['token']
-    elif args.embedding_type == 'bert':
-        df['bert_token_is_root'] = df['word'] == df['token']
+    df = remove_punctuation(df)
+    df = convert_token_to_idx(df, tokenizer)
+    df = check_token_is_root(df, args.embedding_type)
 
     return df
 
 
 def get_token_indices(args, num_tokens):
     if args.embedding_type == 'gpt2':
-        start = 0
-        stop = num_tokens
+        start, stop = 0, num_tokens
     elif args.embedding_type == 'bert':
-        start = 1
-        stop = num_tokens + 1
+        start, stop = 1, num_tokens + 1
     else:
         raise Exception('wrong model')
 
