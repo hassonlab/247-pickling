@@ -29,7 +29,7 @@ def save_pickle(item, file_name):
     return
 
 
-def load_pickle(file):
+def load_pickle(args):
     """Load the datum pickle and returns as a dataframe
 
     Args:
@@ -38,10 +38,13 @@ def load_pickle(file):
     Returns:
         DataFrame: pickle contents returned as dataframe
     """
-    with open(file, 'rb') as fh:
+    with open(args.pickle_name, 'rb') as fh:
         datum = pickle.load(fh)
 
     df = pd.DataFrame.from_dict(datum['labels'])
+
+    if args.conversation_id:
+        df = df[df.conversation_id == args.conversation_id]
 
     return df
 
@@ -64,7 +67,7 @@ def check_token_is_root(df, emb_type=None):
         df['bert_token_is_root'] = df['word'] == df['token']
     else:
         raise Exception("embedding type doesn't exist")
-    
+
     return df
 
 
@@ -288,6 +291,13 @@ def setup_environ(args):
     args.output_dir = os.path.join(os.getcwd(), 'results', args.subject)
 
     stra = 'cnxt_' + str(args.context_length)
+    if args.conversation_id:
+        stra = '_'.join(
+            [stra, 'conversation',
+             str(args.conversation_id).zfill(2)])
+        args.output_dir = os.path.join(os.getcwd(), 'results', args.subject,
+                                       'conv_embeddings')
+
     output_file = '_'.join(
         [args.subject, args.embedding_type, stra, 'embeddings'])
 
@@ -353,6 +363,7 @@ def parse_arguments():
     parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('--subject', type=str, default='625')
     parser.add_argument('--history', action='store_true', default=False)
+    parser.add_argument('--conversation-id', type=int, default=0)
 
     return parser.parse_args()
 
@@ -361,8 +372,7 @@ def main():
     args = parse_arguments()
     select_tokenizer_and_model(args)
     setup_environ(args)
-
-    utterance_df = load_pickle(args.pickle_name)
+    utterance_df = load_pickle(args)
 
     if args.history:
         if args.embedding_type == 'gpt2':

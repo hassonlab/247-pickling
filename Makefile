@@ -1,6 +1,8 @@
 CMD := echo
 CMD := python
-# CMD := sbatch submit1.sh
+CMD := sbatch submit1.sh
+
+CONV_ID_LIST = $(shell seq 1 79)
 
 EMB_TYPE := glove50
 EMB_TYPE := bert
@@ -15,7 +17,7 @@ MEL := 500
 MINF := 30
 
 HIST := --history
-CNXT_LEN := 0
+CNXT_LEN := 1024
 
 
 link-data:
@@ -39,8 +41,19 @@ upload-pickle: create-pickle
 
 generate-embeddings:
 	mkdir -p logs
-	$(CMD) code/tfs_gen_embeddings.py \
-				--subject $(SID) \
-				--embedding-type $(EMB_TYPE) \
-				$(HIST) \
-				--context-length $(CNXT_LEN);
+	for conv_id in $(CONV_ID_LIST); do \
+		$(CMD) code/tfs_gen_embeddings.py \
+					--subject $(SID) \
+					--conversation-id $$conv_id \
+					--embedding-type $(EMB_TYPE) \
+					$(HIST) \
+					--context-length $(CNXT_LEN); \
+	done
+
+
+concatenate-embeddings:
+	python code/tfs_concat_embeddings.py \
+					--subject $(SID) \
+					--embedding-type $(EMB_TYPE) \
+					$(HIST) \
+					--context-length $(CNXT_LEN); \
