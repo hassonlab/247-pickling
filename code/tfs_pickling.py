@@ -248,6 +248,10 @@ def main():
                                 electrode_names=electrode_names)
         save_pickle(args, full_signal_dict, subject_id + '_full_signal')
 
+        # Create pickle with electrode maps
+        electrode_map = dict(zip(electrodes, electrode_names))
+        save_pickle(args, electrode_map, subject_id + '_electrode_names')
+
         # Create pickle with trimmed signal
         trimmed_signal_dict = dict(trimmed_signal=trimmed_signal,
                                    trimmed_stitch_index=trimmed_stitch_index,
