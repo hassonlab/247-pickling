@@ -92,7 +92,7 @@ def main():
 
     all_df = []
     for i in range(1, num_convs + 1):
-        strb = '_'.join([stra, 'conversation', str(i)])
+        strb = '_'.join([stra, 'conversation', str(i).zfill(2)])
         args.output_dir = os.path.join(os.getcwd(), 'results', args.subject,
                                        'conv_embeddings')
         output_file = '_'.join(
