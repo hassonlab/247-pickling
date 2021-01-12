@@ -49,6 +49,12 @@ def load_pickle(args):
     return df
 
 
+def load_conversation(args):
+    """Load the datum pickle and returns as a dataframe"""
+
+    return
+
+
 def add_glove_embeddings(df, dim=None):
     if dim == 50:
         glove = api.load('glove-wiki-gigaword-50')
@@ -60,10 +66,22 @@ def add_glove_embeddings(df, dim=None):
     return df
 
 
-def check_token_is_root(df, emb_type=None):
+def check_token_is_root_dep(df, emb_type=None):
     if emb_type == 'gpt2':
         df['gpt2_token_is_root'] = chr(288) + df['word'] == df['token']
     elif emb_type == 'bert':
+        df['bert_token_is_root'] = df['word'] == df['token']
+    else:
+        raise Exception("embedding type doesn't exist")
+
+    return df
+
+
+def check_token_is_root(args, df):
+    if args.embedding_type == 'gpt2':
+        df['gpt2_token_is_root'] = df['word'] == df['token'].apply(
+            args.tokenizer.convert_tokens_to_string).str.strip()
+    elif args.embedding_type == 'bert':
         df['bert_token_is_root'] = df['word'] == df['token']
     else:
         raise Exception("embedding type doesn't exist")
@@ -98,7 +116,7 @@ def tokenize_and_explode(args, df, tokenizer):
 
     df = remove_punctuation(df)
     df = convert_token_to_idx(df, tokenizer)
-    df = check_token_is_root(df, args.embedding_type)
+    df = check_token_is_root(args, df)
 
     return df
 
@@ -199,7 +217,7 @@ def generate_embeddings_with_context(args, df):
             f'conversation: {conversation}, tokens: {len(token_list)}, #sliding: {len(sliding_windows)}'
         )
         input_ids = torch.tensor(sliding_windows)
-        data_dl = data.DataLoader(input_ids, batch_size=2, shuffle=True)
+        data_dl = data.DataLoader(input_ids, batch_size=1, shuffle=False)
 
         with torch.no_grad():
             model = model.to(device)
