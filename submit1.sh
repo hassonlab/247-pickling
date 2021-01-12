@@ -7,8 +7,8 @@
 #SBATCH -o './logs/%A.out'
 #SBATCH -e './logs/%A.err'
 ##SBATCH --mail-type=begin
-#SBATCH --mail-type=fail
-#SBATCH --mail-type=end
+##SBATCH --mail-type=fail
+##SBATCH --mail-type=end
 #SBATCH --mail-user=hvgazula@umich.edu
 
 if [[ "$HOSTNAME" == *"tiger"* ]]
