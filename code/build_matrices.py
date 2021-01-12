@@ -79,7 +79,8 @@ def build_design_matrices(CONFIG,
             split_indices = np.arange(bin_size, signal_length, bin_size)
             convo_binned_signal = np.vsplit(ecogs, split_indices)
 
-            examples = list(filter(lambda x: x[3] < signal_length, examples))
+            # TODO: think about this line
+            # examples = list(filter(lambda x: x[2] < signal_length, examples))
             convo_example_size.append(len(examples))
 
             trimmed_signal.append(ecogs)
