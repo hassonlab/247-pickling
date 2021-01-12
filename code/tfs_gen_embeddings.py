@@ -217,7 +217,7 @@ def generate_embeddings_with_context(args, df):
             f'conversation: {conversation}, tokens: {len(token_list)}, #sliding: {len(sliding_windows)}'
         )
         input_ids = torch.tensor(sliding_windows)
-        data_dl = data.DataLoader(input_ids, batch_size=1, shuffle=False)
+        data_dl = data.DataLoader(input_ids, batch_size=2, shuffle=False)
 
         with torch.no_grad():
             model = model.to(device)
@@ -261,7 +261,7 @@ def generate_embeddings(args, df):
     attention_masks_val = tokens['attention_mask']
 
     dataset = data.TensorDataset(input_ids_val, attention_masks_val)
-    data_dl = data.DataLoader(dataset, batch_size=8, shuffle=True)
+    data_dl = data.DataLoader(dataset, batch_size=8, shuffle=False)
 
     with torch.no_grad():
         concat_output = []

@@ -2,7 +2,11 @@ CMD := echo
 CMD := python
 CMD := sbatch submit1.sh
 
-CONV_ID_LIST = $(shell seq 1 79)
+# For 625
+CONV_IDS = $(shell seq 1 54)
+
+# For 676
+# CONV_IDS = $(shell seq 1 79)
 
 EMB_TYPE := glove50
 EMB_TYPE := bert
@@ -28,7 +32,7 @@ link-data:
 	ln -sf /projects/HASSON/247/data/conversations-car/* data/
 
 
-create-pickle:
+create-pickle: link-data
 	mkdir -p logs
 	$(CMD) code/tfs_pickling.py \
 				--subjects $(SID) \
@@ -39,9 +43,9 @@ create-pickle:
 upload-pickle: create-pickle
 	gsutil -m cp -r results/$(SID)/$(SID)*.pkl gs://247-podcast-data/247_pickles/
 
-generate-embeddings:
+generate-embeddings: link-data
 	mkdir -p logs
-	for conv_id in $(CONV_ID_LIST); do \
+	for conv_id in $(CONV_IDS); do \
 		$(CMD) code/tfs_gen_embeddings.py \
 					--subject $(SID) \
 					--conversation-id $$conv_id \
@@ -49,7 +53,6 @@ generate-embeddings:
 					$(HIST) \
 					--context-length $(CNXT_LEN); \
 	done
-
 
 concatenate-embeddings:
 	python code/tfs_concat_embeddings.py \
