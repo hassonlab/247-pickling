@@ -49,12 +49,6 @@ def load_pickle(args):
     return df
 
 
-def load_conversation(args):
-    """Load the datum pickle and returns as a dataframe"""
-
-    return
-
-
 def add_glove_embeddings(df, dim=None):
     if dim == 50:
         glove = api.load('glove-wiki-gigaword-50')
