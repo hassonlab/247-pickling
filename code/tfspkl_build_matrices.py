@@ -3,8 +3,8 @@ import os
 
 import numpy as np
 
-from .electrode_utils import return_electrode_array
-from .utils import return_conversations, return_examples_new
+from electrode_utils import return_electrode_array
+from tfspkl_utils import return_conversations, extract_conversation_contents
 
 
 def build_design_matrices(CONFIG,
@@ -60,8 +60,7 @@ def build_design_matrices(CONFIG,
         full_stitch_index.append(signal_length)
         a = ecogs.shape[0]
 
-        examples = return_examples_new(datum_fn, delimiter, exclude_words,
-                                       CONFIG["vocabulary"])
+        examples = extract_conversation_contents(datum_fn, exclude_words)
         b = len(examples)
 
         cutoff_portion = signal_length % bin_size

@@ -1,5 +1,6 @@
 import argparse
 import os
+import glob
 import pickle
 import string
 from datetime import datetime
@@ -47,6 +48,25 @@ def load_pickle(args):
         df = df[df.conversation_id == args.conversation_id]
 
     return df
+
+
+def return_examples_new(file, ex_words):
+    df = pd.read_csv(file,
+                     sep=' ',
+                     header=None,
+                     names=['word', 'onset', 'offset', 'accuracy', 'speaker'])
+    df['word'] = df['word'].str.lower().str.strip()
+    df = df[~df['word'].isin(ex_words)]
+
+    return df.values.tolist()
+
+
+def load_conversation(args):
+    conversation = args.conversation_list[args.conversation_id - 1]
+    conversation_datum_file = glob.glob(
+        os.path.join(args.input_dir, conversation, 'misc', '*datum*.txt'))[0]
+
+    return return_examples_new(conversation_datum_file, None)
 
 
 def add_glove_embeddings(df, dim=None):
@@ -295,6 +315,14 @@ def setup_environ(args):
     args.device = device
     args.pickle_name = os.path.join(os.getcwd(), 'results', args.subject,
                                     args.subject + '_labels.pkl')
+
+    args.input_dir = os.path.join(os.getcwd(), 'data', args.subject)
+    args.conversation_list = sorted(os.listdir(args.input_dir))
+
+    if args.subject == '625':
+        assert len(args.conversation_list) == 54
+    else:
+        assert len(args.conversation_list) == 79
 
     args.gpus = torch.cuda.device_count()
     if args.gpus > 1:

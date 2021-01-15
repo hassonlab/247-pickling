@@ -15,11 +15,8 @@ def extract_elec_ids(conversation):
         [type]: [description]
     """
     elec_files = glob.glob(os.path.join(conversation, 'preprocessed', '*.mat'))
-    elec_files = sorted(
-        elec_files, key=lambda x: int(os.path.splitext(x)[0].split('_')[-1]))
-
-    elec_ids_list = list(
-        map(lambda x: int(os.path.splitext(x)[0].split('_')[-1]), elec_files))
+    elec_ids_list = sorted(list(
+        map(lambda x: int(os.path.splitext(x)[0].split('_')[-1]), elec_files)))
 
     return elec_ids_list
 
@@ -38,7 +35,7 @@ def update_convs(convs):
     for conversation, *_, electrodes in convs:
 
         elect_ids_list = extract_elec_ids(conversation)
-        elect_labels_list = load_header(conversation)
+        elect_labels_list = extract_electrode_labels(conversation)
 
         if not electrodes or len(electrodes) > len(elect_ids_list):
             electrodes = elect_ids_list
@@ -66,7 +63,7 @@ def return_conversations(CONFIG):
         set_str {string} -- string indicating set type (train or valid)
 
     Returns:
-        list -- List of tuples (directory, file, idx)
+        list -- List of tuples (directory, file, idx, common_electrode_list)
     """
     conversations = []
 
@@ -88,8 +85,18 @@ def return_conversations(CONFIG):
     return convs
 
 
-def return_examples_new(file, delim, ex_words, vocab_str='std'):
-    df = pd.read_csv(file,
+def extract_conversation_contents(conversation, ex_words):
+    """Return labels (lines) from conversation text
+
+    Args:
+        file ([type]): [description]
+        ex_words ([type]): [description]
+
+    Returns:
+        list: list of lists with the following contents in that order
+                ['word', 'onset', 'offset', 'accuracy', 'speaker']
+    """
+    df = pd.read_csv(conversation,
                      sep=' ',
                      header=None,
                      names=['word', 'onset', 'offset', 'accuracy', 'speaker'])
@@ -99,21 +106,22 @@ def return_examples_new(file, delim, ex_words, vocab_str='std'):
     return df.values.tolist()
 
 
-def load_header(conversation_dir):
-    """[summary]
-    Args:
-        conversation_dir ([type]): [description]
-        subject_id (string): Subject ID
-    Returns:
-        list: labels
-    """
-    misc_dir = os.path.join(conversation_dir, 'misc')
+def extract_electrode_labels(conversation_dir):
+    """Read the header file electrode labels
 
-    # TODO: Assuming name of mat file is the same as conversation_dir
-    # TODO: write a condition to check this
-    header_file = glob.glob(os.path.join(misc_dir, '*_header.mat'))[0]
+    Args:
+        conversation_dir (str): conversation folder name/path
+
+    Returns:
+        list: electrode labels
+    """
+    header_file = glob.glob(
+        os.path.join(conversation_dir, 'misc', '*_header.mat'))[0]
+
     if not os.path.exists(header_file):
         return
+
     header = mat73.loadmat(header_file)
     labels = header.header.label
+
     return labels

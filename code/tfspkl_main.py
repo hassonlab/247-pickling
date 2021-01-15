@@ -15,9 +15,9 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold, StratifiedKFold
 
-from arg_parser import arg_parser
-from build_matrices import build_design_matrices
-from config import build_config
+from tfspkl_parser import arg_parser
+from tfspkl_build_matrices import build_design_matrices
+from tfspkl_config import build_config
 
 
 def save_pickle(args, item, file_name):
