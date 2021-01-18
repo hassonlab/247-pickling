@@ -229,60 +229,78 @@ def create_folds(args, df, split_str=None):
     return df
 
 
+def create_labels_pickles(args,
+                          stitch_index,
+                          labels,
+                          convo_labels_size,
+                          label_str=None):
+    labels_df = process_labels(stitch_index, labels)
+    labels_df = create_production_flag(labels_df)
+    labels_df = inclass_word_freq(labels_df)
+    labels_df = total_word_freq(labels_df)
+    labels_df = create_folds(args, labels_df)
+
+    labels_dict = dict(labels=labels_df.to_dict('records'),
+                       convo_label_size=convo_labels_size)
+    pkl_name = '_'.join([args.subject_id, label_str, 'labels'])
+    save_pickle(args, labels_dict, pkl_name)
+
+    labels_df = filter_on_freq(args, labels_df)
+    labels_df = create_folds(args, labels_df, 'stratify')
+
+    label_folds = labels_df.to_dict('records')
+    pkl_name = '_'.join(
+        [args.subject_id, label_str, 'labels_MWF',
+         str(args.vocab_min_freq)])
+    save_pickle(args, label_folds, pkl_name)
+
+
 def main():
+    custom_args = ['--subjects', '625', '--max-electrodes', '500',
+     '--vocab-min-freq', '30', '--pickle']
     args = arg_parser()
     CONFIG = build_config(args, results_str='pickles_new')
 
-    subject_id = CONFIG['subjects'][0]
+    args.subject_id = CONFIG['subjects'][0]
 
     if CONFIG['pickle']:
         (full_signal, full_stitch_index, trimmed_signal, trimmed_stitch_index,
-         binned_signal, bin_stitch_index, labels, convo_example_size,
-         electrodes, electrode_names) = build_design_matrices(CONFIG,
-                                                              delimiter=" ")
+         binned_signal, bin_stitch_index, full_labels, trimmed_labels,
+         convo_full_examples_size, convo_trimmed_examples_size, electrodes,
+         electrode_names) = build_design_matrices(CONFIG, delimiter=" ")
 
         # Create pickle with full signal
         full_signal_dict = dict(full_signal=full_signal,
                                 full_stitch_index=full_stitch_index,
                                 electrode_ids=electrodes,
                                 electrode_names=electrode_names)
-        save_pickle(args, full_signal_dict, subject_id + '_full_signal')
+        save_pickle(args, full_signal_dict, args.subject_id + '_full_signal')
 
         # Create pickle with electrode maps
         electrode_map = dict(zip(electrodes, electrode_names))
-        save_pickle(args, electrode_map, subject_id + '_electrode_names')
+        save_pickle(args, electrode_map, args.subject_id + '_electrode_names')
 
         # Create pickle with trimmed signal
         trimmed_signal_dict = dict(trimmed_signal=trimmed_signal,
                                    trimmed_stitch_index=trimmed_stitch_index,
                                    electrode_ids=electrodes,
                                    electrode_names=electrode_names)
-        save_pickle(args, trimmed_signal_dict, subject_id + '_trimmed_signal')
+        save_pickle(args, trimmed_signal_dict,
+                    args.subject_id + '_trimmed_signal')
 
         # Create pickle with binned signal
         binned_signal_dict = dict(binned_signal=binned_signal,
                                   bin_stitch_index=bin_stitch_index,
                                   electrode_ids=electrodes,
                                   electrode_names=electrode_names)
-        save_pickle(args, binned_signal_dict, subject_id + '_binned_signal')
+        save_pickle(args, binned_signal_dict,
+                    args.subject_id + '_binned_signal')
 
-        # Create pickle with all labels
-        labels_df = process_labels(trimmed_stitch_index, labels)
-        labels_df = create_production_flag(labels_df)
-        labels_df = inclass_word_freq(labels_df)
-        labels_df = total_word_freq(labels_df)
-        labels_df = create_folds(args, labels_df)
-
-        labels_dict = dict(labels=labels_df.to_dict('records'),
-                           convo_label_size=convo_example_size)
-        save_pickle(args, labels_dict, subject_id + '_labels')
-
-        labels_df = filter_on_freq(args, labels_df)
-        labels_df = create_folds(args, labels_df, 'stratify')
-
-        label_folds = labels_df.to_dict('records')
-        save_pickle(args, label_folds,
-                    subject_id + '_labels_MWF' + str(args.vocab_min_freq))
+        # Create pickle with trimmed labels
+        create_labels_pickles(args, trimmed_stitch_index, trimmed_labels,
+                              convo_trimmed_examples_size, 'trimmed')
+        create_labels_pickles(args, full_stitch_index, full_labels,
+                              convo_full_examples_size, 'full')
 
     return
 

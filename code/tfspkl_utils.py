@@ -15,8 +15,10 @@ def extract_elec_ids(conversation):
         [type]: [description]
     """
     elec_files = glob.glob(os.path.join(conversation, 'preprocessed', '*.mat'))
-    elec_ids_list = sorted(list(
-        map(lambda x: int(os.path.splitext(x)[0].split('_')[-1]), elec_files)))
+    elec_ids_list = sorted(
+        list(
+            map(lambda x: int(os.path.splitext(x)[0].split('_')[-1]),
+                elec_files)))
 
     return elec_ids_list
 

@@ -36,8 +36,10 @@ def build_design_matrices(CONFIG,
     full_signal, trimmed_signal, binned_signal = [], [], []
     full_stitch_index, trimmed_stitch_index, bin_stitch_index = [], [], []
     all_examples = []
-    convo_example_size = []
-    for conversation, suffix, _, electrodes, electrode_names in convs:
+    all_trimmed_examples = []
+    convo_all_examples_size = []
+    convo_trimmed_examples_size = []
+    for conversation, suffix, _, electrodes, electrode_names in convs[:5]:
         try:  # Check if files exists
             datum_fn = glob.glob(conversation + suffix)[0]
         except IndexError:
@@ -72,8 +74,10 @@ def build_design_matrices(CONFIG,
         convo_binned_signal = np.vsplit(ecogs, split_indices)
 
         # TODO: think about this line
-        # examples = list(filter(lambda x: x[2] < signal_length, examples))
-        convo_example_size.append(len(examples))
+        trimmed_examples = list(
+            filter(lambda x: x[2] < signal_length, examples))
+        convo_all_examples_size.append(len(examples))
+        convo_trimmed_examples_size.append(len(trimmed_examples))
 
         trimmed_signal.append(ecogs)
         trimmed_stitch_index.append(signal_length)
@@ -88,6 +92,7 @@ def build_design_matrices(CONFIG,
         binned_signal.append(mean_binned_signal)
 
         all_examples.append(examples)
+        all_trimmed_examples.append(trimmed_examples)
 
         print(os.path.basename(conversation), a, b, ecogs.shape[0],
               len(examples), mean_binned_signal.shape[0])
@@ -103,4 +108,5 @@ def build_design_matrices(CONFIG,
 
     return (full_signal, full_stitch_index, trimmed_signal,
             trimmed_stitch_index, binned_signal, bin_stitch_index,
-            all_examples, convo_example_size, electrodes, electrode_names)
+            all_examples, all_trimmed_examples, convo_all_examples_size,
+            convo_trimmed_examples_size, electrodes, electrode_names)

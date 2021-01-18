@@ -58,9 +58,7 @@ def create_directory_paths(CONFIG, args, results_str):
     if not os.path.isdir(SAVE_DIR):
         os.makedirs(SAVE_DIR)
 
-    DIR_DICT = dict(CONV_DIRS=CONV_DIRS,
-                    SAVE_DIR=SAVE_DIR,
-                    LOG_FILE=LOG_FILE)
+    DIR_DICT = dict(CONV_DIRS=CONV_DIRS, SAVE_DIR=SAVE_DIR, LOG_FILE=LOG_FILE)
     CONFIG.update(DIR_DICT)
 
     return CONFIG
