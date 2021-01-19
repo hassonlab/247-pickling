@@ -83,7 +83,7 @@ def main():
     args = parse_arguments()
     setup_environ(args)
 
-    stra = 'cnxt_' + str(args.context_length)
+    stra = '_'.join([args.embedding_type, 'cnxt', str(args.context_length)])
 
     if args.subject == '625':
         num_convs = 54
@@ -94,7 +94,7 @@ def main():
     for i in range(1, num_convs + 1):
         strb = '_'.join([stra, 'conversation', str(i).zfill(2)])
         args.output_dir = os.path.join(os.getcwd(), 'results', args.subject,
-                                       'conv_embeddings')
+                                       'embeddings', stra)
         output_file = '_'.join(
             [args.subject, args.embedding_type, strb, 'embeddings.pkl'])
 
@@ -103,7 +103,7 @@ def main():
 
     emb_out_dir = os.path.join(os.getcwd(), 'results', args.subject)
     emb_out_file = '_'.join(
-        [args.subject, args.embedding_type, stra, 'embeddings'])
+        [args.subject, stra, 'embeddings'])
 
     all_df = pd.concat(all_df, ignore_index=True)
     all_df = all_df.to_dict('records')
