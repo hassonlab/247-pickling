@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 from electrode_utils import return_electrode_array
-from tfspkl_utils import return_conversations, extract_conversation_contents
+from tfspkl_utils import extract_conversation_contents, return_conversations
 
 
 def build_design_matrices(CONFIG,
@@ -39,7 +39,7 @@ def build_design_matrices(CONFIG,
     all_trimmed_examples = []
     convo_all_examples_size = []
     convo_trimmed_examples_size = []
-    for conversation, suffix, _, electrodes, electrode_names in convs[:5]:
+    for conversation, suffix, _, electrodes, electrode_names in convs:
         try:  # Check if files exists
             datum_fn = glob.glob(conversation + suffix)[0]
         except IndexError:

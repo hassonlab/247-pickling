@@ -15,9 +15,9 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold, StratifiedKFold
 
-from tfspkl_parser import arg_parser
 from tfspkl_build_matrices import build_design_matrices
 from tfspkl_config import build_config
+from tfspkl_parser import arg_parser
 
 
 def save_pickle(args, item, file_name):
@@ -256,8 +256,6 @@ def create_labels_pickles(args,
 
 
 def main():
-    custom_args = ['--subjects', '625', '--max-electrodes', '500',
-     '--vocab-min-freq', '30', '--pickle']
     args = arg_parser()
     CONFIG = build_config(args, results_str='pickles_new')
 
