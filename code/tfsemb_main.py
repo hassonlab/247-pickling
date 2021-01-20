@@ -1,6 +1,6 @@
 import argparse
-import os
 import glob
+import os
 import pickle
 import string
 from datetime import datetime
@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
@@ -76,17 +77,6 @@ def add_glove_embeddings(df, dim=None):
             lambda x: get_vector(x, glove))
     else:
         raise Exception("Incorrect glove dimension")
-
-    return df
-
-
-def check_token_is_root_dep(df, emb_type=None):
-    if emb_type == 'gpt2':
-        df['gpt2_token_is_root'] = chr(288) + df['word'] == df['token']
-    elif emb_type == 'bert':
-        df['bert_token_is_root'] = df['word'] == df['token']
-    else:
-        raise Exception("embedding type doesn't exist")
 
     return df
 
@@ -212,6 +202,50 @@ def extract_token_embeddings(concat_output):
     return extracted_embeddings
 
 
+def get_correct_prediction_probability(args, concat_logits,
+                                       sentence_token_ids):
+    """Get the probability for the _correct_ word"""
+    #(batch_size, max_len, vocab_size)
+
+    # concatenate all batches
+    prediction_scores = torch.cat(concat_logits, axis=0)
+
+    if prediction_scores.shape[0] == 1:
+        true_y = torch.tensor(sentence_token_ids[0][1:]).unsqueeze(-1)
+        prediction_scores = prediction_scores[0, :-1, :]
+    else:
+        first_sentence_preds = prediction_scores[0, :-1, :]
+        rem_sentences_preds = prediction_scores[1:, -2, :]
+
+        sti = torch.tensor(sentence_token_ids)
+        true_y = torch.cat([sti[0, 1:], sti[1:, -1]]).unsqueeze(-1)
+
+        prediction_scores = torch.cat(
+            [first_sentence_preds, rem_sentences_preds], axis=0)
+
+    prediction_probabilities = F.softmax(prediction_scores, dim=1)
+
+    top1_probabilities, top1_probabilities_idx = prediction_probabilities.max(
+        dim=1)
+    predicted_tokens = args.tokenizer.convert_ids_to_tokens(
+        top1_probabilities_idx)
+    predicted_words = [
+        args.tokenizer.convert_tokens_to_string(token)
+        for token in predicted_tokens
+    ]
+
+    # top-1 probabilities
+    top1_probabilities = top1_probabilities.tolist() + [None]
+    # top-1 word
+    top1_words = predicted_words + [None]
+    # probability of correct word
+    true_y_probability = prediction_probabilities.gather(
+        1, true_y).squeeze(-1).tolist() + [None]
+    #TODO: probabilities of all words
+
+    return top1_words, top1_probabilities, true_y_probability
+
+
 def generate_embeddings_with_context(args, df):
     tokenizer = args.tokenizer
     model = args.model
@@ -223,14 +257,17 @@ def generate_embeddings_with_context(args, df):
         tokenizer.pad_token = tokenizer.eos_token
 
     final_embeddings = []
+    final_top1_word = []
+    final_top1_prob = []
+    final_true_y_prob = []
     for conversation in df.conversation_id.unique():
         token_list = df[df.conversation_id ==
                         conversation]['token_id'].tolist()
-        sliding_windows = list(window(token_list, args.context_length))
+        windows = list(window(token_list, args.context_length))
         print(
-            f'conversation: {conversation}, tokens: {len(token_list)}, #sliding: {len(sliding_windows)}'
+            f'{conversation}, #tok: {len(token_list)}, #window: {len(windows)}'
         )
-        input_ids = torch.tensor(sliding_windows)
+        input_ids = torch.tensor(windows)
         data_dl = data.DataLoader(input_ids, batch_size=2, shuffle=False)
 
         with torch.no_grad():
@@ -238,18 +275,29 @@ def generate_embeddings_with_context(args, df):
             model.eval()
 
             concat_output = []
-            for i, batch in enumerate(data_dl):
+            concat_logits = []
+            for batch in data_dl:
                 batch = batch.to(args.device)
                 model_output = model(batch)
                 concat_output.append(
                     model_output.hidden_states[-1].detach().cpu().numpy())
+                concat_logits.append(model_output.logits.detach().cpu())
 
         extracted_embeddings = extract_token_embeddings(concat_output)
         assert extracted_embeddings.shape[0] == len(token_list)
         final_embeddings.append(extracted_embeddings)
 
-    df['embeddings'] = np.concatenate(final_embeddings, axis=0).tolist()
+        top1_word, top1_prob, true_y_prob = get_correct_prediction_probability(
+            args, concat_logits, windows)
+        final_top1_word.extend(top1_word)
+        final_top1_prob.extend(top1_prob)
+        final_true_y_prob.extend(true_y_prob)
+
     # TODO: convert embeddings dtype from object to float
+    df['embeddings'] = np.concatenate(final_embeddings, axis=0).tolist()
+    df['top1_pred'] = final_top1_word
+    df['top1_pred_prob'] = final_top1_prob
+    df['true_pred_prob'] = final_true_y_prob
 
     save_pickle(df.to_dict('records'), args.output_file)
 
@@ -313,10 +361,14 @@ def gen_word2vec_embeddings(args, df):
 def setup_environ(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     args.device = device
-    args.pickle_name = os.path.join(os.getcwd(), 'results', args.subject,
-                                    args.subject + '_labels.pkl')
 
-    args.input_dir = os.path.join(os.getcwd(), 'data', args.subject)
+    DATA_DIR = os.path.join(os.getcwd(), 'data')
+    RESULTS_DIR = os.path.join(os.getcwd(), 'results')
+
+    args.pickle_name = os.path.join(RESULTS_DIR, args.subject,
+                                    args.subject + '_full_labels.pkl')
+
+    args.input_dir = os.path.join(DATA_DIR, args.subject)
     args.conversation_list = sorted(os.listdir(args.input_dir))
 
     if args.subject == '625':
@@ -328,20 +380,14 @@ def setup_environ(args):
     if args.gpus > 1:
         args.model = nn.DataParallel(args.model)
 
-    args.output_dir = os.path.join(os.getcwd(), 'results', args.subject)
+    stra = '_'.join([args.embedding_type, 'cnxt', str(args.context_length)])
 
-    stra = 'cnxt_' + str(args.context_length)
+    # TODO: if multiple conversations are specified in input
     if args.conversation_id:
-        stra = '_'.join(
-            [stra, 'conversation',
-             str(args.conversation_id).zfill(2)])
-        args.output_dir = os.path.join(os.getcwd(), 'results', args.subject,
-                                       'conv_embeddings')
-
-    output_file = '_'.join(
-        [args.subject, args.embedding_type, stra, 'embeddings'])
-
-    args.output_file = os.path.join(args.output_dir, output_file)
+        args.output_dir = os.path.join(RESULTS_DIR, args.subject, 'embeddings',
+                                       stra)
+        output_file_name = args.conversation_list[args.conversation_id]
+        args.output_file = os.path.join(args.output_dir, output_file_name)
 
     return
 
