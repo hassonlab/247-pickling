@@ -3,7 +3,7 @@
 #SBATCH --mem=250GB
 #SBATCH --gres=gpu:2
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=4
 #SBATCH -o './logs/%A.out'
 #SBATCH -e './logs/%A.err'
 #SBATCH --mail-type=fail

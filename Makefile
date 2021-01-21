@@ -3,7 +3,7 @@ CMD := python
 CMD := sbatch submit1.sh
 
 # For 625
-CONV_IDS = $(shell seq 1 1)
+CONV_IDS = $(shell seq 1 54)
 
 # For 676
 CONV_IDS = $(shell seq 1 79)
