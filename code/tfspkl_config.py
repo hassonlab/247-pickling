@@ -102,7 +102,7 @@ def build_config(args):
     CONFIG = create_directory_paths(CONFIG, args)
 
     write_config(CONFIG)
-    args.__dict__.update(CONFIG)
+    vars(args).update(CONFIG)
 
     return args
 
