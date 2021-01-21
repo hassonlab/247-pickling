@@ -386,7 +386,7 @@ def setup_environ(args):
     if args.conversation_id:
         args.output_dir = os.path.join(RESULTS_DIR, args.subject, 'embeddings',
                                        stra)
-        output_file_name = args.conversation_list[args.conversation_id]
+        output_file_name = args.conversation_list[args.conversation_id - 1]
         args.output_file = os.path.join(args.output_dir, output_file_name)
 
     return
@@ -416,7 +416,9 @@ def select_tokenizer_and_model(args):
         print('No model found for', args.model_name)
         exit(1)
 
-    CACHE_DIR = '/scratch/gpfs/hgazula/.cache/'
+    CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
+    os.makedirs(CACHE_DIR, exist_ok=True)
+
     args.model = model_class.from_pretrained(model_name,
                                              output_hidden_states=True,
                                              cache_dir=CACHE_DIR)

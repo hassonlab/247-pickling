@@ -1,4 +1,4 @@
-from transformers import GPT2Tokenizer, GPT2LMHeadModel
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 CACHE_DIR = '/scratch/gpfs/hgazula/.cache/'
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2-xl',
