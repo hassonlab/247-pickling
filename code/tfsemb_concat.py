@@ -70,7 +70,6 @@ def main():
                                    'embeddings', stra)
 
     conversation_pickles = sorted(os.listdir(args.output_dir))
-    raise Exception(len(conversation_pickles))
     assert len(conversation_pickles) == num_convs, 'Bad conversation size'
 
     all_df = []
@@ -78,7 +77,7 @@ def main():
         conv_pkl = os.path.join(args.output_dir, conversation)
         all_df.append(load_pickle(conv_pkl))
 
-    emb_out_dir = os.path.join(os.getcwd(), 'results', args.subject)
+    emb_out_dir = os.path.join(os.getcwd(), 'results', args.subject, 'pickles')
     emb_out_file = '_'.join([args.subject, stra, 'embeddings'])
 
     all_df = pd.concat(all_df, ignore_index=True)

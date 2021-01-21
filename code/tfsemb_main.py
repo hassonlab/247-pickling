@@ -364,8 +364,9 @@ def setup_environ(args):
 
     DATA_DIR = os.path.join(os.getcwd(), 'data')
     RESULTS_DIR = os.path.join(os.getcwd(), 'results')
+    PKL_DIR = os.path.join(RESULTS_DIR, args.subject, 'pickles')
 
-    args.pickle_name = os.path.join(RESULTS_DIR, args.subject,
+    args.pickle_name = os.path.join(PKL_DIR,
                                     args.subject + '_full_labels.pkl')
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)
