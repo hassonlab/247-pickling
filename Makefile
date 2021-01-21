@@ -3,17 +3,17 @@ CMD := python
 CMD := sbatch submit1.sh
 
 # For 625
-CONV_IDS = $(shell seq 1 54)
+CONV_IDS = $(shell seq 1 1)
 
 # For 676
-# CONV_IDS = $(shell seq 1 79)
+CONV_IDS = $(shell seq 1 79)
 
 EMB_TYPE := glove50
 EMB_TYPE := bert
 EMB_TYPE := gpt2
 
 SID := 625
-# SID := 676
+SID := 676
 
 # a very large number for MEL will extract all common...
 # ...electrodes across all conversations
@@ -34,8 +34,8 @@ link-data:
 
 create-pickle: link-data
 	mkdir -p logs
-	$(CMD) code/tfs_pickling.py \
-				--subjects $(SID) \
+	$(CMD) code/tfspkl_main.py \
+				--subject $(SID) \
 				--max-electrodes $(MEL) \
 				--vocab-min-freq $(MINF) \
 				--pickle;
@@ -46,7 +46,7 @@ upload-pickle: create-pickle
 generate-embeddings: link-data
 	mkdir -p logs
 	for conv_id in $(CONV_IDS); do \
-		$(CMD) code/tfs_gen_embeddings.py \
+		$(CMD) code/tfsemb_main.py \
 					--subject $(SID) \
 					--conversation-id $$conv_id \
 					--embedding-type $(EMB_TYPE) \
@@ -55,7 +55,7 @@ generate-embeddings: link-data
 	done
 
 concatenate-embeddings:
-	python code/tfs_concat_embeddings.py \
+	python code/tfsemb_concat.py \
 					--subject $(SID) \
 					--embedding-type $(EMB_TYPE) \
 					$(HIST) \
