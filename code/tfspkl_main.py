@@ -25,9 +25,7 @@ def save_pickle(args, item, file_name):
     """
     add_ext = '' if file_name.endswith('.pkl') else '.pkl'
 
-    file_name = os.path.join(os.getcwd(), 'results', args.subjects[0],
-                             file_name) + add_ext
-    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+    file_name = os.path.join(args.PKL_DIR, file_name) + add_ext
 
     with open(file_name, 'wb') as fh:
         pickle.dump(item, fh)
@@ -242,7 +240,7 @@ def create_labels_pickles(args,
 
     labels_dict = dict(labels=labels_df.to_dict('records'),
                        convo_label_size=convo_labels_size)
-    pkl_name = '_'.join([args.subject_id, label_str, 'labels'])
+    pkl_name = '_'.join([args.subject, label_str, 'labels'])
     save_pickle(args, labels_dict, pkl_name)
 
     labels_df = filter_on_freq(args, labels_df)
@@ -250,33 +248,31 @@ def create_labels_pickles(args,
 
     label_folds = labels_df.to_dict('records')
     pkl_name = '_'.join(
-        [args.subject_id, label_str, 'labels_MWF',
+        [args.subject, label_str, 'labels_MWF',
          str(args.vocab_min_freq)])
     save_pickle(args, label_folds, pkl_name)
 
 
 def main():
     args = arg_parser()
-    CONFIG = build_config(args, results_str='pickles_new')
+    args = build_config(args)
 
-    args.subject_id = CONFIG['subjects'][0]
-
-    if CONFIG['pickle']:
+    if args.pickle:
         (full_signal, full_stitch_index, trimmed_signal, trimmed_stitch_index,
          binned_signal, bin_stitch_index, full_labels, trimmed_labels,
          convo_full_examples_size, convo_trimmed_examples_size, electrodes,
-         electrode_names) = build_design_matrices(CONFIG, delimiter=" ")
+         electrode_names) = build_design_matrices(vars(args), delimiter=" ")
 
         # Create pickle with full signal
         full_signal_dict = dict(full_signal=full_signal,
                                 full_stitch_index=full_stitch_index,
                                 electrode_ids=electrodes,
                                 electrode_names=electrode_names)
-        save_pickle(args, full_signal_dict, args.subject_id + '_full_signal')
+        save_pickle(args, full_signal_dict, args.subject + '_full_signal')
 
         # Create pickle with electrode maps
         electrode_map = dict(zip(electrodes, electrode_names))
-        save_pickle(args, electrode_map, args.subject_id + '_electrode_names')
+        save_pickle(args, electrode_map, args.subject + '_electrode_names')
 
         # Create pickle with trimmed signal
         trimmed_signal_dict = dict(trimmed_signal=trimmed_signal,
@@ -284,15 +280,14 @@ def main():
                                    electrode_ids=electrodes,
                                    electrode_names=electrode_names)
         save_pickle(args, trimmed_signal_dict,
-                    args.subject_id + '_trimmed_signal')
+                    args.subject + '_trimmed_signal')
 
         # Create pickle with binned signal
         binned_signal_dict = dict(binned_signal=binned_signal,
                                   bin_stitch_index=bin_stitch_index,
                                   electrode_ids=electrodes,
                                   electrode_names=electrode_names)
-        save_pickle(args, binned_signal_dict,
-                    args.subject_id + '_binned_signal')
+        save_pickle(args, binned_signal_dict, args.subject + '_binned_signal')
 
         # Create pickle with trimmed labels
         create_labels_pickles(args, trimmed_stitch_index, trimmed_labels,

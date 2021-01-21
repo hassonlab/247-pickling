@@ -49,22 +49,25 @@ def return_config_dict():
     return CONFIG
 
 
-def create_directory_paths(CONFIG, args, results_str):
+def create_directory_paths(CONFIG, args):
     # Format directory logistics
-    CONV_DIRS = [CONFIG["data_dir"] + '/%s/' % i for i in args.subjects]
-    SAVE_DIR = os.path.join(os.getcwd(), 'results', args.subjects[0])
+    CONV_DIRS = [CONFIG["data_dir"] + '/%s/' % str(args.subject)]
+    SAVE_DIR = os.path.join(os.getcwd(), 'results', str(args.subject))
     LOG_FILE = SAVE_DIR + 'output'
+    PKL_DIR = os.path.join(SAVE_DIR, 'pickles')
 
-    if not os.path.isdir(SAVE_DIR):
-        os.makedirs(SAVE_DIR)
+    os.makedirs(PKL_DIR, exist_ok=True)
 
-    DIR_DICT = dict(CONV_DIRS=CONV_DIRS, SAVE_DIR=SAVE_DIR, LOG_FILE=LOG_FILE)
+    DIR_DICT = dict(CONV_DIRS=CONV_DIRS,
+                    SAVE_DIR=SAVE_DIR,
+                    PKL_DIR=PKL_DIR,
+                    LOG_FILE=LOG_FILE)
     CONFIG.update(DIR_DICT)
 
     return CONFIG
 
 
-def build_config(args, results_str):
+def build_config(args):
     """Combine configuration and input arguments
 
     Args:
@@ -76,12 +79,14 @@ def build_config(args, results_str):
     """
     CONFIG = return_config_dict()
 
-    if len(args.subjects) == 1:
-        if args.subjects[0] == '625':
-            CONFIG["datum_suffix"] = [CONFIG["datum_suffix"][0]]
-        elif args.subjects[0] == '676':
-            CONFIG["datum_suffix"] = [CONFIG["datum_suffix"][1]]
+    if args.subject == 625:
+        CONFIG["datum_suffix"] = [CONFIG["datum_suffix"][0]]
+    elif args.subject == 676:
+        CONFIG["datum_suffix"] = [CONFIG["datum_suffix"][1]]
+    else:
+        raise Exception('Wrong Subject ID')
 
+    args.subject = str(args.subject)
     CONFIG.update(vars(args))
 
     if CONFIG["max_electrodes"]:
@@ -94,11 +99,12 @@ def build_config(args, results_str):
         ]
 
     CONFIG["num_features"] = sum(CONFIG["max_electrodes"])
-    CONFIG = create_directory_paths(CONFIG, args, results_str)
+    CONFIG = create_directory_paths(CONFIG, args)
 
     write_config(CONFIG)
+    args.__dict__.update(CONFIG)
 
-    return CONFIG
+    return args
 
 
 def write_config(dictionary):
