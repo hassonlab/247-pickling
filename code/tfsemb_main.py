@@ -16,6 +16,8 @@ import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
+from transformers.utils.dummy_pt_objects import LogitsProcessor
+# from copy import deepcopy
 
 
 def save_pickle(item, file_name):
@@ -173,33 +175,33 @@ def window(seq, n=2):
         yield result
 
 
-def extract_token_embeddings(concat_output):
+def extract_token_embeddings_new(concat_output):
     """(batch_size, max_len, embedding_size)"""
     # concatenate all batches
-    concatenated_embeddings = np.concatenate(concat_output, axis=0)
-
+    concatenated_embeddings = torch.cat(concat_output, dim=0).numpy()
     emb_dim = concatenated_embeddings.shape[-1]
 
     # the first token is always empty
     init_token_embedding = np.empty((1, emb_dim)) * np.nan
 
-    # From the first example take all embeddings except the last one
-    first_example_all_tokens = concatenated_embeddings[0, :-1, :]
-
-    if concatenated_embeddings.shape[0] == 1:
-        extracted_embeddings = np.concatenate(
-            [init_token_embedding, first_example_all_tokens], axis=0)
-    else:
-        # From all other examples take the penultimate embeddings
-        rem_examples_last_token = concatenated_embeddings[1:, -2, :]
-
-        extracted_embeddings = np.concatenate([
-            init_token_embedding, first_example_all_tokens,
-            rem_examples_last_token
-        ],
-                                              axis=0)
+    extracted_embeddings = np.concatenate(
+        [init_token_embedding, concatenated_embeddings], axis=0)
 
     return extracted_embeddings
+
+
+def gather_logits(batch_num, logits):
+    if batch_num == 0:
+        if logits.shape[0] == 1:
+            x = logits[0, :-1, :].clone()
+        else:
+            first_sentence_preds = logits[0, :-1, :].clone()
+            rem_sentences_preds = logits[1:, -2, :].clone()
+            x = torch.cat([first_sentence_preds, rem_sentences_preds], axis=0)
+    else:
+        x = logits[:, -2, :].clone()
+
+    return x
 
 
 def get_correct_prediction_probability(args, concat_logits,
@@ -212,16 +214,9 @@ def get_correct_prediction_probability(args, concat_logits,
 
     if prediction_scores.shape[0] == 1:
         true_y = torch.tensor(sentence_token_ids[0][1:]).unsqueeze(-1)
-        prediction_scores = prediction_scores[0, :-1, :]
     else:
-        first_sentence_preds = prediction_scores[0, :-1, :]
-        rem_sentences_preds = prediction_scores[1:, -2, :]
-
         sti = torch.tensor(sentence_token_ids)
         true_y = torch.cat([sti[0, 1:], sti[1:, -1]]).unsqueeze(-1)
-
-        prediction_scores = torch.cat(
-            [first_sentence_preds, rem_sentences_preds], axis=0)
 
     prediction_probabilities = F.softmax(prediction_scores, dim=1)
 
@@ -276,14 +271,16 @@ def generate_embeddings_with_context(args, df):
 
             concat_output = []
             concat_logits = []
-            for batch in data_dl:
+            for batch_num, batch in enumerate(data_dl):
                 batch = batch.to(args.device)
                 model_output = model(batch)
-                concat_output.append(
-                    model_output.hidden_states[-1].detach().cpu().numpy())
-                concat_logits.append(model_output.logits.detach().cpu())
+                item1 = gather_logits(batch_num,
+                                      model_output.hidden_states[-1].cpu())
+                concat_output.append(item1)
+                item2 = gather_logits(batch_num, model_output.logits.cpu())
+                concat_logits.append(item2)
 
-        extracted_embeddings = extract_token_embeddings(concat_output)
+        extracted_embeddings = extract_token_embeddings_new(concat_output)
         assert extracted_embeddings.shape[0] == len(token_list)
         final_embeddings.append(extracted_embeddings)
 
@@ -366,8 +363,7 @@ def setup_environ(args):
     RESULTS_DIR = os.path.join(os.getcwd(), 'results')
     PKL_DIR = os.path.join(RESULTS_DIR, args.subject, 'pickles')
 
-    args.pickle_name = os.path.join(PKL_DIR,
-                                    args.subject + '_full_labels.pkl')
+    args.pickle_name = os.path.join(PKL_DIR, args.subject + '_full_labels.pkl')
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)
     args.conversation_list = sorted(os.listdir(args.input_dir))
