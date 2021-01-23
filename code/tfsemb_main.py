@@ -16,8 +16,6 @@ import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
-from transformers.utils.dummy_pt_objects import LogitsProcessor
-# from copy import deepcopy
 
 
 def save_pickle(item, file_name):
@@ -104,7 +102,7 @@ def convert_token_to_idx(df, tokenizer):
     return df
 
 
-def tokenize_and_explode(args, df, tokenizer):
+def tokenize_and_explode(args, df):
     """Tokenizes the words/labels and creates a row for each token
 
     Args:
@@ -117,11 +115,11 @@ def tokenize_and_explode(args, df, tokenizer):
 
     df = add_glove_embeddings(df, dim=50)
 
-    df['token'] = df.word.apply(tokenizer.tokenize)
+    df['token'] = df.word.apply(args.tokenizer.tokenize)
     df = df.explode('token', ignore_index=True)
 
     df = remove_punctuation(df)
-    df = convert_token_to_idx(df, tokenizer)
+    df = convert_token_to_idx(df, args.tokenizer)
     df = check_token_is_root(args, df)
 
     return df
@@ -246,7 +244,7 @@ def generate_embeddings_with_context(args, df):
     model = args.model
     device = args.device
 
-    df = tokenize_and_explode(args, df, tokenizer)
+    df = tokenize_and_explode(args, df)
 
     if args.embedding_type == 'gpt2':
         tokenizer.pad_token = tokenizer.eos_token
@@ -356,13 +354,13 @@ def gen_word2vec_embeddings(args, df):
 
 
 def setup_environ(args):
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    args.device = device
 
     DATA_DIR = os.path.join(os.getcwd(), 'data')
     RESULTS_DIR = os.path.join(os.getcwd(), 'results')
     PKL_DIR = os.path.join(RESULTS_DIR, args.subject, 'pickles')
 
+    args.device = torch.device(
+        "cuda:0" if torch.cuda.is_available() else "cpu")
     args.pickle_name = os.path.join(PKL_DIR, args.subject + '_full_labels.pkl')
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)
@@ -444,8 +442,6 @@ def parse_arguments():
     parser.add_argument('--save-hidden-states',
                         action='store_true',
                         default=False)
-    parser.add_argument('--suffix', type=str, default='')
-    parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('--subject', type=str, default='625')
     parser.add_argument('--history', action='store_true', default=False)
     parser.add_argument('--conversation-id', type=int, default=0)
