@@ -210,7 +210,9 @@ def get_correct_prediction_probability(args, concat_logits,
     # concatenate all batches
     prediction_scores = torch.cat(concat_logits, axis=0)
 
-    if prediction_scores.shape[0] == 1:
+    if prediction_scores.shape[0] == 0:
+        return [None], [None], [None]
+    elif prediction_scores.shape[0] == 1:
         true_y = torch.tensor(sentence_token_ids[0][1:]).unsqueeze(-1)
     else:
         sti = torch.tensor(sentence_token_ids)
