@@ -1,5 +1,4 @@
 import argparse
-import glob
 import os
 import pickle
 import string
@@ -18,6 +17,19 @@ from transformers import (BartForConditionalGeneration, BartTokenizer,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
 
 
+def main_timer(func):
+    def function_wrapper():
+        start_time = datetime.now()
+        print(f'Start Time: {start_time.strftime("%A %m/%d/%Y %H:%M:%S")}')
+
+        func()
+
+        end_time = datetime.now()
+        print(f'End Time: {end_time.strftime("%A %m/%d/%Y %H:%M:%S")}')
+        print(f'Total runtime: {end_time - start_time} (HH:MM:SS)')
+    return function_wrapper
+
+
 def save_pickle(item, file_name):
     """Write 'item' to 'file_name.pkl'
     """
@@ -29,6 +41,12 @@ def save_pickle(item, file_name):
     with open(file_name, 'wb') as fh:
         pickle.dump(item, fh)
     return
+
+
+def select_conversation(args, df):
+    if args.conversation_id:
+        df = df[df.conversation_id == args.conversation_id]
+    return df
 
 
 def load_pickle(args):
@@ -45,29 +63,7 @@ def load_pickle(args):
 
     df = pd.DataFrame.from_dict(datum['labels'])
 
-    if args.conversation_id:
-        df = df[df.conversation_id == args.conversation_id]
-
     return df
-
-
-def return_examples_new(file, ex_words):
-    df = pd.read_csv(file,
-                     sep=' ',
-                     header=None,
-                     names=['word', 'onset', 'offset', 'accuracy', 'speaker'])
-    df['word'] = df['word'].str.lower().str.strip()
-    df = df[~df['word'].isin(ex_words)]
-
-    return df.values.tolist()
-
-
-def load_conversation(args):
-    conversation = args.conversation_list[args.conversation_id - 1]
-    conversation_datum_file = glob.glob(
-        os.path.join(args.input_dir, conversation, 'misc', '*datum*.txt'))[0]
-
-    return return_examples_new(conversation_datum_file, None)
 
 
 def add_glove_embeddings(df, dim=None):
@@ -82,7 +78,7 @@ def add_glove_embeddings(df, dim=None):
 
 
 def check_token_is_root(args, df):
-    if args.embedding_type == 'gpt2':
+    if args.embedding_type == 'gpt2-xl':
         df['gpt2_token_is_root'] = df['word'] == df['token'].apply(
             args.tokenizer.convert_tokens_to_string).str.strip()
     elif args.embedding_type == 'bert':
@@ -173,7 +169,7 @@ def window(seq, n=2):
         yield result
 
 
-def extract_token_embeddings_new(concat_output):
+def process_extracted_embeddings(concat_output):
     """(batch_size, max_len, embedding_size)"""
     # concatenate all batches
     concatenated_embeddings = torch.cat(concat_output, dim=0).numpy()
@@ -188,22 +184,7 @@ def extract_token_embeddings_new(concat_output):
     return extracted_embeddings
 
 
-def gather_logits(batch_num, logits):
-    if batch_num == 0:
-        if logits.shape[0] == 1:
-            x = logits[0, :-1, :].clone()
-        else:
-            first_sentence_preds = logits[0, :-1, :].clone()
-            rem_sentences_preds = logits[1:, -2, :].clone()
-            x = torch.cat([first_sentence_preds, rem_sentences_preds], axis=0)
-    else:
-        x = logits[:, -2, :].clone()
-
-    return x
-
-
-def get_correct_prediction_probability(args, concat_logits,
-                                       sentence_token_ids):
+def process_extracted_logits(args, concat_logits, sentence_token_ids):
     """Get the probability for the _correct_ word"""
     #(batch_size, max_len, vocab_size)
 
@@ -241,51 +222,83 @@ def get_correct_prediction_probability(args, concat_logits,
     return top1_words, top1_probabilities, true_y_probability
 
 
-def generate_embeddings_with_context(args, df):
-    tokenizer = args.tokenizer
+def extract_select_vectors(batch_idx, array):
+    if batch_idx == 0:
+        x = array[0, :-1, :].clone()
+        if array.shape[0] > 1:
+            rem_sentences_preds = array[1:, -2, :].clone()
+            x = torch.cat([x, rem_sentences_preds], axis=0)
+    else:
+        x = array[:, -2, :].clone()
+
+    return x
+
+
+def model_forward_pass(args, data_dl):
     model = args.model
     device = args.device
 
+    with torch.no_grad():
+        model = model.to(device)
+        model.eval()
+
+        all_embeddings = []
+        all_logits = []
+        for batch_idx, batch in enumerate(data_dl):
+            batch = batch.to(args.device)
+            model_output = model(batch)
+
+            embeddings = model_output.hidden_states[-1].cpu()
+            logits = model_output.logits.cpu()
+
+            embeddings = extract_select_vectors(batch_idx, embeddings)
+            logits = extract_select_vectors(batch_idx, logits)
+
+            all_embeddings.append(embeddings)
+            all_logits.append(logits)
+
+    return all_embeddings, all_logits
+
+
+def get_conversation_tokens(df, conversation):
+    token_list = df[df.conversation_id == conversation]['token_id'].tolist()
+    return token_list
+
+
+def make_input_from_tokens(args, token_list):
+    windows = list(window(token_list, args.context_length))
+    return windows
+
+
+def make_dataloader_from_input(windows):
+    input_ids = torch.tensor(windows)
+    data_dl = data.DataLoader(input_ids, batch_size=2, shuffle=False)
+    return data_dl
+
+
+def generate_embeddings_with_context(args, df):
     df = tokenize_and_explode(args, df)
 
     if args.embedding_type == 'gpt2':
-        tokenizer.pad_token = tokenizer.eos_token
+        args.tokenizer.pad_token = args.tokenizer.eos_token
 
     final_embeddings = []
     final_top1_word = []
     final_top1_prob = []
     final_true_y_prob = []
     for conversation in df.conversation_id.unique():
-        token_list = df[df.conversation_id ==
-                        conversation]['token_id'].tolist()
-        windows = list(window(token_list, args.context_length))
-        print(
-            f'{conversation}, #tok: {len(token_list)}, #window: {len(windows)}'
-        )
-        input_ids = torch.tensor(windows)
-        data_dl = data.DataLoader(input_ids, batch_size=2, shuffle=False)
+        token_list = get_conversation_tokens(df, conversation)
+        model_input = make_input_from_tokens(args, token_list)
 
-        with torch.no_grad():
-            model = model.to(device)
-            model.eval()
+        input_dl = make_dataloader_from_input(model_input)
+        embeddings, logits = model_forward_pass(args, input_dl)
 
-            concat_output = []
-            concat_logits = []
-            for batch_num, batch in enumerate(data_dl):
-                batch = batch.to(args.device)
-                model_output = model(batch)
-                item1 = gather_logits(batch_num,
-                                      model_output.hidden_states[-1].cpu())
-                concat_output.append(item1)
-                item2 = gather_logits(batch_num, model_output.logits.cpu())
-                concat_logits.append(item2)
+        embeddings = process_extracted_embeddings(embeddings)
+        assert embeddings.shape[0] == len(token_list)
+        final_embeddings.append(embeddings)
 
-        extracted_embeddings = extract_token_embeddings_new(concat_output)
-        assert extracted_embeddings.shape[0] == len(token_list)
-        final_embeddings.append(extracted_embeddings)
-
-        top1_word, top1_prob, true_y_prob = get_correct_prediction_probability(
-            args, concat_logits, windows)
+        top1_word, top1_prob, true_y_prob = process_extracted_logits(
+            args, logits, model_input)
         final_top1_word.extend(top1_word)
         final_top1_prob.extend(top1_prob)
         final_true_y_prob.extend(true_y_prob)
@@ -368,10 +381,10 @@ def setup_environ(args):
     args.input_dir = os.path.join(DATA_DIR, args.subject)
     args.conversation_list = sorted(os.listdir(args.input_dir))
 
-    if args.subject == '625':
-        assert len(args.conversation_list) == 54
-    else:
-        assert len(args.conversation_list) == 79
+    # if args.subject == '625':
+    #     assert len(args.conversation_list) == 54
+    # else:
+    #     assert len(args.conversation_list) == 79
 
     args.gpus = torch.cuda.device_count()
     if args.gpus > 1:
@@ -391,7 +404,7 @@ def setup_environ(args):
 
 def select_tokenizer_and_model(args):
 
-    if args.embedding_type == 'gpt2':
+    if args.embedding_type == 'gpt2-xl':
         tokenizer_class = GPT2Tokenizer
         model_class = GPT2LMHeadModel
         model_name = 'gpt2-xl'
@@ -451,14 +464,17 @@ def parse_arguments():
     return parser.parse_args()
 
 
+@main_timer
 def main():
     args = parse_arguments()
     select_tokenizer_and_model(args)
     setup_environ(args)
+
     utterance_df = load_pickle(args)
+    utterance_df = select_conversation(args, utterance_df)
 
     if args.history:
-        if args.embedding_type == 'gpt2':
+        if args.embedding_type == 'gpt2-xl':
             generate_embeddings_with_context(args, utterance_df)
         else:
             print('TODO: Generate embeddings for this model with context')
@@ -473,11 +489,4 @@ def main():
 
 
 if __name__ == '__main__':
-    start_time = datetime.now()
-    print(f'Start Time: {start_time.strftime("%A %m/%d/%Y %H:%M:%S")}')
-
     main()
-
-    end_time = datetime.now()
-    print(f'End Time: {end_time.strftime("%A %m/%d/%Y %H:%M:%S")}')
-    print(f'Total runtime: {end_time - start_time} (HH:MM:SS)')
