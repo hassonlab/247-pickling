@@ -35,7 +35,6 @@ download-pickles:
 	mkdir -p results/{625,676}
 	gsutil -m rsync -x "^(?!.*625).*" gs://247-podcast-data/247_pickles/ results/625/
 	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247_pickles/ results/676/
-	cp /scratch/gpfs/zzada/247-pickling/results/625/625_gpt2_cnxt_1024_embeddings.pkl results/625/
 
 create-pickle: link-data
 	mkdir -p logs
