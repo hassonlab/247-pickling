@@ -5,7 +5,7 @@ import mat73
 import pandas as pd
 
 
-def extract_elec_ids(conversation):
+def get_electrode_ids(conversation):
     """[summary]
 
     Args:
@@ -33,10 +33,10 @@ def get_common_electrodes(convs):
         [type]: [description]
     """
     all_elec_ids_list = [
-        extract_elec_ids(conversation) for conversation in convs
+        get_electrode_ids(conversation) for conversation in convs
     ]
     all_elec_labels_list = [
-        extract_electrode_labels(conversation) for conversation in convs
+        get_electrode_labels(conversation) for conversation in convs
     ]
 
     common_electrodes = list(set.intersection(*map(set, all_elec_ids_list)))
@@ -87,7 +87,7 @@ def extract_conversation_contents(conversation, ex_words):
     return df.values.tolist()
 
 
-def extract_electrode_labels(conversation_dir):
+def get_electrode_labels(conversation_dir):
     """Read the header file electrode labels
 
     Args:

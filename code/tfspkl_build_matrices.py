@@ -12,10 +12,7 @@ def build_design_matrices(CONFIG, delimiter=','):
 
     Args:
         CONFIG (dict): configuration information
-        fs (int, optional): frames per second. Defaults to 512.
         delimiter (str, optional): conversation delimier. Defaults to ','.
-        aug_shift_ms (list, optional): shifts for data augmentation.
-        Defaults to [-500, -250, 250].
 
     Returns:
         tuple: (signals, labels)
@@ -25,23 +22,27 @@ def build_design_matrices(CONFIG, delimiter=','):
         labels: words/n-grams/sentences
     """
     exclude_words = CONFIG["exclude_words"]
+    suffix = '/misc/*datum*.txt'
 
     conversations = get_conversation_list(CONFIG)
     electrodes, electrode_names = get_common_electrodes(conversations)
 
     full_signal, trimmed_signal, binned_signal = [], [], []
     full_stitch_index, trimmed_stitch_index, bin_stitch_index = [], [], []
+    
     all_examples = []
     all_trimmed_examples = []
+    
     convo_all_examples_size = []
     convo_trimmed_examples_size = []
-    suffix = '/misc/*datum*.txt'
+    
     for conversation in conversations:
         try:  # Check if files exists
             datum_fn = glob.glob(conversation + suffix)[0]
         except IndexError:
             print('File DNE: ', conversation + suffix)
             continue
+
         # Extract electrode data (signal_length, num_electrodes)
         ecogs = return_electrode_array(conversation, electrodes)
         if not ecogs.size:
@@ -60,7 +61,6 @@ def build_design_matrices(CONFIG, delimiter=','):
         a = ecogs.shape[0]
 
         examples = extract_conversation_contents(datum_fn, exclude_words)
-        b = len(examples)
 
         cutoff_portion = signal_length % bin_size
         if cutoff_portion:
@@ -91,8 +91,8 @@ def build_design_matrices(CONFIG, delimiter=','):
         all_examples.append(examples)
         all_trimmed_examples.append(trimmed_examples)
 
-        print(os.path.basename(conversation), a, b, ecogs.shape[0],
-              len(examples), mean_binned_signal.shape[0])
+        print(os.path.basename(conversation), a, len(examples), ecogs.shape[0],
+              len(trimmed_examples), mean_binned_signal.shape[0])
 
     full_signal = np.concatenate(full_signal)
     full_stitch_index = np.cumsum(full_stitch_index).tolist()
