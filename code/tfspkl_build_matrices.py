@@ -29,8 +29,6 @@ def build_design_matrices(CONFIG,
     exclude_words = CONFIG["exclude_words"]
 
     convs = return_conversations(CONFIG)
-    cumsum_electrodes = list(np.cumsum(CONFIG['max_electrodes']))
-    cumsum_electrodes.insert(0, 0)
 
     full_signal, trimmed_signal, binned_signal = [], [], []
     full_stitch_index, trimmed_stitch_index, bin_stitch_index = [], [], []

@@ -6,7 +6,7 @@ def arg_parser(default_args: Optional[List] = None):
     """Read arguments from the command line
 
     Args:
-        default_args: None/List of arguments (seeexamples)
+        default_args: None/List of arguments (see examples)
 
     Examples::
         >>> output = arg_parser()
@@ -15,8 +15,6 @@ def arg_parser(default_args: Optional[List] = None):
 
     Miscellaneous:
         subjects: (list of strings): subject id's as a list
-        shift (integer): Amount by which the onset should be shifted
-        window-size (int): window size to consider for the word in ms
         bin-size (int): bin size in milliseconds
         max-electrodes (int):
         vocab-min-freq (int):
@@ -37,7 +35,6 @@ def arg_parser(default_args: Optional[List] = None):
     parser.add_argument('--subject', type=int, default=0)
     parser.add_argument('--bin-size', type=int, default=32)
     parser.add_argument('--vocab-min-freq', type=int, default=10)
-    parser.add_argument('--pickle', action='store_true', default=False)
     parser.add_argument('--num-folds', type=int, default=5)
 
     if not default_args:

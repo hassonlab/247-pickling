@@ -41,8 +41,7 @@ create-pickle: link-data
 	$(CMD) code/tfspkl_main.py \
 				--subject $(SID) \
 				--max-electrodes $(MEL) \
-				--vocab-min-freq $(MINF) \
-				--pickle;
+				--vocab-min-freq $(MINF);
 
 upload-pickle: create-pickle
 	gsutil -m cp -r results/$(SID)/$(SID)*.pkl gs://247-podcast-data/247_pickles/

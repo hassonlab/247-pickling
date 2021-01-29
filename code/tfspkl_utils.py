@@ -46,7 +46,6 @@ def update_convs(convs):
         all_elec_labels_list.append(elect_labels_list)
 
     common_electrodes = list(set.intersection(*map(set, all_elec_ids_list)))
-    # raise Exception(all_elec_labels_list)
     common_labels = sorted(list(
         set.intersection(*map(set, all_elec_labels_list))),
                            key=lambda x: all_elec_labels_list[0].index(x))
