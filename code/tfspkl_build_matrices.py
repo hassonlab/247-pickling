@@ -3,13 +3,11 @@ import os
 
 import numpy as np
 from electrode_utils import return_electrode_array
-from tfspkl_utils import extract_conversation_contents, return_conversations
+from tfspkl_utils import (extract_conversation_contents, get_common_electrodes,
+                          get_conversation_list)
 
 
-def build_design_matrices(CONFIG,
-                          fs=512,
-                          delimiter=',',
-                          aug_shift_ms=[-500, -250, 250]):
+def build_design_matrices(CONFIG, delimiter=','):
     """Build examples and labels for the model
 
     Args:
@@ -28,7 +26,8 @@ def build_design_matrices(CONFIG,
     """
     exclude_words = CONFIG["exclude_words"]
 
-    convs = return_conversations(CONFIG)
+    conversations = get_conversation_list(CONFIG)
+    electrodes, electrode_names = get_common_electrodes(conversations)
 
     full_signal, trimmed_signal, binned_signal = [], [], []
     full_stitch_index, trimmed_stitch_index, bin_stitch_index = [], [], []
@@ -36,7 +35,8 @@ def build_design_matrices(CONFIG,
     all_trimmed_examples = []
     convo_all_examples_size = []
     convo_trimmed_examples_size = []
-    for conversation, suffix, _, electrodes, electrode_names in convs:
+    suffix = '/misc/*datum*.txt'
+    for conversation in conversations:
         try:  # Check if files exists
             datum_fn = glob.glob(conversation + suffix)[0]
         except IndexError:

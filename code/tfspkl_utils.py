@@ -23,7 +23,7 @@ def extract_elec_ids(conversation):
     return elec_ids_list
 
 
-def update_convs(convs):
+def get_common_electrodes(convs):
     """[summary]
 
     Args:
@@ -32,18 +32,12 @@ def update_convs(convs):
     Returns:
         [type]: [description]
     """
-    all_elec_ids_list = []
-    all_elec_labels_list = []
-    for conversation, *_, electrodes in convs:
-
-        elect_ids_list = extract_elec_ids(conversation)
-        elect_labels_list = extract_electrode_labels(conversation)
-
-        if not electrodes or len(electrodes) > len(elect_ids_list):
-            electrodes = elect_ids_list
-
-        all_elec_ids_list.append(electrodes)
-        all_elec_labels_list.append(elect_labels_list)
+    all_elec_ids_list = [
+        extract_elec_ids(conversation) for conversation in convs
+    ]
+    all_elec_labels_list = [
+        extract_electrode_labels(conversation) for conversation in convs
+    ]
 
     common_electrodes = list(set.intersection(*map(set, all_elec_ids_list)))
     common_labels = sorted(list(
@@ -52,11 +46,10 @@ def update_convs(convs):
 
     common_labels = [common_labels[elec - 1] for elec in common_electrodes]
 
-    convs = [(*conv[:3], common_electrodes, common_labels) for conv in convs]
-    return convs
+    return common_electrodes, common_labels
 
 
-def return_conversations(CONFIG):
+def get_conversation_list(CONFIG):
     """Returns list of conversations
 
     Arguments:
@@ -66,24 +59,11 @@ def return_conversations(CONFIG):
     Returns:
         list -- List of tuples (directory, file, idx, common_electrode_list)
     """
-    conversations = []
 
-    for conv_dir in CONFIG["CONV_DIRS"]:
-        conversation_list = [
-            os.path.basename(x) for x in sorted(
-                glob.glob(os.path.join(conv_dir, '*conversation*')))
-        ]
-        conversations.append(conversation_list)
+    conversations = sorted(
+        glob.glob(os.path.join(CONFIG["CONV_DIRS"], '*conversation*')))
 
-    convs = [
-        (conv_dir + conv_name, '/misc/*datum_%s.txt' % ds, idx, electrode_list)
-        for idx, (conv_dir, convs, ds, electrode_list) in enumerate(
-            zip(CONFIG["CONV_DIRS"], conversations, CONFIG["datum_suffix"],
-                CONFIG["electrode_list"])) for conv_name in convs
-    ]
-    convs = update_convs(convs)
-
-    return convs
+    return conversations
 
 
 def extract_conversation_contents(conversation, ex_words):

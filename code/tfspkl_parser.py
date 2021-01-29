@@ -27,10 +27,7 @@ def arg_parser(default_args: Optional[List] = None):
                        nargs='*',
                        type=int,
                        action='append')
-    group.add_argument('--max-electrodes',
-                       nargs='*',
-                       type=int,
-                       action='append')
+    group.add_argument('--max-electrodes', type=int, default=250)
 
     parser.add_argument('--subject', type=int, default=0)
     parser.add_argument('--bin-size', type=int, default=32)
@@ -41,12 +38,5 @@ def arg_parser(default_args: Optional[List] = None):
         args = parser.parse_args()
     else:
         args = parser.parse_args(default_args)
-
-    if args.electrode_list:
-        args.electrode_list = [item for item in args.electrode_list if item]
-    else:
-        args.max_electrodes = [
-            item for sublist in args.max_electrodes for item in sublist
-        ]
 
     return args

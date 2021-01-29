@@ -257,9 +257,9 @@ def main():
     args = build_config(args)
 
     (full_signal, full_stitch_index, trimmed_signal, trimmed_stitch_index,
-        binned_signal, bin_stitch_index, full_labels, trimmed_labels,
-        convo_full_examples_size, convo_trimmed_examples_size, electrodes,
-        electrode_names) = build_design_matrices(vars(args), delimiter=" ")
+     binned_signal, bin_stitch_index, full_labels, trimmed_labels,
+     convo_full_examples_size, convo_trimmed_examples_size, electrodes,
+     electrode_names) = build_design_matrices(vars(args), delimiter=" ")
 
     # Create pickle with full signal
     full_signal_dict = dict(full_signal=full_signal,
@@ -274,24 +274,23 @@ def main():
 
     # Create pickle with trimmed signal
     trimmed_signal_dict = dict(trimmed_signal=trimmed_signal,
-                                trimmed_stitch_index=trimmed_stitch_index,
-                                electrode_ids=electrodes,
-                                electrode_names=electrode_names)
-    save_pickle(args, trimmed_signal_dict,
-                args.subject + '_trimmed_signal')
+                               trimmed_stitch_index=trimmed_stitch_index,
+                               electrode_ids=electrodes,
+                               electrode_names=electrode_names)
+    save_pickle(args, trimmed_signal_dict, args.subject + '_trimmed_signal')
 
     # Create pickle with binned signal
     binned_signal_dict = dict(binned_signal=binned_signal,
-                                bin_stitch_index=bin_stitch_index,
-                                electrode_ids=electrodes,
-                                electrode_names=electrode_names)
+                              bin_stitch_index=bin_stitch_index,
+                              electrode_ids=electrodes,
+                              electrode_names=electrode_names)
     save_pickle(args, binned_signal_dict, args.subject + '_binned_signal')
 
     # Create pickle with trimmed labels
     create_labels_pickles(args, trimmed_stitch_index, trimmed_labels,
-                            convo_trimmed_examples_size, 'trimmed')
+                          convo_trimmed_examples_size, 'trimmed')
     create_labels_pickles(args, full_stitch_index, full_labels,
-                            convo_full_examples_size, 'full')
+                          convo_full_examples_size, 'full')
 
     return
 

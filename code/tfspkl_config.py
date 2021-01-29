@@ -51,7 +51,7 @@ def return_config_dict():
 
 def create_directory_paths(CONFIG, args):
     # Format directory logistics
-    CONV_DIRS = [CONFIG["data_dir"] + '/%s/' % str(args.subject)]
+    CONV_DIRS = CONFIG["data_dir"] + '/%s/' % str(args.subject)
     SAVE_DIR = os.path.join(os.getcwd(), 'results', str(args.subject))
     LOG_FILE = SAVE_DIR + 'output'
     PKL_DIR = os.path.join(SAVE_DIR, 'pickles')
@@ -90,15 +90,11 @@ def build_config(args):
     CONFIG.update(vars(args))
 
     if CONFIG["max_electrodes"]:
-        CONFIG["electrode_list"] = [
-            list(range(1, k + 1)) for k in CONFIG["max_electrodes"]
-        ]
+        CONFIG["electrode_list"] = list(range(1, CONFIG["max_electrodes"] + 1))
     else:
-        CONFIG["max_electrodes"] = [
-            len(item) for item in CONFIG["electrode_list"]
-        ]
+        CONFIG["max_electrodes"] = len(CONFIG["electrode_list"])
 
-    CONFIG["num_features"] = sum(CONFIG["max_electrodes"])
+    CONFIG["num_features"] = CONFIG["max_electrodes"]
     CONFIG = create_directory_paths(CONFIG, args)
 
     write_config(CONFIG)
