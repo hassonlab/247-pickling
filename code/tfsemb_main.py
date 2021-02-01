@@ -405,7 +405,7 @@ def setup_environ(args):
 
 def select_tokenizer_and_model(args):
 
-    if args.embedding_type == 'gpt2':
+    if args.embedding_type == 'gpt2-xl':
         tokenizer_class = GPT2Tokenizer
         model_class = GPT2LMHeadModel
         model_name = 'gpt2-xl'
