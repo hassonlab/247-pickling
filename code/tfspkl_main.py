@@ -40,8 +40,8 @@ def find_switch_points(array):
 def get_sentence_length(section):
     """Sentence length = offset of the last word - onset of first word
     """
-    last_word_offset = section.iloc[-1, 3]
-    first_word_onset = section.iloc[0, 2]
+    last_word_offset = section.iloc[-1, 2]
+    first_word_onset = section.iloc[0, 1]
     return last_word_offset - first_word_onset
 
 
@@ -58,7 +58,7 @@ def append_sentence(section):
 
 def append_sentence_length(section):
     sentence_length = get_sentence_length(section)
-    section['sentence_length'] = sentence_length
+    section['sentence_signal_length'] = sentence_length
     return section
 
 
@@ -133,7 +133,12 @@ def add_conversation_id(conversation, conv_id):
     return conversation
 
 
-def process_labels(trimmed_stitch_index, labels):
+def add_conversation_name(conversation, name):
+    conversation['conversation_name'] = os.path.basename(name)
+    return conversation
+
+
+def process_labels(trimmed_stitch_index, labels, conversations):
     """Adjust label onsets to account for stitched signal length.
     Also peform stemming on the labels.
 
@@ -150,12 +155,13 @@ def process_labels(trimmed_stitch_index, labels):
     new_labels = []
 
     len_to_add = 0
-    for conv_id, (start,
-                  sub_list) in enumerate(zip(trimmed_stitch_index, labels), 1):
+    for conv_id, (conversation_name, start, sub_list) in enumerate(
+            zip(conversations, trimmed_stitch_index, labels), 1):
 
         sub_list = create_sentence(sub_list)
         sub_list = shift_onsets(sub_list, start)
         sub_list = add_conversation_id(sub_list, conv_id)
+        sub_list = add_conversation_name(sub_list, conversation_name)
         sub_list, len_to_add = add_sentence_index(sub_list, len_to_add)
 
         new_labels.append(sub_list)
@@ -230,8 +236,9 @@ def create_labels_pickles(args,
                           stitch_index,
                           labels,
                           convo_labels_size,
+                          convs,
                           label_str=None):
-    labels_df = process_labels(stitch_index, labels)
+    labels_df = process_labels(stitch_index, labels, convs)
     labels_df = create_production_flag(labels_df)
     labels_df = inclass_word_freq(labels_df)
     labels_df = total_word_freq(labels_df)
@@ -259,7 +266,8 @@ def main():
     (full_signal, full_stitch_index, trimmed_signal, trimmed_stitch_index,
      binned_signal, bin_stitch_index, full_labels, trimmed_labels,
      convo_full_examples_size, convo_trimmed_examples_size, electrodes,
-     electrode_names) = build_design_matrices(vars(args), delimiter=" ")
+     electrode_names, conversations) = build_design_matrices(vars(args),
+                                                             delimiter=" ")
 
     # Create pickle with full signal
     full_signal_dict = dict(full_signal=full_signal,
@@ -288,9 +296,10 @@ def main():
 
     # Create pickle with trimmed labels
     create_labels_pickles(args, trimmed_stitch_index, trimmed_labels,
-                          convo_trimmed_examples_size, 'trimmed')
+                          convo_trimmed_examples_size, conversations,
+                          'trimmed')
     create_labels_pickles(args, full_stitch_index, full_labels,
-                          convo_full_examples_size, 'full')
+                          convo_full_examples_size, conversations, 'full')
 
     return
 

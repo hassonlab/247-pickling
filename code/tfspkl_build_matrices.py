@@ -29,13 +29,13 @@ def build_design_matrices(CONFIG, delimiter=','):
 
     full_signal, trimmed_signal, binned_signal = [], [], []
     full_stitch_index, trimmed_stitch_index, bin_stitch_index = [], [], []
-    
+
     all_examples = []
     all_trimmed_examples = []
-    
+
     convo_all_examples_size = []
     convo_trimmed_examples_size = []
-    
+
     for conversation in conversations:
         try:  # Check if files exists
             datum_fn = glob.glob(conversation + suffix)[0]
@@ -106,4 +106,5 @@ def build_design_matrices(CONFIG, delimiter=','):
     return (full_signal, full_stitch_index, trimmed_signal,
             trimmed_stitch_index, binned_signal, bin_stitch_index,
             all_examples, all_trimmed_examples, convo_all_examples_size,
-            convo_trimmed_examples_size, electrodes, electrode_names)
+            convo_trimmed_examples_size, electrodes, electrode_names,
+            conversations)

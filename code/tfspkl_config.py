@@ -5,15 +5,13 @@ import os
 def create_directory_paths(args):
     # Format directory logistics
     DATA_DIR = os.path.join(os.getcwd(), 'data')
-    CONV_DIRS = DATA_DIR + '/%s/' % str(args.subject)
-    SAVE_DIR = os.path.join(os.getcwd(), 'results', str(args.subject))
+    CONV_DIRS = DATA_DIR + '/%s/' % args.subject
+    SAVE_DIR = os.path.join(os.getcwd(), 'results', args.subject)
     PKL_DIR = os.path.join(SAVE_DIR, 'pickles')
 
     os.makedirs(PKL_DIR, exist_ok=True)
 
-    DIR_DICT = dict(CONV_DIRS=CONV_DIRS,
-                    SAVE_DIR=SAVE_DIR,
-                    PKL_DIR=PKL_DIR)
+    DIR_DICT = dict(CONV_DIRS=CONV_DIRS, SAVE_DIR=SAVE_DIR, PKL_DIR=PKL_DIR)
     vars(args).update(DIR_DICT)
 
     return
@@ -29,6 +27,7 @@ def build_config(args):
     Returns:
         dict: combined configuration information
     """
+    args.subject = str(args.subject)
     args.exclude_words = ["sp", "{lg}", "{ns}"]
     create_directory_paths(args)
 
