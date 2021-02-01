@@ -1,6 +1,4 @@
 CMD := echo
-CMD := python
-CMD := sbatch submit1.sh
 
 # For 625
 CONV_IDS = $(shell seq 1 54)
@@ -36,6 +34,7 @@ download-pickles:
 	gsutil -m rsync -x "^(?!.*625).*" gs://247-podcast-data/247_pickles/ results/625/
 	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247_pickles/ results/676/
 
+CMD := python
 create-pickle: link-data
 	mkdir -p logs
 	$(CMD) code/tfspkl_main.py \
@@ -44,8 +43,9 @@ create-pickle: link-data
 				--vocab-min-freq $(MINF);
 
 upload-pickle: create-pickle
-	gsutil -m cp -r results/$(SID)/$(SID)*.pkl gs://247-podcast-data/247_pickles/
+	gsutil -m cp -r results/$(SID)/pickles/$(SID)*.pkl gs://247-podcast-data/247_pickles/
 
+CMD := sbatch submit1.sh
 generate-embeddings: link-data
 	mkdir -p logs
 	for conv_id in $(CONV_IDS); do \
