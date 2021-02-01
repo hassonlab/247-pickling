@@ -27,6 +27,7 @@ def main_timer(func):
         end_time = datetime.now()
         print(f'End Time: {end_time.strftime("%A %m/%d/%Y %H:%M:%S")}')
         print(f'Total runtime: {end_time - start_time} (HH:MM:SS)')
+
     return function_wrapper
 
 
@@ -79,7 +80,7 @@ def add_glove_embeddings(df, dim=None):
 
 def check_token_is_root(args, df):
     if args.embedding_type == 'gpt2-xl':
-        df['gpt2_token_is_root'] = df['word'] == df['token'].apply(
+        df['gpt2-xl_token_is_root'] = df['word'] == df['token'].apply(
             args.tokenizer.convert_tokens_to_string).str.strip()
     elif args.embedding_type == 'bert':
         df['bert_token_is_root'] = df['word'] == df['token']
@@ -122,7 +123,7 @@ def tokenize_and_explode(args, df):
 
 
 def get_token_indices(args, num_tokens):
-    if args.embedding_type == 'gpt2':
+    if args.embedding_type == 'gpt2-xl':
         start, stop = 0, num_tokens
     elif args.embedding_type == 'bert':
         start, stop = 1, num_tokens + 1
@@ -211,12 +212,12 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
     ]
 
     # top-1 probabilities
-    top1_probabilities = top1_probabilities.tolist() + [None]
+    top1_probabilities = [None] + top1_probabilities.tolist()
     # top-1 word
-    top1_words = predicted_words + [None]
+    top1_words = [None] + predicted_words
     # probability of correct word
-    true_y_probability = prediction_probabilities.gather(
-        1, true_y).squeeze(-1).tolist() + [None]
+    true_y_probability = [None] + prediction_probabilities.gather(
+        1, true_y).squeeze(-1).tolist()
     #TODO: probabilities of all words
 
     return top1_words, top1_probabilities, true_y_probability
@@ -279,7 +280,7 @@ def make_dataloader_from_input(windows):
 def generate_embeddings_with_context(args, df):
     df = tokenize_and_explode(args, df)
 
-    if args.embedding_type == 'gpt2':
+    if args.embedding_type == 'gpt2-xl':
         args.tokenizer.pad_token = args.tokenizer.eos_token
 
     final_embeddings = []
@@ -325,7 +326,7 @@ def generate_embeddings(args, df):
     df = tokenize_and_explode(args, df, tokenizer)
     unique_sentence_list = get_unique_sentences(df)
 
-    if args.embedding_type == 'gpt2':
+    if args.embedding_type == 'gpt2-xl':
         tokenizer.pad_token = tokenizer.eos_token
 
     tokens = tokenizer(unique_sentence_list, padding=True, return_tensors='pt')
@@ -404,7 +405,7 @@ def setup_environ(args):
 
 def select_tokenizer_and_model(args):
 
-    if args.embedding_type == 'gpt2-xl':
+    if args.embedding_type == 'gpt2':
         tokenizer_class = GPT2Tokenizer
         model_class = GPT2LMHeadModel
         model_name = 'gpt2-xl'

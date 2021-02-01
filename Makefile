@@ -10,7 +10,7 @@ CONV_IDS = $(shell seq 1 79)
 
 EMB_TYPE := glove50
 EMB_TYPE := bert
-EMB_TYPE := gpt2
+EMB_TYPE := gpt2-xl
 
 SID := 625
 SID := 676
