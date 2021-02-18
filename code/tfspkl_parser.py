@@ -31,7 +31,7 @@ def arg_parser(default_args: Optional[List] = None):
 
     parser.add_argument('--subject', type=int, default=0)
     parser.add_argument('--bin-size', type=int, default=32)
-    parser.add_argument('--vocab-min-freq', type=int, default=10)
+    parser.add_argument('--vocab-min-freq', type=int, default=0)
     parser.add_argument('--num-folds', type=int, default=5)
 
     if not default_args:

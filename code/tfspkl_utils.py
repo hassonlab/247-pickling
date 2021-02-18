@@ -1,5 +1,6 @@
 import glob
 import os
+import sys
 
 import mat73
 import pandas as pd
@@ -96,8 +97,11 @@ def get_electrode_labels(conversation_dir):
     Returns:
         list: electrode labels
     """
-    header_file = glob.glob(
-        os.path.join(conversation_dir, 'misc', '*_header.mat'))[0]
+    try:
+        header_file = glob.glob(
+            os.path.join(conversation_dir, 'misc', '*_header.mat'))[0]
+    except IndexError as e:
+        sys.exit('Header File Missing')
 
     if not os.path.exists(header_file):
         return

@@ -249,14 +249,14 @@ def create_labels_pickles(args,
     pkl_name = '_'.join([args.subject, label_str, 'labels'])
     save_pickle(args, labels_dict, pkl_name)
 
-    labels_df = filter_on_freq(args, labels_df)
-    labels_df = create_folds(args, labels_df, 'stratify')
+    if args.vocab_min_freq:
+        labels_df = filter_on_freq(args, labels_df)
+        labels_df = create_folds(args, labels_df, 'stratify')
 
-    label_folds = labels_df.to_dict('records')
-    pkl_name = '_'.join(
-        [args.subject, label_str, 'labels_MWF',
-         str(args.vocab_min_freq)])
-    save_pickle(args, label_folds, pkl_name)
+        label_folds = labels_df.to_dict('records')
+        pkl_name = '_'.join(
+            [args.subject, label_str, 'labels_MWF', str(args.vocab_min_freq)])
+        save_pickle(args, label_folds, pkl_name)
 
 
 def main():

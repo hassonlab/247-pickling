@@ -22,7 +22,7 @@ def build_design_matrices(CONFIG, delimiter=','):
         labels: words/n-grams/sentences
     """
     exclude_words = CONFIG["exclude_words"]
-    suffix = '/misc/*datum*.txt'
+    suffix = '/misc/*trimmed.txt'
 
     conversations = get_conversation_list(CONFIG)
     electrodes, electrode_names = get_common_electrodes(conversations)
