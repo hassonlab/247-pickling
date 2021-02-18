@@ -64,8 +64,11 @@ create-pickle:
 				--max-electrodes $(MEL) \
 				--vocab-min-freq $(MINF);
 
-upload-pickle: create-pickle
+upload-247-pickle: create-pickle
 	gsutil -m cp -r results/$(SID)/pickles/$(SID)*.pkl gs://247-podcast-data/247_pickles/
+
+upload-podcast-pickle: create-pickle
+	gsutil -m cp -r results/$(SID)/pickles/*.pkl gs://247-podcast-data/podcast_pickles/$(SID)
 
 # CMD := sbatch submit1.sh
 generate-embeddings: link-data
