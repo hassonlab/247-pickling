@@ -11,7 +11,7 @@ EMB_TYPE := bert
 EMB_TYPE := gpt2-xl
 
 PRJCT_ID := podcast
-PRJCT_ID := tfs
+# PRJCT_ID := tfs
 
 # 247 subjects
 SID_LIST=625 676
@@ -60,12 +60,9 @@ create-pickle:
 					--vocab-min-freq $(MINF); \
 		done
 
-upload-247-pickle: create-pickle
-	gsutil -m cp -r results/$(SID)/pickles/$(SID)*.pkl gs://247-podcast-data/247_pickles/
-
-upload-podcast-pickle: create-pickle
+upload-pickle: create-pickle
 	for sid in $(SID_LIST); do \
-		gsutil -m cp -r results/$$sid/pickles/*.pkl gs://247-podcast-data/podcast_pickles/$$sid; \
+		gsutil -m cp -r results/$(PRJCT_ID)/$$sid/pickles/*.pkl gs://247-podcast-data/$(PRJCT_ID)_pickles/$$sid; \
 	done
 
 download-247-pickles:
