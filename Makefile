@@ -11,7 +11,7 @@ EMB_TYPE := bert
 EMB_TYPE := gpt2-xl
 
 PRJCT_ID := podcast
-# PRJCT_ID := tfs
+PRJCT_ID := tfs
 
 # 247 subjects
 SID_LIST=625 676
@@ -43,17 +43,10 @@ endif
 	# create symlinks from original data store
 	ln -sf /projects/HASSON/247/data/$(DIR_KEY)/* data/$(PRJCT_ID)/
 
-
-download-pickles:
-	mkdir -p results/{625,676}
-	gsutil -m rsync -x "^(?!.*625).*" gs://247-podcast-data/247_pickles/ results/625/
-	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247_pickles/ results/676/
-
-CMD := python
 create-pickle:
 	mkdir -p logs
 	for sid in $(SID_LIST); do \
-		$(CMD) code/tfspkl_main.py \
+		python code/tfspkl_main.py \
 					--project-id $(PRJCT_ID) \
 					--subject $$sid \
 					--max-electrodes $(MEL) \
@@ -68,7 +61,7 @@ upload-pickle: create-pickle
 download-247-pickles:
 	mkdir -p results/{625,676}
 	gsutil -m rsync -x "^(?!.*625).*" gs://247-podcast-data/247_pickles/ results/625/
-	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247_pickles/ results/67
+	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247_pickles/ results/676/
 
 # CMD := sbatch submit1.sh
 generate-embeddings:
