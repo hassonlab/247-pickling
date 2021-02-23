@@ -50,8 +50,9 @@ def return_electrode_array(CONFIG, conv, elect):
     elec_ids = ((conv, electrode) for electrode in elect)
     with Pool() as pool:
         ecogs = list(
-            filter(lambda x: x is not None,
-                   pool.map(partial(get_electrode_mp, CONFIG=CONFIG), elec_ids)))
+            filter(
+                lambda x: x is not None,
+                pool.map(partial(get_electrode_mp, CONFIG=CONFIG), elec_ids)))
 
     ecogs = standardize_matrix(ecogs)
     assert (ecogs.ndim == 2 and ecogs.shape[1] == len(elect))

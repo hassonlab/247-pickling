@@ -9,7 +9,6 @@ Copyright (c) 2020 Your Company
 '''
 import os
 import pickle
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -17,6 +16,7 @@ from sklearn.model_selection import KFold, StratifiedKFold
 from tfspkl_build_matrices import build_design_matrices
 from tfspkl_config import build_config
 from tfspkl_parser import arg_parser
+from utils import main_timer
 
 
 def save_pickle(args, item, file_name):
@@ -260,6 +260,7 @@ def create_labels_pickles(args,
         save_pickle(args, label_folds, pkl_name)
 
 
+@main_timer
 def main():
     args = arg_parser()
     args = build_config(args)
@@ -306,11 +307,4 @@ def main():
 
 
 if __name__ == "__main__":
-    start_time = datetime.now()
-    print(f'Start Time: {start_time.strftime("%A %m/%d/%Y %H:%M:%S")}')
-
     main()
-
-    end_time = datetime.now()
-    print(f'End Time: {end_time.strftime("%A %m/%d/%Y %H:%M:%S")}')
-    print(f'Total runtime: {end_time - start_time} (HH:MM:SS)')

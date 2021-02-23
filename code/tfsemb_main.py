@@ -2,7 +2,6 @@ import argparse
 import os
 import pickle
 import string
-from datetime import datetime
 from itertools import islice
 
 import gensim.downloader as api
@@ -15,20 +14,7 @@ import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
-
-
-def main_timer(func):
-    def function_wrapper():
-        start_time = datetime.now()
-        print(f'Start Time: {start_time.strftime("%A %m/%d/%Y %H:%M:%S")}')
-
-        func()
-
-        end_time = datetime.now()
-        print(f'End Time: {end_time.strftime("%A %m/%d/%Y %H:%M:%S")}')
-        print(f'Total runtime: {end_time - start_time} (HH:MM:SS)')
-
-    return function_wrapper
+from utils import main_timer
 
 
 def save_pickle(item, file_name):
