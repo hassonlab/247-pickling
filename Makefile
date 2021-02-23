@@ -11,7 +11,7 @@ EMB_TYPE := bert
 EMB_TYPE := gpt2-xl
 
 PRJCT_ID := podcast
-# PRJCT_ID := tfs
+PRJCT_ID := tfs
 
 # 247 subjects
 SID_LIST=625 676
@@ -29,9 +29,9 @@ CNXT_LEN := 1024
 
 link-data:
 ifeq ($(PRJCT_ID), podcast)
-	DIR_KEY="podcast-data"
+	$(eval DIR_KEY := podcast-data)
 else
-	DIR_KEY="conversations-car"
+	$(eval DIR_KEY := conversations-car)
 endif
 
 	# create directory
@@ -91,11 +91,3 @@ concatenate-embeddings:
 					--embedding-type $(EMB_TYPE) \
 					$(HIST) \
 					--context-length $(CNXT_LEN); \
-
-test:
-if [ podcast = podcast ]; then
-	mathstester="podcast"
-else
-	mathstester="not equal"
-fi
-	echo $(mathstester)
