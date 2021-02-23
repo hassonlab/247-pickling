@@ -33,6 +33,7 @@ def arg_parser(default_args: Optional[List] = None):
     parser.add_argument('--bin-size', type=int, default=32)
     parser.add_argument('--vocab-min-freq', type=int, default=0)
     parser.add_argument('--num-folds', type=int, default=5)
+    parser.add_argument('--project-id', type=str, default=None)
 
     if not default_args:
         args = parser.parse_args()

@@ -10,23 +10,14 @@ EMB_TYPE := glove50
 EMB_TYPE := bert
 EMB_TYPE := gpt2-xl
 
-PRJCT_KEY := tfs
-PRJCT_KEY := podcast
+PRJCT_ID := tfs
+PRJCT_ID := podcast
 
 # 247 subjects
-
-SID := 625
-SID := 676
+SID_LIST= 625 676
 
 # podcast subjects
-SID := 661
-SID := 662
-SID := 717
-SID := 723
-SID := 737
-SID := 741
-SID := 742
-SID := 763
+SID_LIST=661 662 717 723 741 742 763 798 
 
 # a very large number for MEL will extract all common...
 # ...electrodes across all conversations
@@ -59,19 +50,24 @@ download-pickles:
 CMD := python
 create-pickle:
 	mkdir -p logs
-	$(CMD) code/tfspkl_main.py \
-				--subject $(SID) \
-				--max-electrodes $(MEL) \
-				--vocab-min-freq $(MINF);
+	for sid in $(SID_LIST); do \
+		$(CMD) code/tfspkl_main.py \
+					--project-id $(PRJCT_ID) \
+					--subject $$sid \
+					--max-electrodes $(MEL) \
+					--vocab-min-freq $(MINF); \
+		done
 
 upload-247-pickle: create-pickle
 	gsutil -m cp -r results/$(SID)/pickles/$(SID)*.pkl gs://247-podcast-data/247_pickles/
 
 upload-podcast-pickle: create-pickle
-	gsutil -m cp -r results/$(SID)/pickles/*.pkl gs://247-podcast-data/podcast_pickles/$(SID)
+	for sid in $(SID_LIST); do \
+		gsutil -m cp -r results/$$sid/pickles/*.pkl gs://247-podcast-data/podcast_pickles/$$sid; \
+	done
 
 # CMD := sbatch submit1.sh
-generate-embeddings: link-data
+generate-embeddings:
 	mkdir -p logs
 	for conv_id in $(CONV_IDS); do \
 		$(CMD) code/tfsemb_main.py \

@@ -382,11 +382,6 @@ def setup_environ(args):
     args.input_dir = os.path.join(DATA_DIR, args.subject)
     args.conversation_list = sorted(os.listdir(args.input_dir))
 
-    # if args.subject == '625':
-    #     assert len(args.conversation_list) == 54
-    # else:
-    #     assert len(args.conversation_list) == 79
-
     args.gpus = torch.cuda.device_count()
     if args.gpus > 1:
         args.model = nn.DataParallel(args.model)

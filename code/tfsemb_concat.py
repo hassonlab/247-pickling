@@ -62,8 +62,10 @@ def main():
 
     if args.subject == '625':
         num_convs = 54
-    else:
+    elif args.subject == '676':
         num_convs = 79
+    else:
+        num_convs = 1
 
     stra = '_'.join([args.embedding_type, 'cnxt', str(args.context_length)])
     args.output_dir = os.path.join(os.getcwd(), 'results', args.subject,

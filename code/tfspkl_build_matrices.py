@@ -25,7 +25,7 @@ def build_design_matrices(CONFIG, delimiter=','):
     suffix = '/misc/*trimmed.txt'
 
     conversations = get_conversation_list(CONFIG)
-    electrodes, electrode_names = get_common_electrodes(conversations)
+    electrodes, electrode_names = get_common_electrodes(CONFIG, conversations)
 
     full_signal, trimmed_signal, binned_signal = [], [], []
     full_stitch_index, trimmed_stitch_index, bin_stitch_index = [], [], []
@@ -44,7 +44,7 @@ def build_design_matrices(CONFIG, delimiter=','):
             continue
 
         # Extract electrode data (signal_length, num_electrodes)
-        ecogs = return_electrode_array(conversation, electrodes)
+        ecogs = return_electrode_array(CONFIG, conversation, electrodes)
         if not ecogs.size:
             print(f'Bad Conversation: {conversation}')
             continue

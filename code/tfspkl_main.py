@@ -255,7 +255,8 @@ def create_labels_pickles(args,
 
         label_folds = labels_df.to_dict('records')
         pkl_name = '_'.join(
-            [args.subject, label_str, 'labels_MWF', str(args.vocab_min_freq)])
+            [args.subject, label_str, 'labels_MWF',
+             str(args.vocab_min_freq)])
         save_pickle(args, label_folds, pkl_name)
 
 

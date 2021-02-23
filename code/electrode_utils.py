@@ -1,11 +1,13 @@
 import glob
+import sys
+from functools import partial
 from multiprocessing import Pool
 
 import numpy as np
 from scipy.io import loadmat
 
 
-def get_electrode(elec_id):
+def get_electrode(CONFIG, elec_id):
     """Extract neural data from mat files
 
     Arguments:
@@ -15,7 +17,15 @@ def get_electrode(elec_id):
         np.array: float32 numpy array of neural data
     """
     conversation, electrode = elec_id
-    search_str = conversation + f'/preprocessed/*_{electrode}.mat'
+
+    if CONFIG['project_id'] == 'podcast':
+        search_str = conversation + f'/preprocessed_all/*_{electrode}.mat'
+    elif CONFIG['project_id'] == '247':
+        search_str = conversation + f'/preprocessed/*_{electrode}.mat'
+    else:
+        print('Incorrect Project ID')
+        sys.exit()
+
     mat_fn = glob.glob(search_str)
     if len(mat_fn) == 0:
         print(f'[WARNING] electrode {electrode} DNE in {search_str}')
@@ -23,7 +33,11 @@ def get_electrode(elec_id):
     return loadmat(mat_fn[0])['p1st'].squeeze().astype(np.float32)
 
 
-def return_electrode_array(conv, elect):
+def get_electrode_mp(elec_id, CONFIG):
+    return get_electrode(CONFIG, elec_id)
+
+
+def return_electrode_array(CONFIG, conv, elect):
     """Return neural data from all electrodes as a numpy object
 
     Arguments:
@@ -36,7 +50,8 @@ def return_electrode_array(conv, elect):
     elec_ids = ((conv, electrode) for electrode in elect)
     with Pool() as pool:
         ecogs = list(
-            filter(lambda x: x is not None, pool.map(get_electrode, elec_ids)))
+            filter(lambda x: x is not None,
+                   pool.map(partial(get_electrode_mp, CONFIG=CONFIG), elec_ids)))
 
     ecogs = standardize_matrix(ecogs)
     assert (ecogs.ndim == 2 and ecogs.shape[1] == len(elect))

@@ -6,7 +6,7 @@ import mat73
 import pandas as pd
 
 
-def get_electrode_ids(conversation):
+def get_electrode_ids(CONFIG, conversation):
     """[summary]
 
     Args:
@@ -15,7 +15,16 @@ def get_electrode_ids(conversation):
     Returns:
         [type]: [description]
     """
-    elec_files = glob.glob(os.path.join(conversation, 'preprocessed', '*.mat'))
+    if CONFIG['project_id'] == 'podcast':
+        elec_files = glob.glob(
+            os.path.join(conversation, 'preprocessed_all', '*.mat'))
+    elif CONFIG['project_id'] == '247':
+        elec_files = glob.glob(
+            os.path.join(conversation, 'preprocessed', '*.mat'))
+    else:
+        print('Incorrect Project ID')
+        sys.exit()
+
     elec_ids_list = sorted(
         list(
             map(lambda x: int(os.path.splitext(x)[0].split('_')[-1]),
@@ -24,7 +33,7 @@ def get_electrode_ids(conversation):
     return elec_ids_list
 
 
-def get_common_electrodes(convs):
+def get_common_electrodes(CONFIG, convs):
     """[summary]
 
     Args:
@@ -34,7 +43,7 @@ def get_common_electrodes(convs):
         [type]: [description]
     """
     all_elec_ids_list = [
-        get_electrode_ids(conversation) for conversation in convs
+        get_electrode_ids(CONFIG, conversation) for conversation in convs
     ]
     all_elec_labels_list = [
         get_electrode_labels(conversation) for conversation in convs
