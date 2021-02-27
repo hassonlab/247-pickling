@@ -81,3 +81,7 @@ concatenate-embeddings:
 					--embedding-type $(EMB_TYPE) \
 					$(HIST) \
 					--context-length $(CNXT_LEN); \
+
+# Sync results with the /projects/HASSON folder
+sync-results:
+	rsync -ah /scratch/gpfs/$(shell whoami)/247-pickling/results/* /projects/HASSON/247/results_new_infra/pickling/
