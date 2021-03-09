@@ -117,8 +117,8 @@ def word_stemming(conversation, ps):
 
 
 def shift_onsets(conversation, shift):
-    conversation['onset'] += shift
-    conversation['offset'] += shift
+    conversation['adjusted_onset'] += shift
+    conversation['adjusted_offset'] += shift
     return conversation
 
 
