@@ -14,7 +14,7 @@ import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
-from utils import main_timer
+from utils import main_timer, write_config
 
 
 def save_pickle(item, file_name):
@@ -357,13 +357,15 @@ def gen_word2vec_embeddings(args, df):
 
 def setup_environ(args):
 
-    DATA_DIR = os.path.join(os.getcwd(), 'data')
-    RESULTS_DIR = os.path.join(os.getcwd(), 'results')
+    DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
+    RESULTS_DIR = os.path.join(os.getcwd(), 'results', args.project_id)
     PKL_DIR = os.path.join(RESULTS_DIR, args.subject, 'pickles')
 
     args.device = torch.device(
         "cuda:0" if torch.cuda.is_available() else "cpu")
-    args.pickle_name = os.path.join(PKL_DIR, args.subject + '_full_labels.pkl')
+
+    labels_file = '_'.join([args.subject, args.pkl_identifier, 'labels.pkl'])
+    args.pickle_name = os.path.join(PKL_DIR, labels_file)
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)
     args.conversation_list = sorted(os.listdir(args.input_dir))
@@ -377,7 +379,9 @@ def setup_environ(args):
     # TODO: if multiple conversations are specified in input
     if args.conversation_id:
         args.output_dir = os.path.join(RESULTS_DIR, args.subject, 'embeddings',
-                                       stra)
+                                       stra, args.pkl_identifier)
+        os.makedirs(args.output_dir, exist_ok=True)
+
         output_file_name = args.conversation_list[args.conversation_id - 1]
         args.output_file = os.path.join(args.output_dir, output_file_name)
 
@@ -442,6 +446,8 @@ def parse_arguments():
     parser.add_argument('--subject', type=str, default='625')
     parser.add_argument('--history', action='store_true', default=False)
     parser.add_argument('--conversation-id', type=int, default=0)
+    parser.add_argument('--pkl-identifier', type=str, default=None)
+    parser.add_argument('--project-id', type=str, default=None)
 
     return parser.parse_args()
 

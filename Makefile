@@ -20,6 +20,10 @@ EMB_TYPE := glove50
 EMB_TYPE := bert
 EMB_TYPE := gpt2-xl
 
+PKL_IDENTIFIER := full
+PKL_IDENTIFIER := trimmed
+PKL_IDENTIFIER := binned
+
 # a very large number for MEL will extract all common...
 # ...electrodes across all conversations
 MEL := 500
@@ -64,11 +68,13 @@ download-247-pickles:
 	gsutil -m rsync -x "^(?!.*625).*" gs://247-podcast-data/247_pickles/ results/625/
 	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247_pickles/ results/676/
 
-# CMD := sbatch submit1.sh
+# CMD := sbatch submit.sh
 generate-embeddings:
 	mkdir -p logs
 	for conv_id in $(CONV_IDS); do \
 		$(CMD) code/tfsemb_main.py \
+					--project-id $(PRJCT_ID) \
+					--pkl-identifier $(PKL_IDENTIFIER) \
 					--subject $(SID) \
 					--conversation-id $$conv_id \
 					--embedding-type $(EMB_TYPE) \
