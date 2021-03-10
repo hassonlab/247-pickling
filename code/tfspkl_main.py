@@ -117,8 +117,8 @@ def word_stemming(conversation, ps):
 
 
 def shift_onsets(conversation, shift):
-    conversation['adjusted_onset'] += shift
-    conversation['adjusted_offset'] += shift
+    conversation['adjusted_onset'] = conversation['onset'] + shift
+    conversation['adjusted_offset'] = conversation['offset'] + shift
     return conversation
 
 
@@ -278,6 +278,9 @@ def main():
                             electrode_names=electrode_names)
     save_pickle(args, full_signal_dict, args.subject + '_full_signal')
 
+    # Create pickle with full stitch index
+    save_pickle(args, full_stitch_index, args.subject + '_full_stitch_index')
+
     # Create pickle with electrode maps
     electrode_map = dict(zip(electrodes, electrode_names))
     save_pickle(args, electrode_map, args.subject + '_electrode_names')
@@ -289,12 +292,19 @@ def main():
                                electrode_names=electrode_names)
     save_pickle(args, trimmed_signal_dict, args.subject + '_trimmed_signal')
 
+    # Create pickle with full stitch index
+    save_pickle(args, trimmed_stitch_index,
+                args.subject + '_trimmed_stitch_index')
+
     # Create pickle with binned signal
     binned_signal_dict = dict(binned_signal=binned_signal,
                               bin_stitch_index=bin_stitch_index,
                               electrode_ids=electrodes,
                               electrode_names=electrode_names)
     save_pickle(args, binned_signal_dict, args.subject + '_binned_signal')
+
+    # Create pickle with full stitch index
+    save_pickle(args, bin_stitch_index, args.subject + '_bin_stitch_index')
 
     # Create pickle with trimmed labels
     create_labels_pickles(args, trimmed_stitch_index, trimmed_labels,

@@ -1,23 +1,24 @@
 CMD := echo
 
+# 247 subjects
+PRJCT_ID := tfs
+SID_LIST=625 676
+
 # For 625
+SID := 625
 CONV_IDS = $(shell seq 1 54)
 
 # For 676
+SID := 676
 CONV_IDS = $(shell seq 1 79)
+
+# # podcast subjects
+PRJCT_ID := podcast
+SID_LIST=661 662 717 723 741 742 763 798
 
 EMB_TYPE := glove50
 EMB_TYPE := bert
 EMB_TYPE := gpt2-xl
-
-PRJCT_ID := podcast
-PRJCT_ID := tfs
-
-# 247 subjects
-SID_LIST=625 676
-
-# podcast subjects
-SID_LIST=661 662 717 723 741 742 763 798 
 
 # a very large number for MEL will extract all common...
 # ...electrodes across all conversations

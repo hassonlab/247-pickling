@@ -18,7 +18,7 @@ def get_electrode_ids(CONFIG, conversation):
     if CONFIG['project_id'] == 'podcast':
         elec_files = glob.glob(
             os.path.join(conversation, 'preprocessed_all', '*.mat'))
-    elif CONFIG['project_id'] == '247':
+    elif CONFIG['project_id'] == 'tfs':
         elec_files = glob.glob(
             os.path.join(conversation, 'preprocessed', '*.mat'))
     else:

@@ -20,7 +20,7 @@ def get_electrode(CONFIG, elec_id):
 
     if CONFIG['project_id'] == 'podcast':
         search_str = conversation + f'/preprocessed_all/*_{electrode}.mat'
-    elif CONFIG['project_id'] == '247':
+    elif CONFIG['project_id'] == 'tfs':
         search_str = conversation + f'/preprocessed/*_{electrode}.mat'
     else:
         print('Incorrect Project ID')

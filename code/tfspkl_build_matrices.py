@@ -91,8 +91,10 @@ def build_design_matrices(CONFIG, delimiter=','):
         all_examples.append(examples)
         all_trimmed_examples.append(trimmed_examples)
 
-        print(os.path.basename(conversation), a, len(examples), ecogs.shape[0],
-              len(trimmed_examples), mean_binned_signal.shape[0])
+        print(f'{os.path.basename(conversation): 35}, {a: 08}, \
+                {len(examples): 05}, {ecogs.shape[0]: 08}, \
+                    {len(trimmed_examples): 05}, \
+                        {mean_binned_signal.shape[0]: 06}')
 
     full_signal = np.concatenate(full_signal)
     full_stitch_index = np.cumsum(full_stitch_index).tolist()
