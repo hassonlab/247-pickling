@@ -12,8 +12,16 @@ def create_directory_paths(args):
 
     os.makedirs(PKL_DIR, exist_ok=True)
 
-    DIR_DICT = dict(CONV_DIRS=CONV_DIRS, SAVE_DIR=SAVE_DIR, PKL_DIR=PKL_DIR)
+    DIR_DICT = dict(CONV_DIRS=CONV_DIRS,
+                    SAVE_DIR=SAVE_DIR,
+                    PKL_DIR=PKL_DIR,
+                    DATA_DIR=DATA_DIR)
     vars(args).update(DIR_DICT)
+
+    if args.sig_elec_file:
+        sig_file_path, sig_file_name = os.path.split(args.sig_elec_file)
+        if not sig_file_path:
+            args.sig_elec_file = os.path.join(DATA_DIR, sig_file_name)
 
     return
 

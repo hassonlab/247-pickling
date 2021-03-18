@@ -133,12 +133,15 @@ def add_conversation_id(conversation, conv_id):
     return conversation
 
 
-def add_conversation_name(conversation, name):
-    conversation['conversation_name'] = os.path.basename(name)
+def add_conversation_name(args, conversation, name):
+    if args.project_id == 'tfs':
+        conversation['conversation_name'] = os.path.basename(name)
+    else:
+        conversation['conversation_name'] = None
     return conversation
 
 
-def process_labels(trimmed_stitch_index, labels, conversations):
+def process_labels(args, trimmed_stitch_index, labels, conversations):
     """Adjust label onsets to account for stitched signal length.
     Also peform stemming on the labels.
 
@@ -161,7 +164,7 @@ def process_labels(trimmed_stitch_index, labels, conversations):
         sub_list = create_sentence(sub_list)
         sub_list = shift_onsets(sub_list, start)
         sub_list = add_conversation_id(sub_list, conv_id)
-        sub_list = add_conversation_name(sub_list, conversation_name)
+        sub_list = add_conversation_name(args, sub_list, conversation_name)
         sub_list, len_to_add = add_sentence_index(sub_list, len_to_add)
 
         new_labels.append(sub_list)
@@ -238,7 +241,7 @@ def create_labels_pickles(args,
                           convo_labels_size,
                           convs,
                           label_str=None):
-    labels_df = process_labels(stitch_index, labels, convs)
+    labels_df = process_labels(args, stitch_index, labels, convs)
     labels_df = create_production_flag(labels_df)
     labels_df = inclass_word_freq(labels_df)
     labels_df = total_word_freq(labels_df)
@@ -268,28 +271,32 @@ def main():
     (full_signal, full_stitch_index, trimmed_signal, trimmed_stitch_index,
      binned_signal, bin_stitch_index, full_labels, trimmed_labels,
      convo_full_examples_size, convo_trimmed_examples_size, electrodes,
-     electrode_names, conversations) = build_design_matrices(vars(args),
-                                                             delimiter=" ")
+     electrode_names, conversations,
+     subject_id) = build_design_matrices(vars(args), delimiter=" ")
 
     # Create pickle with full signal
     full_signal_dict = dict(full_signal=full_signal,
                             full_stitch_index=full_stitch_index,
                             electrode_ids=electrodes,
-                            electrode_names=electrode_names)
+                            electrode_names=electrode_names,
+                            subject=subject_id)
     save_pickle(args, full_signal_dict, args.subject + '_full_signal')
 
     # Create pickle with full stitch index
     save_pickle(args, full_stitch_index, args.subject + '_full_stitch_index')
 
     # Create pickle with electrode maps
-    electrode_map = dict(zip(electrodes, electrode_names))
+    electrode_map = dict(subject=subject_id,
+                         electrode_id=electrodes,
+                         electrode_name=electrode_names)
     save_pickle(args, electrode_map, args.subject + '_electrode_names')
 
     # Create pickle with trimmed signal
     trimmed_signal_dict = dict(trimmed_signal=trimmed_signal,
                                trimmed_stitch_index=trimmed_stitch_index,
                                electrode_ids=electrodes,
-                               electrode_names=electrode_names)
+                               electrode_names=electrode_names,
+                               subject=subject_id)
     save_pickle(args, trimmed_signal_dict, args.subject + '_trimmed_signal')
 
     # Create pickle with full stitch index
@@ -300,7 +307,8 @@ def main():
     binned_signal_dict = dict(binned_signal=binned_signal,
                               bin_stitch_index=bin_stitch_index,
                               electrode_ids=electrodes,
-                              electrode_names=electrode_names)
+                              electrode_names=electrode_names,
+                              subject=subject_id)
     save_pickle(args, binned_signal_dict, args.subject + '_binned_signal')
 
     # Create pickle with full stitch index

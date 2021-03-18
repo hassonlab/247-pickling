@@ -2,9 +2,17 @@ import glob
 import os
 
 import numpy as np
+import pandas as pd
 from electrode_utils import return_electrode_array
 from tfspkl_utils import (extract_conversation_contents, get_common_electrodes,
                           get_conversation_list)
+
+
+def function1(x):
+    split_list = x.split('conversation1')
+    electrode = split_list[-1].strip('_')
+    subject = int(split_list[0][2:5])
+    return (subject, electrode)
 
 
 def build_design_matrices(CONFIG, delimiter=','):
@@ -21,11 +29,82 @@ def build_design_matrices(CONFIG, delimiter=','):
         signals: neural activity data
         labels: words/n-grams/sentences
     """
+    if CONFIG['sig_elec_file']:
+        try:
+            bobbi = pd.read_csv(CONFIG['sig_elec_file'],
+                                header=None)[0].tolist()
+            sigelec_list = [function1(item) for item in bobbi]
+            df = pd.DataFrame(sigelec_list, columns=['subject', 'electrode'])
+        except:
+            df = pd.read_csv(CONFIG['sig_elec_file'],
+                             columns=['subject', 'electrode'])
+        else:
+            electrodes_dict = df.groupby('subject')['electrode'].apply(
+                list).to_dict()
+
+        full_signal = []
+        trimmed_signal = []
+        binned_signal = []
+        electrode_names = []
+        electrodes = []
+        subject_id = []
+        for subject, electrode_labels in electrodes_dict.items():
+            (full_signal_part, full_stitch_index, trimmed_signal_part,
+             trimmed_stitch_index, binned_signal_part, bin_stitch_index,
+             all_examples, all_trimmed_examples, convo_all_examples_size,
+             convo_trimmed_examples_size, electrodes_part,
+             electrode_names_part, conversations,
+             subject_id_part) = process_data_for_pickles(
+                 CONFIG, subject, electrode_labels)
+
+            full_signal.append(full_signal_part)
+            trimmed_signal.append(trimmed_signal_part)
+            binned_signal.append(binned_signal_part)
+
+            electrode_names.extend(electrode_names_part)
+            electrodes.extend(electrodes_part)
+            subject_id.extend(subject_id_part)
+
+        conversations = [None]
+
+        full_signal = np.concatenate(full_signal, axis=1)
+        trimmed_signal = np.concatenate(trimmed_signal, axis=1)
+        binned_signal = np.concatenate(binned_signal, axis=1)
+
+    else:
+        (full_signal, full_stitch_index, trimmed_signal, trimmed_stitch_index,
+         binned_signal, bin_stitch_index, all_examples, all_trimmed_examples,
+         convo_all_examples_size, convo_trimmed_examples_size, electrodes,
+         electrode_names, conversations,
+         subject_id) = process_data_for_pickles(CONFIG)
+
+    return (full_signal, full_stitch_index, trimmed_signal,
+            trimmed_stitch_index, binned_signal, bin_stitch_index,
+            all_examples, all_trimmed_examples, convo_all_examples_size,
+            convo_trimmed_examples_size, electrodes, electrode_names,
+            conversations, subject_id)
+
+
+def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
     exclude_words = CONFIG["exclude_words"]
     suffix = '/misc/*trimmed.txt'
 
-    conversations = get_conversation_list(CONFIG)
+    conversations = get_conversation_list(CONFIG, subject)
     electrodes, electrode_names = get_common_electrodes(CONFIG, conversations)
+
+    if electrode_labels:
+        idx = [
+            i for i, e in enumerate(electrode_names) if e in electrode_labels
+        ]
+        electrode_names = [electrode_names[i] for i in idx]
+        electrodes = [electrodes[i] for i in idx]
+
+        assert set(electrode_names) == set(electrode_labels)
+
+    if subject:
+        subject_id = [subject for i in electrodes]
+    else:
+        subject_id = [CONFIG["subject"] for i in electrodes]
 
     full_signal, trimmed_signal, binned_signal = [], [], []
     full_stitch_index, trimmed_stitch_index, bin_stitch_index = [], [], []
@@ -91,10 +170,8 @@ def build_design_matrices(CONFIG, delimiter=','):
         all_examples.append(examples)
         all_trimmed_examples.append(trimmed_examples)
 
-        print(f'{os.path.basename(conversation): 35}, {a: 08}, \
-                {len(examples): 05}, {ecogs.shape[0]: 08}, \
-                    {len(trimmed_examples): 05}, \
-                        {mean_binned_signal.shape[0]: 06}')
+        print(os.path.basename(conversation), a, len(examples), ecogs.shape[0],
+              len(trimmed_examples), mean_binned_signal.shape[0])
 
     full_signal = np.concatenate(full_signal)
     full_stitch_index = np.cumsum(full_stitch_index).tolist()
@@ -109,4 +186,4 @@ def build_design_matrices(CONFIG, delimiter=','):
             trimmed_stitch_index, binned_signal, bin_stitch_index,
             all_examples, all_trimmed_examples, convo_all_examples_size,
             convo_trimmed_examples_size, electrodes, electrode_names,
-            conversations)
+            conversations, subject_id)

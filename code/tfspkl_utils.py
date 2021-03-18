@@ -59,7 +59,7 @@ def get_common_electrodes(CONFIG, convs):
     return common_electrodes, common_labels
 
 
-def get_conversation_list(CONFIG):
+def get_conversation_list(CONFIG, subject=None):
     """Returns list of conversations
 
     Arguments:
@@ -69,9 +69,15 @@ def get_conversation_list(CONFIG):
     Returns:
         list -- List of tuples (directory, file, idx, common_electrode_list)
     """
+    if CONFIG['subject'] != '777':
+        conversations = sorted(
+            glob.glob(os.path.join(CONFIG["CONV_DIRS"], '*conversation*')))
 
-    conversations = sorted(
-        glob.glob(os.path.join(CONFIG["CONV_DIRS"], '*conversation*')))
+        return conversations
+    else:
+        CONV_DIRS = CONFIG["DATA_DIR"] + '/%s/' % str(subject)
+        conversations = sorted(
+            glob.glob(os.path.join(CONV_DIRS, '*conversation*')))
 
     return conversations
 
