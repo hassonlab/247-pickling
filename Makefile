@@ -2,7 +2,7 @@ CMD := echo
 
 # 247 subjects
 PRJCT_ID := tfs
-SID_LIST=625 676
+SID_LIST=625
 
 # For 625
 SID := 625
@@ -12,9 +12,10 @@ CONV_IDS = $(shell seq 1 54)
 SID := 676
 CONV_IDS = $(shell seq 1 79)
 
-# # podcast subjects
+# # # podcast subjects
 PRJCT_ID := podcast
 SID_LIST=661 662 717 723 741 742 763 798
+SID_LIST=777
 
 EMB_TYPE := glove50
 EMB_TYPE := bert
@@ -58,7 +59,15 @@ create-pickle:
 					--vocab-min-freq $(MINF); \
 		done
 
-upload-pickle: create-pickle
+create-sig-pickle:
+	mkdir -p logs
+	python code/tfspkl_main.py \
+			--project-id $(PRJCT_ID) \
+			--sig-elec-file /scratch/gpfs/hgazula/phase-5000-sig-elec-glove50d-perElec-FDR-01_newVer_1000perm-LH.csv \
+			--max-electrodes $(MEL) \
+			--vocab-min-freq $(MINF);
+
+upload-pickle:
 	for sid in $(SID_LIST); do \
 		gsutil -m cp -r results/$(PRJCT_ID)/$$sid/pickles/*.pkl gs://247-podcast-data/$(PRJCT_ID)_pickles/$$sid; \
 	done
@@ -68,7 +77,7 @@ download-247-pickles:
 	gsutil -m rsync -x "^(?!.*625).*" gs://247-podcast-data/247_pickles/ results/625/
 	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247_pickles/ results/676/
 
-# CMD := sbatch submit.sh
+CMD := sbatch submit.sh
 generate-embeddings:
 	mkdir -p logs
 	for conv_id in $(CONV_IDS); do \
@@ -84,10 +93,12 @@ generate-embeddings:
 
 concatenate-embeddings:
 	python code/tfsemb_concat.py \
-					--subject $(SID) \
-					--embedding-type $(EMB_TYPE) \
-					$(HIST) \
-					--context-length $(CNXT_LEN); \
+				--project-id $(PRJCT_ID) \
+				--pkl-identifier $(PKL_IDENTIFIER) \
+				--subject $(SID) \
+				--embedding-type $(EMB_TYPE) \
+				$(HIST) \
+				--context-length $(CNXT_LEN); \
 
 # Sync results with the /projects/HASSON folder
 sync-results:
