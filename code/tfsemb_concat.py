@@ -53,6 +53,8 @@ def parse_arguments():
     parser.add_argument('--subject', type=str, default='625')
     parser.add_argument('--history', action='store_true', default=False)
     parser.add_argument('--conversation-id', type=int, default=0)
+    parser.add_argument('--pkl-identifier', type=str, default=None)
+    parser.add_argument('--project-id', type=str, default=None)
 
     return parser.parse_args()
 
@@ -68,8 +70,9 @@ def main():
         num_convs = 1
 
     stra = '_'.join([args.embedding_type, 'cnxt', str(args.context_length)])
-    args.output_dir = os.path.join(os.getcwd(), 'results', args.subject,
-                                   'embeddings', stra)
+    args.output_dir = os.path.join(os.getcwd(), 'results', args.project_id,
+                                   args.subject, 'embeddings', stra,
+                                   args.pkl_identifier)
 
     conversation_pickles = sorted(os.listdir(args.output_dir))
     assert len(conversation_pickles) == num_convs, 'Bad conversation size'
@@ -79,8 +82,10 @@ def main():
         conv_pkl = os.path.join(args.output_dir, conversation)
         all_df.append(load_pickle(conv_pkl))
 
-    emb_out_dir = os.path.join(os.getcwd(), 'results', args.subject, 'pickles')
-    emb_out_file = '_'.join([args.subject, stra, 'embeddings'])
+    emb_out_dir = os.path.join(os.getcwd(), 'results', args.project_id,
+                               args.subject, 'pickles')
+    emb_out_file = '_'.join(
+        [args.subject, args.pkl_identifier, stra, 'embeddings'])
 
     all_df = pd.concat(all_df, ignore_index=True)
     all_df = all_df.to_dict('records')
