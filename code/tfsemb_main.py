@@ -173,7 +173,7 @@ def process_extracted_embeddings(concat_output):
 
 def process_extracted_logits(args, concat_logits, sentence_token_ids):
     """Get the probability for the _correct_ word"""
-    #(batch_size, max_len, vocab_size)
+    # (batch_size, max_len, vocab_size)
 
     # concatenate all batches
     prediction_scores = torch.cat(concat_logits, axis=0)
@@ -187,6 +187,10 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
         true_y = torch.cat([sti[0, 1:], sti[1:, -1]]).unsqueeze(-1)
 
     prediction_probabilities = F.softmax(prediction_scores, dim=1)
+
+    logp = np.log2(prediction_probabilities)
+    entropy = [None] + torch.sum(-prediction_probabilities * logp,
+                                 dim=1).tolist()
 
     top1_probabilities, top1_probabilities_idx = prediction_probabilities.max(
         dim=1)
@@ -206,7 +210,7 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
         1, true_y).squeeze(-1).tolist()
     #TODO: probabilities of all words
 
-    return top1_words, top1_probabilities, true_y_probability
+    return top1_words, top1_probabilities, true_y_probability, entropy
 
 
 def extract_select_vectors(batch_idx, array):
@@ -284,7 +288,7 @@ def generate_embeddings_with_context(args, df):
         assert embeddings.shape[0] == len(token_list)
         final_embeddings.append(embeddings)
 
-        top1_word, top1_prob, true_y_prob = process_extracted_logits(
+        top1_word, top1_prob, true_y_prob, entropy = process_extracted_logits(
             args, logits, model_input)
         final_top1_word.extend(top1_word)
         final_top1_prob.extend(top1_prob)
@@ -295,6 +299,8 @@ def generate_embeddings_with_context(args, df):
     df['top1_pred'] = final_top1_word
     df['top1_pred_prob'] = final_top1_prob
     df['true_pred_prob'] = final_true_y_prob
+    df['surprise'] = -df['true_pred_prob'] * np.log2(df['true_pred_prob'])
+    df['entropy'] = entropy
 
     save_pickle(df.to_dict('records'), args.output_file)
 
