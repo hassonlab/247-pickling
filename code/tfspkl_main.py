@@ -45,14 +45,17 @@ def get_sentence_length(section):
     return last_word_offset - first_word_onset
 
 
-def append_sentence(section):
+def append_sentence(args, section):
     """Join the words to form a sentence and append
 
     Args:
         section (DataFrame): [description]
     """
-    sentence = ' '.join(section['word'])
-    section['sentence'] = sentence
+    if args.project_id == 'tfs':
+        sentence = ' '.join(section['word'])
+        section['sentence'] = sentence
+    else:
+        section['sentence'] = None
     return section
 
 
@@ -85,19 +88,19 @@ def split_convo_to_sections(conversation):
     return sentence_df
 
 
-def process_sections(section_list):
+def process_sections(args, section_list):
     # For each sentence df split
     my_labels = []
     for idx, section in enumerate(section_list):
         section = append_sentence_length(section)
-        section = append_sentence(section)
+        section = append_sentence(args, section)
         section = append_num_words(section)
         section = append_sentence_idx(section, idx)
         my_labels.append(section)
     return pd.concat(my_labels, ignore_index=True)
 
 
-def create_sentence(conversation):
+def create_sentence(args, conversation):
     """[summary]
 
     Args:
@@ -107,7 +110,7 @@ def create_sentence(conversation):
         [type]: [description]
     """
     convo_sections = split_convo_to_sections(conversation)
-    conversation = process_sections(convo_sections)
+    conversation = process_sections(args, convo_sections)
     return conversation
 
 
@@ -161,7 +164,7 @@ def process_labels(args, trimmed_stitch_index, labels, conversations):
     for conv_id, (conversation_name, start, sub_list) in enumerate(
             zip(conversations, trimmed_stitch_index, labels), 1):
 
-        sub_list = create_sentence(sub_list)
+        sub_list = create_sentence(args, sub_list)
         sub_list = shift_onsets(sub_list, start)
         sub_list = add_conversation_id(sub_list, conv_id)
         sub_list = add_conversation_name(args, sub_list, conversation_name)
