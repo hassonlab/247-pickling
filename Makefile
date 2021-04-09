@@ -5,9 +5,9 @@ Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 
 # NOTE: link data from tigressdata before running any scripts \
 (Recommend running this before running every target)
-link-data-vars: PRJCT_ID := tfs # {tfs | podcast}
+link-data: PRJCT_ID := tfs # {tfs | podcast}
 
-link-data: link-data-vars
+link-data:
 ifeq ($(PRJCT_ID), podcast)
 	$(eval DIR_KEY := podcast-data)
 else
@@ -25,9 +25,9 @@ endif
 
 
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
-%-pickle: CMD := echo 		# {echo | python}
-%-pickle: PRJCT_ID := tfs 	# {tfs | podcast}
-%-pickle: SID_LIST=676 		# {625 676 | 661 662 717 723 741 742 763 798 | 777}
+%-pickle: CMD := python 		# {echo | python}
+%-pickle: PRJCT_ID := podcast 	# {tfs | podcast}
+%-pickle: SID_LIST=743 		# {625 676 | 661 662 717 723 741 742 743 763 798 | 777}
 %-pickle: MEL := 500 		# Setting a large number will extract all common \
 									electrodes across all conversations
 %-pickle: MINF := 0
@@ -78,7 +78,7 @@ download-247-pickles:
 and hence only generate once using subject: 661
 
 # generates embeddings (for each conversation separately)
-generate-embeddings: generate-embeddings-variables
+generate-embeddings:
 	mkdir -p logs
 	for conv_id in $(CONV_IDS); do \
 		$(CMD) code/tfsemb_main.py \
@@ -92,7 +92,7 @@ generate-embeddings: generate-embeddings-variables
 	done
 
 # concatenate embeddings from all conversations
-concatenate-embeddings: generate-embeddings-vars
+concatenate-embeddings:
 	python code/tfsemb_concat.py \
 				--project-id $(PRJCT_ID) \
 				--pkl-identifier $(PKL_IDENTIFIER) \
@@ -100,6 +100,12 @@ concatenate-embeddings: generate-embeddings-vars
 				--embedding-type $(EMB_TYPE) \
 				$(HIST) \
 				--context-length $(CNXT_LEN); \
+
+# Podcast: copy embeddings to other subjects as well
+copy-embeddings:
+	for SID_LIST=662 717 723 741 742 763 798 | 777}; do \
+		rsync /scratch/gpfs/$(shell whoami)/247-pickling/results/podcast/661/
+	done
 
 # Sync results with the /projects/HASSON folder
 sync-results:
