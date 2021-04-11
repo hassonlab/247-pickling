@@ -5,7 +5,7 @@ Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 
 # NOTE: link data from tigressdata before running any scripts \
 (Recommend running this before running every target)
-link-data: PRJCT_ID := tfs
+PRJCT_ID := tfs
 # {tfs | podcast}
 
 link-data:
