@@ -5,7 +5,7 @@ Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 
 # NOTE: link data from tigressdata before running any scripts \
 (Recommend running this before running every target)
-PRJCT_ID := tfs
+PRJCT_ID := podcast
 # {tfs | podcast}
 
 link-data:
@@ -24,6 +24,12 @@ endif
 	# create symlinks from original data store
 	ln -sf /projects/HASSON/247/data/$(DIR_KEY)/* data/$(PRJCT_ID)/
 
+ifeq ($(PRJCT_ID), podcast)
+	cp /projects/HASSON/247/data/podcast/podcast-transcription.txt data/$(PRJCT_ID)/
+	cp /projects/HASSON/247/data/podcast/podcast-datum-cloze.csv data/$(PRJCT_ID)/
+else
+	$(eval DIR_KEY := conversations-car)
+endif
 
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
 %-pickle: CMD := python 		# {echo | python}
