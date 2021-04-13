@@ -14,7 +14,7 @@ import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
-from utils import main_timer
+from utils import lcs, main_timer
 
 
 def save_pickle(item, file_name):
@@ -95,16 +95,13 @@ def tokenize_and_explode(args, df):
     Returns:
         DataFrame: a new dataframe object with the words tokenized
     """
-
     df = add_glove_embeddings(df, dim=50)
 
     df['token'] = df.word.apply(args.tokenizer.tokenize)
     df = df.explode('token', ignore_index=True)
-
     df = remove_punctuation(df)
     df = convert_token_to_idx(df, args.tokenizer)
     df = check_token_is_root(args, df)
-
     return df
 
 
@@ -269,7 +266,6 @@ def make_dataloader_from_input(windows):
 
 def generate_embeddings_with_context(args, df):
     df = tokenize_and_explode(args, df)
-
     if args.embedding_type == 'gpt2-xl':
         args.tokenizer.pad_token = args.tokenizer.eos_token
 
@@ -280,7 +276,6 @@ def generate_embeddings_with_context(args, df):
     for conversation in df.conversation_id.unique():
         token_list = get_conversation_tokens(df, conversation)
         model_input = make_input_from_tokens(args, token_list)
-
         input_dl = make_dataloader_from_input(model_input)
         embeddings, logits = model_forward_pass(args, input_dl)
 
@@ -315,7 +310,7 @@ def generate_embeddings(args, df):
     model = model.to(device)
     model.eval()
 
-    df = tokenize_and_explode(args, df, tokenizer)
+    df = tokenize_and_explode(args, df)
     unique_sentence_list = get_unique_sentences(df)
 
     if args.embedding_type == 'gpt2-xl':
@@ -464,20 +459,57 @@ def main():
     select_tokenizer_and_model(args)
     setup_environ(args)
 
-    utterance_df = load_pickle(args)
-    utterance_df = select_conversation(args, utterance_df)
+    if args.project_id == 'tfs':
+        utterance_df = load_pickle(args)
+        utterance_df = select_conversation(args, utterance_df)
+    elif args.project_id == 'podcast':
+        DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
+
+        story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
+        cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
+
+        # Read all words and tokenize them
+        with open(story_file, 'r') as fp:
+            story_lines = fp.readlines()
+
+        story_words = [line.split() for line in story_lines]
+        word_list = [item for sublist in story_words for item in sublist]
+
+        utterance_df = pd.DataFrame(word_list, columns=['word'])
+        utterance_df['conversation_id'] = 1
+    else:
+        raise Exception('Invalid Project ID')
 
     if args.history:
         if args.embedding_type == 'gpt2-xl':
-            generate_embeddings_with_context(args, utterance_df)
+            df = generate_embeddings_with_context(args, utterance_df)
         else:
             print('TODO: Generate embeddings for this model with context')
-        return
-
-    if args.embedding_type == 'glove50':
-        gen_word2vec_embeddings(args, utterance_df)
     else:
-        generate_embeddings(args, utterance_df)
+        if args.embedding_type == 'glove50':
+            gen_word2vec_embeddings(args, utterance_df)
+        else:
+            generate_embeddings(args, utterance_df)
+
+    if args.project_id == 'podcast':
+        df['token2word'] = df['token'].apply(
+            args.tokenizer.convert_tokens_to_string).str.strip()
+        
+        # Align the two lists
+        cloze_df = pd.read_csv(cloze_file, sep=',')
+        words = list(map(str.lower, cloze_df.word.tolist()))
+
+        model_tokens = df['token2word'].tolist()
+
+        mask1, mask2 = lcs(words, model_tokens)
+
+        cloze_df = cloze_df.iloc[mask1, :].reset_index(drop=True)
+        df = df.iloc[mask2, :].reset_index(drop=True)
+
+        df_final = pd.concat([df, cloze_df], axis=1)
+        df_final = df_final.loc[:, ~df_final.columns.duplicated()]
+        
+        save_pickle(df_final.to_dict('records'), args.output_file)
 
     return
 
