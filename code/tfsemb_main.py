@@ -99,7 +99,6 @@ def tokenize_and_explode(args, df):
 
     df['token'] = df.word.apply(args.tokenizer.tokenize)
     df = df.explode('token', ignore_index=True)
-    df = remove_punctuation(df)
     df = convert_token_to_idx(df, args.tokenizer)
     df = check_token_is_root(args, df)
     return df
@@ -297,7 +296,7 @@ def generate_embeddings_with_context(args, df):
     df['surprise'] = -df['true_pred_prob'] * np.log2(df['true_pred_prob'])
     df['entropy'] = entropy
 
-    save_pickle(df.to_dict('records'), args.output_file)
+    save_pickle(df.to_dict('records'), args.output_file_prefinal)
 
     return df
 
@@ -386,6 +385,8 @@ def setup_environ(args):
         output_file_name = args.conversation_list[args.conversation_id - 1]
         args.output_file = os.path.join(args.output_dir, output_file_name)
 
+        args.output_file_prefinal = os.path.join(args.output_dir, output_file_name + '_prefinal')
+
     return
 
 
@@ -453,6 +454,35 @@ def parse_arguments():
     return parser.parse_args()
 
 
+def return_story_as_df(args):
+    """Tokenize the podcast transcript and return as dataframe
+
+    Args:
+        args ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """    
+    DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
+    story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
+
+    # Read all words and tokenize them
+    with open(story_file, 'r') as fp:
+        data = fp.readlines()
+
+        data = [item.split(' ') for item in data]
+        data = [
+            item[:-2] + [' '.join(item[-2:])] if item[-1] == '\n' else item
+            for item in data
+        ]
+        data = [item for sublist in data for item in sublist]
+
+    df = pd.DataFrame(data, columns=['word'])
+    df['conversation_id'] = 1
+
+    return df
+
+
 @main_timer
 def main():
     args = parse_arguments()
@@ -463,20 +493,7 @@ def main():
         utterance_df = load_pickle(args)
         utterance_df = select_conversation(args, utterance_df)
     elif args.project_id == 'podcast':
-        DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-
-        story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
-        cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
-
-        # Read all words and tokenize them
-        with open(story_file, 'r') as fp:
-            story_lines = fp.readlines()
-
-        story_words = [line.split() for line in story_lines]
-        word_list = [item for sublist in story_words for item in sublist]
-
-        utterance_df = pd.DataFrame(word_list, columns=['word'])
-        utterance_df['conversation_id'] = 1
+        utterance_df = return_story_as_df(args)
     else:
         raise Exception('Invalid Project ID')
 
@@ -493,8 +510,11 @@ def main():
 
     if args.project_id == 'podcast':
         df['token2word'] = df['token'].apply(
-            args.tokenizer.convert_tokens_to_string).str.strip()
-        
+            args.tokenizer.convert_tokens_to_string).str.strip().str.lower()
+
+        DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
+        cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
+
         # Align the two lists
         cloze_df = pd.read_csv(cloze_file, sep=',')
         words = list(map(str.lower, cloze_df.word.tolist()))
@@ -508,7 +528,7 @@ def main():
 
         df_final = pd.concat([df, cloze_df], axis=1)
         df_final = df_final.loc[:, ~df_final.columns.duplicated()]
-        
+
         save_pickle(df_final.to_dict('records'), args.output_file)
 
     return
