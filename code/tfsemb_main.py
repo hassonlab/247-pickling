@@ -476,7 +476,7 @@ def return_story_as_df(args):
         ]
         data = [item for sublist in data for item in sublist]
 
-    df = pd.DataFrame(data, columns=['word'])[:100]
+    df = pd.DataFrame(data, columns=['word'])
     df['conversation_id'] = 1
 
     return df
@@ -512,7 +512,7 @@ def main():
         cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
 
         # Align the two lists
-        cloze_df = pd.read_csv(cloze_file, sep=',')[:100]
+        cloze_df = pd.read_csv(cloze_file, sep=',')
         words = list(map(str.lower, cloze_df.word.tolist()))
 
         model_tokens = df['token2word'].tolist()
