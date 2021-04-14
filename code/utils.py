@@ -3,6 +3,8 @@ from datetime import datetime
 import numpy as np
 import tqdm
 
+from sklearn.model_selection import KFold, StratifiedKFold
+
 
 def main_timer(func):
     def function_wrapper():
@@ -49,3 +51,44 @@ def lcs(x, y):
             j -= 1
 
     return mask1[::-1], mask2[::-1]
+
+
+def stratify_split(df, num_folds, split_str=None):
+    # Extract only test folds
+    if split_str is None:
+        skf = KFold(n_splits=num_folds, shuffle=True, random_state=0)
+    elif split_str == 'stratify':
+        skf = StratifiedKFold(n_splits=num_folds, shuffle=True, random_state=0)
+    else:
+        raise Exception('wrong string')
+
+    folds = [t[1] for t in skf.split(df, df.word)]
+    return folds
+
+
+def create_folds(df, num_folds, split_str=None):
+    """create new columns in the df with the folds labeled
+
+    Args:
+        args (namespace): namespace object with input arguments
+        df (DataFrame): labels
+    """
+    fold_column_names = ['fold' + str(i) for i in range(5)]
+    folds = stratify_split(df, num_folds, split_str=split_str)
+
+    # Go through each fold, and split
+    for i, fold_col in enumerate(fold_column_names):
+        # Shift the number of folds for this iteration
+        # [0 1 2 3 4] -> [1 2 3 4 0] -> [2 3 4 0 1]
+        #                       ^ dev fold
+        #                         ^ test fold
+        #                 | - | <- train folds
+
+        folds_ixs = np.roll(folds, i)
+        *_, dev_ixs, test_ixs = folds_ixs
+
+        df[fold_col] = 'train'
+        df.loc[dev_ixs, fold_col] = 'dev'
+        df.loc[test_ixs, fold_col] = 'test'
+
+    return df

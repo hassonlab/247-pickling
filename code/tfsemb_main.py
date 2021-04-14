@@ -14,7 +14,7 @@ import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
-from utils import lcs, main_timer
+from utils import create_folds, lcs, main_timer
 
 
 def save_pickle(item, file_name):
@@ -540,6 +540,7 @@ def main():
 
     if args.project_id == 'podcast':
         df = align_podcast_tokens(args, df)
+        df = create_folds(args, df)
 
     save_pickle(df.to_dict('records'), args.output_file)
 
