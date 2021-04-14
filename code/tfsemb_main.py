@@ -453,14 +453,15 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def return_story_as_df(args):
+def tokenize_podcast_transcript(args):
     """Tokenize the podcast transcript and return as dataframe
 
     Args:
-        args ([type]): [description]
+        args (Namespace): namespace object containing project parameters
+                            (command line arguments and others)
 
     Returns:
-        [type]: [description]
+        DataFrame: containing tokenized transcript
     """
     DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
     story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
@@ -482,6 +483,36 @@ def return_story_as_df(args):
     return df
 
 
+def align_podcast_tokens(args, df):
+    """Align the embeddings tokens with datum (containing onset/offset)
+
+    Args:
+        args (Namespace): namespace object containing project parameters
+        df (DataFrame): embeddings dataframe
+
+    Returns:
+        df (DataFrame): aligned/filtered dataframe (goes into encoding)
+    """
+    DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
+    cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
+
+    cloze_df = pd.read_csv(cloze_file, sep=',')
+    words = list(map(str.lower, cloze_df.word.tolist()))
+
+    model_tokens = df['token2word'].tolist()
+
+    # Align the two lists
+    mask1, mask2 = lcs(words, model_tokens)
+
+    cloze_df = cloze_df.iloc[mask1, :].reset_index(drop=True)
+    df = df.iloc[mask2, :].reset_index(drop=True)
+
+    df_final = pd.concat([df, cloze_df], axis=1)
+    df = df_final.loc[:, ~df_final.columns.duplicated()]
+
+    return df
+
+
 @main_timer
 def main():
     args = parse_arguments()
@@ -492,7 +523,7 @@ def main():
         utterance_df = load_pickle(args)
         utterance_df = select_conversation(args, utterance_df)
     elif args.project_id == 'podcast':
-        utterance_df = return_story_as_df(args)
+        utterance_df = tokenize_podcast_transcript(args)
     else:
         raise Exception('Invalid Project ID')
 
@@ -508,22 +539,7 @@ def main():
             df = generate_embeddings(args, utterance_df)
 
     if args.project_id == 'podcast':
-        DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-        cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
-
-        # Align the two lists
-        cloze_df = pd.read_csv(cloze_file, sep=',')
-        words = list(map(str.lower, cloze_df.word.tolist()))
-
-        model_tokens = df['token2word'].tolist()
-
-        mask1, mask2 = lcs(words, model_tokens)
-
-        cloze_df = cloze_df.iloc[mask1, :].reset_index(drop=True)
-        df = df.iloc[mask2, :].reset_index(drop=True)
-
-        df_final = pd.concat([df, cloze_df], axis=1)
-        df = df_final.loc[:, ~df_final.columns.duplicated()]
+        df = align_podcast_tokens(args, df)
 
     save_pickle(df.to_dict('records'), args.output_file)
 
