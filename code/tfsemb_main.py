@@ -56,7 +56,7 @@ def load_pickle(args):
 def add_glove_embeddings(df, dim=None):
     if dim == 50:
         glove = api.load('glove-wiki-gigaword-50')
-        df['glove50_embeddings'] = df['word'].apply(
+        df['glove50_embeddings'] = df['token2word'].apply(
             lambda x: get_vector(x, glove))
     else:
         raise Exception("Incorrect glove dimension")
@@ -95,12 +95,14 @@ def tokenize_and_explode(args, df):
     Returns:
         DataFrame: a new dataframe object with the words tokenized
     """
-    df = add_glove_embeddings(df, dim=50)
-
     df['token'] = df.word.apply(args.tokenizer.tokenize)
     df = df.explode('token', ignore_index=True)
+    df['token2word'] = df['token'].apply(
+        args.tokenizer.convert_tokens_to_string).str.strip().str.lower()
     df = convert_token_to_idx(df, args.tokenizer)
     df = check_token_is_root(args, df)
+    df = add_glove_embeddings(df, dim=50)
+
     return df
 
 
@@ -296,8 +298,6 @@ def generate_embeddings_with_context(args, df):
     df['surprise'] = -df['true_pred_prob'] * np.log2(df['true_pred_prob'])
     df['entropy'] = entropy
 
-    save_pickle(df.to_dict('records'), args.output_file_prefinal)
-
     return df
 
 
@@ -336,9 +336,7 @@ def generate_embeddings(args, df):
     embeddings = np.concatenate(concat_output, axis=0)
     emb_df = map_embeddings_to_tokens(args, df, embeddings)
 
-    save_pickle(emb_df.to_dict('records'), args.output_file)
-
-    return
+    return emb_df
 
 
 def get_vector(x, glove):
@@ -348,11 +346,11 @@ def get_vector(x, glove):
         return None
 
 
-def gen_word2vec_embeddings(args, df):
+def generate_glove_embeddings(args, df):
     glove = api.load('glove-wiki-gigaword-50')
     df['embeddings'] = df['word'].apply(lambda x: get_vector(x, glove))
-    save_pickle(df.to_dict('records'), args.output_file)
-    return
+
+    return df
 
 
 def setup_environ(args):
@@ -385,7 +383,8 @@ def setup_environ(args):
         output_file_name = args.conversation_list[args.conversation_id - 1]
         args.output_file = os.path.join(args.output_dir, output_file_name)
 
-        args.output_file_prefinal = os.path.join(args.output_dir, output_file_name + '_prefinal')
+        args.output_file_prefinal = os.path.join(
+            args.output_dir, output_file_name + '_prefinal')
 
     return
 
@@ -462,7 +461,7 @@ def return_story_as_df(args):
 
     Returns:
         [type]: [description]
-    """    
+    """
     DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
     story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
 
@@ -477,7 +476,7 @@ def return_story_as_df(args):
         ]
         data = [item for sublist in data for item in sublist]
 
-    df = pd.DataFrame(data, columns=['word'])
+    df = pd.DataFrame(data, columns=['word'])[:100]
     df['conversation_id'] = 1
 
     return df
@@ -504,19 +503,16 @@ def main():
             print('TODO: Generate embeddings for this model with context')
     else:
         if args.embedding_type == 'glove50':
-            gen_word2vec_embeddings(args, utterance_df)
+            df = generate_glove_embeddings(args, utterance_df)
         else:
-            generate_embeddings(args, utterance_df)
+            df = generate_embeddings(args, utterance_df)
 
     if args.project_id == 'podcast':
-        df['token2word'] = df['token'].apply(
-            args.tokenizer.convert_tokens_to_string).str.strip().str.lower()
-
         DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
         cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
 
         # Align the two lists
-        cloze_df = pd.read_csv(cloze_file, sep=',')
+        cloze_df = pd.read_csv(cloze_file, sep=',')[:100]
         words = list(map(str.lower, cloze_df.word.tolist()))
 
         model_tokens = df['token2word'].tolist()
@@ -527,9 +523,9 @@ def main():
         df = df.iloc[mask2, :].reset_index(drop=True)
 
         df_final = pd.concat([df, cloze_df], axis=1)
-        df_final = df_final.loc[:, ~df_final.columns.duplicated()]
+        df = df_final.loc[:, ~df_final.columns.duplicated()]
 
-        save_pickle(df_final.to_dict('records'), args.output_file)
+    save_pickle(df.to_dict('records'), args.output_file)
 
     return
 
