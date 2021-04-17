@@ -32,10 +32,14 @@ else
 endif
 
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
-%-pickle: CMD := python 		# {echo | python}
-%-pickle: PRJCT_ID := podcast 	# {tfs | podcast}
-%-pickle: SID_LIST=743 		# {625 676 | 661 662 717 723 741 742 743 763 798 | 777}
-%-pickle: MEL := 500 		# Setting a large number will extract all common \
+%-pickle: CMD := python
+# {echo | python}
+%-pickle: PRJCT_ID := podcast
+# {tfs | podcast}
+%-pickle: SID_LIST=661 662 717 723 741 742 743 763 798 777
+# {625 676 | 661 662 717 723 741 742 743 763 798 | 777}
+%-pickle: MEL := 500
+# Setting a large number will extract all common \
 									electrodes across all conversations
 %-pickle: MINF := 0
 
@@ -72,13 +76,19 @@ download-247-pickles:
 
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: CMD := sbatch submit.sh  	# {echo | python | sbatch submit.sh}
-%-embeddings: PRJCT_ID := podcast  		# {tfs | podcast}
-%-embeddings: SID := 661 				# {625 | 676 | 661} 
+%-embeddings: CMD := python
+# {echo | python | sbatch submit.sh}
+%-embeddings: PRJCT_ID := podcast
+# {tfs | podcast}
+%-embeddings: SID := 661
+# {625 | 676 | 661} 
 	
-%-embeddings: CONV_IDS = $(shell seq 1 1) # {54 for 625 | 79 for 676 | 1 for 661}
-%-embeddings: PKL_IDENTIFIER := full 	# {full | trimmed | binned}
-%-embeddings: EMB_TYPE := gpt2-xl 		# {glove50 | bert | gpt2-xl}
+%-embeddings: CONV_IDS = $(shell seq 1 1)
+# {54 for 625 | 79 for 676 | 1 for 661}
+%-embeddings: PKL_IDENTIFIER := full
+# {full | trimmed | binned}
+%-embeddings: EMB_TYPE := gpt2-xl
+# {glove50 | bert | gpt2-xl}
 %-embeddings: CNXT_LEN := 1024
 %-embeddings: HIST := --history
 # Note: embeddings file is the same for all podcast subjects \

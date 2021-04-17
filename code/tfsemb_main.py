@@ -540,7 +540,7 @@ def main():
 
     if args.project_id == 'podcast':
         df = align_podcast_tokens(args, df)
-        df = create_folds(args, df)
+        df = create_folds(args, 10, df)
 
     save_pickle(df.to_dict('records'), args.output_file)
 
