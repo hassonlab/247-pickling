@@ -200,9 +200,9 @@ def filter_on_freq(args, df):
 def stratify_split(df, split_str=None):
     # Extract only test folds
     if split_str is None:
-        skf = KFold(n_splits=5, shuffle=True, random_state=0)
+        skf = KFold(n_splits=5, shuffle=False, random_state=0)
     elif split_str == 'stratify':
-        skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+        skf = StratifiedKFold(n_splits=5, shuffle=False, random_state=0)
     else:
         raise Exception('wrong string')
 

@@ -2,7 +2,6 @@ from datetime import datetime
 
 import numpy as np
 import tqdm
-
 from sklearn.model_selection import KFold, StratifiedKFold
 
 
@@ -56,9 +55,11 @@ def lcs(x, y):
 def stratify_split(df, num_folds, split_str=None):
     # Extract only test folds
     if split_str is None:
-        skf = KFold(n_splits=num_folds, shuffle=True, random_state=0)
+        skf = KFold(n_splits=num_folds, shuffle=False, random_state=0)
     elif split_str == 'stratify':
-        skf = StratifiedKFold(n_splits=num_folds, shuffle=True, random_state=0)
+        skf = StratifiedKFold(n_splits=num_folds,
+                              shuffle=False,
+                              random_state=0)
     else:
         raise Exception('wrong string')
 

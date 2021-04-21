@@ -36,7 +36,7 @@ endif
 # {echo | python}
 %-pickle: PRJCT_ID := podcast
 # {tfs | podcast}
-%-pickle: SID_LIST=661 662 717 723 741 742 743 763 798 777
+%-pickle: SID_LIST=661 662 717 723 741 742 743 763 798
 # {625 676 | 661 662 717 723 741 742 743 763 798 | 777}
 %-pickle: MEL := 500
 # Setting a large number will extract all common \
@@ -76,13 +76,12 @@ download-247-pickles:
 
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: CMD := python
+%-embeddings: CMD := sbatch submit.sh
 # {echo | python | sbatch submit.sh}
 %-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
 %-embeddings: SID := 661
 # {625 | 676 | 661} 
-	
 %-embeddings: CONV_IDS = $(shell seq 1 1)
 # {54 for 625 | 79 for 676 | 1 for 661}
 %-embeddings: PKL_IDENTIFIER := full

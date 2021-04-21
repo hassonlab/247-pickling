@@ -259,6 +259,18 @@ def make_input_from_tokens(args, token_list):
     return windows
 
 
+def make_input_from_tokens1(args, token_list):
+    size = args.context_length
+    windows = [
+        token_list[x:x + size] for x in range(len(token_list) - size + 1)
+    ]
+    windows = [
+        token_list[max(i - size, 0):i] for i in range(1,
+                                                      len(token_list) + 1)
+    ]
+    return windows
+
+
 def make_dataloader_from_input(windows):
     input_ids = torch.tensor(windows)
     data_dl = data.DataLoader(input_ids, batch_size=2, shuffle=False)
@@ -540,7 +552,7 @@ def main():
 
     if args.project_id == 'podcast':
         df = align_podcast_tokens(args, df)
-        df = create_folds(args, 10, df)
+        df = create_folds(df, 10)
 
     save_pickle(df.to_dict('records'), args.output_file)
 
