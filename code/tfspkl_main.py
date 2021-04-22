@@ -16,7 +16,7 @@ from sklearn.model_selection import KFold, StratifiedKFold
 from tfspkl_build_matrices import build_design_matrices
 from tfspkl_config import build_config
 from tfspkl_parser import arg_parser
-from utils import main_timer
+from utils import create_folds, main_timer
 
 
 def save_pickle(args, item, file_name):
@@ -197,47 +197,6 @@ def filter_on_freq(args, df):
     return df
 
 
-def stratify_split(df, split_str=None):
-    # Extract only test folds
-    if split_str is None:
-        skf = KFold(n_splits=5, shuffle=False, random_state=0)
-    elif split_str == 'stratify':
-        skf = StratifiedKFold(n_splits=5, shuffle=False, random_state=0)
-    else:
-        raise Exception('wrong string')
-
-    folds = [t[1] for t in skf.split(df, df.word)]
-    return folds
-
-
-def create_folds(args, df, split_str=None):
-    """create new columns in the df with the folds labeled
-
-    Args:
-        args (namespace): namespace object with input arguments
-        df (DataFrame): labels
-    """
-    fold_column_names = ['fold' + str(i) for i in range(5)]
-    folds = stratify_split(df, split_str=split_str)
-
-    # Go through each fold, and split
-    for i, fold_col in enumerate(fold_column_names):
-        # Shift the number of folds for this iteration
-        # [0 1 2 3 4] -> [1 2 3 4 0] -> [2 3 4 0 1]
-        #                       ^ dev fold
-        #                         ^ test fold
-        #                 | - | <- train folds
-
-        folds_ixs = np.roll(folds, i)
-        *_, dev_ixs, test_ixs = folds_ixs
-
-        df[fold_col] = 'train'
-        df.loc[dev_ixs, fold_col] = 'dev'
-        df.loc[test_ixs, fold_col] = 'test'
-
-    return df
-
-
 def create_labels_pickles(args,
                           stitch_index,
                           labels,
@@ -248,7 +207,7 @@ def create_labels_pickles(args,
     labels_df = create_production_flag(labels_df)
     labels_df = inclass_word_freq(labels_df)
     labels_df = total_word_freq(labels_df)
-    labels_df = create_folds(args, labels_df)
+    labels_df = create_folds(labels_df, 10)
 
     labels_dict = dict(labels=labels_df.to_dict('records'),
                        convo_label_size=convo_labels_size)
@@ -257,13 +216,13 @@ def create_labels_pickles(args,
 
     if args.vocab_min_freq:
         labels_df = filter_on_freq(args, labels_df)
-        labels_df = create_folds(args, labels_df, 'stratify')
+        labels_df = create_folds(labels_df, 10, 'stratify')
 
         label_folds = labels_df.to_dict('records')
         pkl_name = '_'.join(
             [args.subject, label_str, 'labels_MWF',
              str(args.vocab_min_freq)])
-        save_pickle(args, label_folds, pkl_name)
+        save_pickle(label_folds, pkl_name)
 
 
 @main_timer

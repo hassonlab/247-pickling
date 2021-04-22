@@ -74,7 +74,7 @@ def create_folds(df, num_folds, split_str=None):
         args (namespace): namespace object with input arguments
         df (DataFrame): labels
     """
-    fold_column_names = ['fold' + str(i) for i in range(5)]
+    fold_column_names = ['fold' + str(i) for i in range(num_folds)]
     folds = stratify_split(df, num_folds, split_str=split_str)
 
     # Go through each fold, and split
