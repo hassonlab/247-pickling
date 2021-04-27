@@ -246,13 +246,15 @@ def make_input_from_tokens(args, token_list):
 
     # HG's approach
     windows = [
-        tuple(token_list[x:x + size]) for x in range(len(token_list) - size + 1)
+        tuple(token_list[x:x + size])
+        for x in range(len(token_list) - size + 1)
     ]
 
     # ZZ's approach
     # windows = [
-    #     tuple(token_list[max(i - size, 0):i]) for i in range(1,
-    #                                                   len(token_list) + 1)
+    #     tuple(token_list[max(i - size, 0):i])
+    #     for i in range(1,
+    #                    len(token_list) + 1)
     # ]
     return windows
 
