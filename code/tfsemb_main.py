@@ -2,7 +2,6 @@ import argparse
 import os
 import pickle
 import string
-from itertools import islice
 
 import gensim.downloader as api
 import numpy as np
@@ -142,18 +141,6 @@ def get_unique_sentences(df):
                'sentence']].drop_duplicates()['sentence'].tolist()
 
 
-def window(seq, n=2):
-    "Returns a sliding window (of width n) over data from the iterable"
-    "   s -> (s0,s1,...s[n-1]), (s1,s2,...,sn), ...                   "
-    it = iter(seq)
-    result = tuple(islice(it, n))
-    if len(result) <= n:
-        yield result
-    for elem in it:
-        result = result[1:] + (elem, )
-        yield result
-
-
 def process_extracted_embeddings(concat_output):
     """(batch_size, max_len, embedding_size)"""
     # concatenate all batches
@@ -255,19 +242,18 @@ def get_conversation_tokens(df, conversation):
 
 
 def make_input_from_tokens(args, token_list):
-    windows = list(window(token_list, args.context_length))
-    return windows
-
-
-def make_input_from_tokens1(args, token_list):
     size = args.context_length
+
+    # HG's approach
     windows = [
-        token_list[x:x + size] for x in range(len(token_list) - size + 1)
+        tuple(token_list[x:x + size]) for x in range(len(token_list) - size + 1)
     ]
-    windows = [
-        token_list[max(i - size, 0):i] for i in range(1,
-                                                      len(token_list) + 1)
-    ]
+
+    # ZZ's approach
+    # windows = [
+    #     tuple(token_list[max(i - size, 0):i]) for i in range(1,
+    #                                                   len(token_list) + 1)
+    # ]
     return windows
 
 
@@ -288,7 +274,7 @@ def generate_embeddings_with_context(args, df):
     final_true_y_prob = []
     for conversation in df.conversation_id.unique():
         token_list = get_conversation_tokens(df, conversation)
-        model_input = make_input_from_tokens(args, token_list)
+        model_input = make_input_from_tokens1(args, token_list)
         input_dl = make_dataloader_from_input(model_input)
         embeddings, logits = model_forward_pass(args, input_dl)
 
