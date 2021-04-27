@@ -274,7 +274,7 @@ def generate_embeddings_with_context(args, df):
     final_true_y_prob = []
     for conversation in df.conversation_id.unique():
         token_list = get_conversation_tokens(df, conversation)
-        model_input = make_input_from_tokens1(args, token_list)
+        model_input = make_input_from_tokens(args, token_list)
         input_dl = make_dataloader_from_input(model_input)
         embeddings, logits = model_forward_pass(args, input_dl)
 

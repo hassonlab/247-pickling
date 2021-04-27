@@ -18,4 +18,7 @@ if __name__ == '__main__':
         trim_dest = os.path.join(prjct_dir, str(subject), 'pickles',
                                  str(subject) + trim_emb)
         copy2(full_src1, full_dest)
-        copy2(trim_src1, trim_dest)
+        try:
+            copy2(trim_src1, trim_dest)
+        except FileNotFoundError:
+            pass
