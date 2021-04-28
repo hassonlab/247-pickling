@@ -245,10 +245,13 @@ def make_input_from_tokens(args, token_list):
     size = args.context_length
 
     # HG's approach
-    windows = [
-        tuple(token_list[x:x + size])
-        for x in range(len(token_list) - size + 1)
-    ]
+    if len(token_list) <= size:
+        windows = [tuple(token_list)]
+    else:
+        windows = [
+            tuple(token_list[x:x + size])
+            for x in range(len(token_list) - size + 1)
+        ]
 
     # ZZ's approach
     # windows = [
@@ -277,9 +280,11 @@ def generate_embeddings_with_context(args, df):
     for conversation in df.conversation_id.unique():
         token_list = get_conversation_tokens(df, conversation)
         model_input = make_input_from_tokens(args, token_list)
+        print(len(model_input))
+        print(model_input)
         input_dl = make_dataloader_from_input(model_input)
         embeddings, logits = model_forward_pass(args, input_dl)
-
+        print(len(embeddings), len(logits))
         embeddings = process_extracted_embeddings(embeddings)
         assert embeddings.shape[0] == len(token_list)
         final_embeddings.append(embeddings)
@@ -381,10 +386,10 @@ def setup_environ(args):
         os.makedirs(args.output_dir, exist_ok=True)
 
         output_file_name = args.conversation_list[args.conversation_id - 1]
-        args.output_file = os.path.join(args.output_dir, output_file_name)
+        args.output_file = os.path.join(args.output_dir, output_file_name + '_hg')
 
         args.output_file_prefinal = os.path.join(
-            args.output_dir, output_file_name + '_prefinal')
+            args.output_dir, output_file_name + '_hg_prefinal')
 
     return
 
@@ -464,7 +469,8 @@ def tokenize_podcast_transcript(args):
         DataFrame: containing tokenized transcript
     """
     DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-    story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
+    # story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
+    story_file = os.path.join(DATA_DIR, 'pieman_transcript.txt')
 
     # Read all words and tokenize them
     with open(story_file, 'r') as fp:
@@ -477,7 +483,7 @@ def tokenize_podcast_transcript(args):
         ]
         data = [item for sublist in data for item in sublist]
 
-    df = pd.DataFrame(data, columns=['word'])
+    df = pd.DataFrame(data, columns=['word'])[:20]
     df['conversation_id'] = 1
 
     return df
@@ -494,9 +500,10 @@ def align_podcast_tokens(args, df):
         df (DataFrame): aligned/filtered dataframe (goes into encoding)
     """
     DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-    cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
+    # cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
+    cloze_file = os.path.join(DATA_DIR, 'piemanAligned_all.txt')
 
-    cloze_df = pd.read_csv(cloze_file, sep=',')
+    cloze_df = pd.read_csv(cloze_file, sep=',')[:20]
     words = list(map(str.lower, cloze_df.word.tolist()))
 
     model_tokens = df['token2word'].tolist()
@@ -539,6 +546,7 @@ def main():
             df = generate_embeddings(args, utterance_df)
 
     if args.project_id == 'podcast':
+        save_pickle(df.to_dict('records'), args.output_file_prefinal)
         df = align_podcast_tokens(args, df)
         df = create_folds(df, 10)
 
