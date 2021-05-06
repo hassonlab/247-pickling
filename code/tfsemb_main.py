@@ -386,10 +386,11 @@ def setup_environ(args):
         os.makedirs(args.output_dir, exist_ok=True)
 
         output_file_name = args.conversation_list[args.conversation_id - 1]
-        args.output_file = os.path.join(args.output_dir, output_file_name + '_hg')
+        args.output_file = os.path.join(args.output_dir,
+                                        output_file_name)
 
         args.output_file_prefinal = os.path.join(
-            args.output_dir, output_file_name + '_hg_prefinal')
+            args.output_dir, output_file_name + '_prefinal')
 
     return
 
@@ -455,6 +456,12 @@ def parse_arguments():
     parser.add_argument('--pkl-identifier', type=str, default=None)
     parser.add_argument('--project-id', type=str, default=None)
 
+    # custom_args = [
+    #     '--project-id', 'podcast', '--pkl-identifier', 'full',
+    #     '--conversation-id', '1', '--subject', '661', '--history',
+    #     '--context-length', '1024', '--embedding-type', 'gpt2-xl'
+    # ]
+
     return parser.parse_args()
 
 
@@ -469,21 +476,21 @@ def tokenize_podcast_transcript(args):
         DataFrame: containing tokenized transcript
     """
     DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-    # story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
-    story_file = os.path.join(DATA_DIR, 'pieman_transcript.txt')
+    story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
+    # story_file = os.path.join(DATA_DIR, 'pieman_transcript.txt')
 
     # Read all words and tokenize them
     with open(story_file, 'r') as fp:
         data = fp.readlines()
 
-        data = [item.split(' ') for item in data]
-        data = [
-            item[:-2] + [' '.join(item[-2:])] if item[-1] == '\n' else item
-            for item in data
-        ]
+        data = [item.strip().split(' ') for item in data]
+        # data = [
+        #     item[:-2] + [' '.join(item[-2:])] if item[-1] == '\n' else item
+        #     for item in data
+        # ]
         data = [item for sublist in data for item in sublist]
 
-    df = pd.DataFrame(data, columns=['word'])[:20]
+    df = pd.DataFrame(data, columns=['word'])
     df['conversation_id'] = 1
 
     return df
@@ -500,10 +507,10 @@ def align_podcast_tokens(args, df):
         df (DataFrame): aligned/filtered dataframe (goes into encoding)
     """
     DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-    # cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
-    cloze_file = os.path.join(DATA_DIR, 'piemanAligned_all.txt')
+    cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
+    # cloze_file = os.path.join(DATA_DIR, 'piemanAligned_all.txt')
 
-    cloze_df = pd.read_csv(cloze_file, sep=',')[:20]
+    cloze_df = pd.read_csv(cloze_file, sep=',')
     words = list(map(str.lower, cloze_df.word.tolist()))
 
     model_tokens = df['token2word'].tolist()

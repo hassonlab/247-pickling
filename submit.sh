@@ -7,12 +7,16 @@
 #SBATCH -o './logs/%A.out'
 #SBATCH -e './logs/%A.err'
 #SBATCH --mail-type=fail
-#SBATCH --mail-user=hvgazula@umich.edu
 
 if [[ "$HOSTNAME" == *"tiger"* ]]
 then
     echo "It's tiger"
     module load anaconda
+    source activate torch-env
+elif [[ "$HOSTNAME" == *"della-gpu"* ]]
+then
+    echo "It's della-gpu"
+    module load anaconda3/2020.11
     source activate torch-env
 else
     module load anacondapy
