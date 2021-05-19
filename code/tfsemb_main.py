@@ -13,7 +13,7 @@ import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
-from utils import create_folds, lcs, main_timer
+from .utils import create_folds, lcs, main_timer
 
 
 def save_pickle(item, file_name):
@@ -465,6 +465,16 @@ def parse_arguments():
     return parser.parse_args()
 
 
+def tokenize_transcript(file_name):
+    # Read all words and tokenize them
+    with open(file_name, 'r') as fp:
+        data = fp.readlines()
+
+    data = [item.strip().split(' ') for item in data]
+    data = [item for sublist in data for item in sublist]
+    return data
+
+
 def tokenize_podcast_transcript(args):
     """Tokenize the podcast transcript and return as dataframe
 
@@ -479,16 +489,7 @@ def tokenize_podcast_transcript(args):
     story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
     # story_file = os.path.join(DATA_DIR, 'pieman_transcript.txt')
 
-    # Read all words and tokenize them
-    with open(story_file, 'r') as fp:
-        data = fp.readlines()
-
-        data = [item.strip().split(' ') for item in data]
-        # data = [
-        #     item[:-2] + [' '.join(item[-2:])] if item[-1] == '\n' else item
-        #     for item in data
-        # ]
-        data = [item for sublist in data for item in sublist]
+    data = tokenize_transcript(story_file)
 
     df = pd.DataFrame(data, columns=['word'])
     df['conversation_id'] = 1
