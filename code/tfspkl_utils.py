@@ -75,6 +75,8 @@ def get_conversation_list(CONFIG, subject=None):
 
         return conversations
     else:
+        if subject is None:
+            subject = CONFIG['subject']
         CONV_DIRS = CONFIG["DATA_DIR"] + '/%s/' % str(subject)
         conversations = sorted(
             glob.glob(os.path.join(CONV_DIRS, '*conversation*')))
@@ -115,8 +117,8 @@ def get_electrode_labels(conversation_dir):
     try:
         header_file = glob.glob(
             os.path.join(conversation_dir, 'misc', '*_header.mat'))[0]
-    except IndexError as e:
-        sys.exit('Header File Missing')
+    except IndexError:
+        raise ValueError('Header File Missing')
 
     if not os.path.exists(header_file):
         return

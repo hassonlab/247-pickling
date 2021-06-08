@@ -12,10 +12,12 @@ import pickle
 
 import numpy as np
 import pandas as pd
+import gensim.downloader as api
 from tfspkl_build_matrices import build_design_matrices
 from tfspkl_config import build_config
 from tfspkl_parser import arg_parser
 from utils import create_folds, main_timer
+from transformers import AutoTokenizer
 
 
 def save_pickle(args, item, file_name):
@@ -196,6 +198,27 @@ def filter_on_freq(args, df):
     return df
 
 
+def add_vocab_columns(df):
+    '''Add columns to the dataframe indicating whether each word is in the
+    vocabulary of the language models we're using.
+    '''
+
+    # Add glove
+    glove = api.load('glove-wiki-gigaword-50')
+    df['in_glove'] = df.word.str.lower().apply(lambda x: x in glove.vocab)
+
+    # Add language models
+    names = ['gpt2', 'bert-base-cased',
+             'facebook/blenderbot_small-90M', 'facebook/blenderbot-3B']
+    for model in names:
+        tokenizer = AutoTokenizer.from_pretrained(model)
+        key = model.split('/')[-1].replace('-', '_')
+        df[f'in_{key}'] = df.word.apply(lambda x:
+                                        len(tokenizer.tokenize(x)) == 1)
+
+    return df
+
+
 def create_labels_pickles(args,
                           stitch_index,
                           labels,
@@ -206,22 +229,25 @@ def create_labels_pickles(args,
     labels_df = create_production_flag(labels_df)
     labels_df = inclass_word_freq(labels_df)
     labels_df = total_word_freq(labels_df)
-    labels_df = create_folds(labels_df, 10)
+    labels_df = add_vocab_columns(labels_df)
+    # labels_df = create_folds(labels_df, args.num_folds)
 
     labels_dict = dict(labels=labels_df.to_dict('records'),
                        convo_label_size=convo_labels_size)
     pkl_name = '_'.join([args.subject, label_str, 'labels'])
     save_pickle(args, labels_dict, pkl_name)
 
-    if args.vocab_min_freq:
-        labels_df = filter_on_freq(args, labels_df)
-        labels_df = create_folds(labels_df, 10, 'stratify')
+    # NOTE - commenting this out because fold splitting should be done in
+    # the analysis pipeline
+    # if args.vocab_min_freq:
+    #     labels_df = filter_on_freq(args, labels_df)
+    #     labels_df = create_folds(labels_df, args.num_folds, 'stratify')
 
-        label_folds = labels_df.to_dict('records')
-        pkl_name = '_'.join(
-            [args.subject, label_str, 'labels_MWF',
-             str(args.vocab_min_freq)])
-        save_pickle(label_folds, pkl_name)
+    #     label_folds = labels_df.to_dict('records')
+    #     pkl_name = '_'.join(
+    #         [args.subject, label_str, 'labels_MWF',
+    #          str(args.vocab_min_freq)])
+    #     save_pickle(label_folds, pkl_name)
 
 
 @main_timer
