@@ -8,15 +8,16 @@ Description: Contains code to pickle 247 data
 Copyright (c) 2020 Your Company
 '''
 import os
+import nltk
 import pickle
-
 import numpy as np
 import pandas as pd
 import gensim.downloader as api
+
 from tfspkl_build_matrices import build_design_matrices
 from tfspkl_config import build_config
 from tfspkl_parser import arg_parser
-from utils import create_folds, main_timer
+from utils import main_timer
 from transformers import AutoTokenizer
 
 
@@ -219,6 +220,16 @@ def add_vocab_columns(df):
     return df
 
 
+def add_stemming(df):
+    lt = nltk.stem.WordNetLemmatizer()
+    df['lemmatized_word'] = df.word.str.lower().str.strip().apply(lt.lemmatize)
+
+    ps = nltk.stem.PorterStemmer()
+    df['stemmed_word'] = df.word.str.lower().str.strip().apply(ps.stem)
+
+    return df
+
+
 def create_labels_pickles(args,
                           stitch_index,
                           labels,
@@ -228,6 +239,7 @@ def create_labels_pickles(args,
     labels_df = process_labels(args, stitch_index, labels, convs)
     labels_df = create_production_flag(labels_df)
     labels_df = inclass_word_freq(labels_df)
+    labels_df = add_stemming(labels_df)
     labels_df = total_word_freq(labels_df)
     labels_df = add_vocab_columns(labels_df)
     # labels_df = create_folds(labels_df, args.num_folds)
