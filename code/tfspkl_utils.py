@@ -99,7 +99,7 @@ def extract_conversation_contents(conversation, ex_words):
                      sep=' ',
                      header=None,
                      names=['word', 'onset', 'offset', 'accuracy', 'speaker'])
-    df['word'] = df['word'].str.lower().str.strip()
+    df['word'] = df['word'].str.strip()
     df = df[~df['word'].isin(ex_words)]
 
     return df.values.tolist()
