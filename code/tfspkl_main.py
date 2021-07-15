@@ -8,14 +8,17 @@ Description: Contains code to pickle 247 data
 Copyright (c) 2020 Your Company
 '''
 import os
+import nltk
 import pickle
-
 import numpy as np
 import pandas as pd
+import gensim.downloader as api
+
 from tfspkl_build_matrices import build_design_matrices
 from tfspkl_config import build_config
 from tfspkl_parser import arg_parser
-from utils import create_folds, main_timer
+from utils import main_timer
+from transformers import AutoTokenizer
 
 
 def save_pickle(args, item, file_name):
@@ -174,14 +177,13 @@ def process_labels(args, trimmed_stitch_index, labels, conversations):
     return pd.concat(new_labels, ignore_index=True)
 
 
-def inclass_word_freq(df):
-    df['word_freq_phase'] = df.groupby(['word', 'production'
-                                        ])['word'].transform('count')
-    return df
+def add_word_freqs(df):
+    grouped = df.word.str.lower().to_frame().groupby('word')
+    df['word_freq_overall'] = grouped.word.transform('count')
 
-
-def total_word_freq(df):
-    df['word_freq_overall'] = df.groupby(['word'])['word'].transform('count')
+    first = df[['word', 'production']].applymap(lambda x: x.lower() if type(x) == str else x)
+    grouped = first.groupby(['word', 'production'])
+    df['word_freq_phase'] = grouped.word.transform('count')
     return df
 
 
@@ -196,6 +198,37 @@ def filter_on_freq(args, df):
     return df
 
 
+def add_vocab_columns(df):
+    '''Add columns to the dataframe indicating whether each word is in the
+    vocabulary of the language models we're using.
+    '''
+
+    # Add glove
+    glove = api.load('glove-wiki-gigaword-50')
+    df['in_glove'] = df.word.str.lower().apply(lambda x: x in glove.vocab)
+
+    # Add language models
+    names = ['gpt2', 'bert-base-cased',
+             'facebook/blenderbot_small-90M', 'facebook/blenderbot-3B']
+    for model in names:
+        tokenizer = AutoTokenizer.from_pretrained(model, add_prefix_space=True)
+        key = model.split('/')[-1].replace('-', '_')
+        df[f'in_{key}'] = df.word.apply(lambda x:
+                                        len(tokenizer.tokenize(x)) == 1)
+
+    return df
+
+
+def add_stemming(df):
+    lt = nltk.stem.WordNetLemmatizer()
+    df['lemmatized_word'] = df.word.str.strip().apply(lt.lemmatize)
+
+    ps = nltk.stem.PorterStemmer()
+    df['stemmed_word'] = df.word.str.strip().apply(ps.stem)
+
+    return df
+
+
 def create_labels_pickles(args,
                           stitch_index,
                           labels,
@@ -204,24 +237,27 @@ def create_labels_pickles(args,
                           label_str=None):
     labels_df = process_labels(args, stitch_index, labels, convs)
     labels_df = create_production_flag(labels_df)
-    labels_df = inclass_word_freq(labels_df)
-    labels_df = total_word_freq(labels_df)
-    labels_df = create_folds(labels_df, 10)
+    labels_df = add_word_freqs(labels_df)
+    labels_df = add_stemming(labels_df)
+    labels_df = add_vocab_columns(labels_df)
+    # labels_df = create_folds(labels_df, args.num_folds)
 
     labels_dict = dict(labels=labels_df.to_dict('records'),
                        convo_label_size=convo_labels_size)
     pkl_name = '_'.join([args.subject, label_str, 'labels'])
     save_pickle(args, labels_dict, pkl_name)
 
-    if args.vocab_min_freq:
-        labels_df = filter_on_freq(args, labels_df)
-        labels_df = create_folds(labels_df, 10, 'stratify')
+    # NOTE - commenting this out because fold splitting should be done in
+    # the analysis pipeline
+    # if args.vocab_min_freq:
+    #     labels_df = filter_on_freq(args, labels_df)
+    #     labels_df = create_folds(labels_df, args.num_folds, 'stratify')
 
-        label_folds = labels_df.to_dict('records')
-        pkl_name = '_'.join(
-            [args.subject, label_str, 'labels_MWF',
-             str(args.vocab_min_freq)])
-        save_pickle(label_folds, pkl_name)
+    #     label_folds = labels_df.to_dict('records')
+    #     pkl_name = '_'.join(
+    #         [args.subject, label_str, 'labels_MWF',
+    #          str(args.vocab_min_freq)])
+    #     save_pickle(label_folds, pkl_name)
 
 
 @main_timer
