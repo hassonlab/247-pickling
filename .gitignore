@@ -9,3 +9,5 @@ logs/*
 data/*
 
 !.gitkeep
+.cache
+.vscode
