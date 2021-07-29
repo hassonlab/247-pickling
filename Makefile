@@ -90,22 +90,26 @@ download-247-pickles:
 # {glove50 | bert | gpt2-xl}
 %-embeddings: CNXT_LEN := 1024
 %-embeddings: HIST := --history
+%-embeddings: LAYER := ${shell seq 1 3}
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 
 # generates embeddings (for each conversation separately)
 generate-embeddings:
 	mkdir -p logs
-	for conv_id in $(CONV_IDS); do \
-		$(CMD) code/tfsemb_main.py \
-					--project-id $(PRJCT_ID) \
-					--pkl-identifier $(PKL_IDENTIFIER) \
-					--subject $(SID) \
-					--conversation-id $$conv_id \
-					--embedding-type $(EMB_TYPE) \
-					$(HIST) \
-					--context-length $(CNXT_LEN); \
-	done
+	for layer in $(LAYER); do \
+		for conv_id in $(CONV_IDS); do \
+			$(CMD) code/tfsemb_main.py \
+						--project-id $(PRJCT_ID) \
+						--pkl-identifier $(PKL_IDENTIFIER) \
+						--subject $(SID) \
+						--conversation-id $$conv_id \
+						--embedding-type $(EMB_TYPE) \
+						$(HIST) \
+						--context-length $(CNXT_LEN) \
+						--layer-idx $$layer; \
+		done; \
+	done;
 
 # concatenate embeddings from all conversations
 concatenate-embeddings:

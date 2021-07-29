@@ -13,7 +13,7 @@ import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
-from .utils import create_folds, lcs, main_timer
+from utils import create_folds, lcs, main_timer
 
 
 def save_pickle(item, file_name):
@@ -224,7 +224,7 @@ def model_forward_pass(args, data_dl):
             batch = batch.to(args.device)
             model_output = model(batch)
 
-            embeddings = model_output.hidden_states[-1].cpu()
+            embeddings = model_output.hidden_states[args.layer_idx].cpu()
             logits = model_output.logits.cpu()
 
             embeddings = extract_select_vectors(batch_idx, embeddings)
@@ -280,11 +280,10 @@ def generate_embeddings_with_context(args, df):
     for conversation in df.conversation_id.unique():
         token_list = get_conversation_tokens(df, conversation)
         model_input = make_input_from_tokens(args, token_list)
-        print(len(model_input))
-        print(model_input)
+
         input_dl = make_dataloader_from_input(model_input)
         embeddings, logits = model_forward_pass(args, input_dl)
-        print(len(embeddings), len(logits))
+
         embeddings = process_extracted_embeddings(embeddings)
         assert embeddings.shape[0] == len(token_list)
         final_embeddings.append(embeddings)
@@ -382,15 +381,12 @@ def setup_environ(args):
     # TODO: if multiple conversations are specified in input
     if args.conversation_id:
         args.output_dir = os.path.join(RESULTS_DIR, args.subject, 'embeddings',
-                                       stra, args.pkl_identifier)
+                                       stra, args.pkl_identifier,
+                                       f'layer_{args.layer_idx:02d}')
         os.makedirs(args.output_dir, exist_ok=True)
 
         output_file_name = args.conversation_list[args.conversation_id - 1]
-        args.output_file = os.path.join(args.output_dir,
-                                        output_file_name)
-
-        args.output_file_prefinal = os.path.join(
-            args.output_dir, output_file_name + '_prefinal')
+        args.output_file = os.path.join(args.output_dir, output_file_name)
 
     return
 
@@ -418,6 +414,13 @@ def select_tokenizer_and_model(args):
     else:
         print('No model found for', args.model_name)
         exit(1)
+
+    # Make sure the right model name is passed as an input argument
+    layer_dict = {'gpt2-xl': 48, 'bert': 24, 'bbot-small': 8, 'bbot': 12}
+    args.layer_idx = layer_dict[
+        args.model_name] if args.layer_idx is None else args.layer_idx
+    assert 0 <= args.layer_idx <= layer_dict[
+        args.model_name], 'Invalid Layer Number'
 
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -455,6 +458,7 @@ def parse_arguments():
     parser.add_argument('--conversation-id', type=int, default=0)
     parser.add_argument('--pkl-identifier', type=str, default=None)
     parser.add_argument('--project-id', type=str, default=None)
+    parser.add_argument('--layer-idx', nargs='?', type=int, default=None)
 
     # custom_args = [
     #     '--project-id', 'podcast', '--pkl-identifier', 'full',
@@ -554,7 +558,6 @@ def main():
             df = generate_embeddings(args, utterance_df)
 
     if args.project_id == 'podcast':
-        save_pickle(df.to_dict('records'), args.output_file_prefinal)
         df = align_podcast_tokens(args, df)
         df = create_folds(df, 10)
 
