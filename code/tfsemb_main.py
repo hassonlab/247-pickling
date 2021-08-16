@@ -416,11 +416,11 @@ def select_tokenizer_and_model(args):
         exit(1)
 
     # Make sure the right model name is passed as an input argument
-    layer_dict = {'gpt2-xl': 48, 'bert': 24, 'bbot-small': 8, 'bbot': 12}
+    layer_dict = {'gpt2-xl': 48, 'bert-large-uncased-whole-word-masking': 24, 'bbot-small': 8, 'bbot': 12}
     args.layer_idx = layer_dict[
-        args.model_name] if args.layer_idx is None else args.layer_idx
+        model_name] if args.layer_idx is None else args.layer_idx
     assert 0 <= args.layer_idx <= layer_dict[
-        args.model_name], 'Invalid Layer Number'
+        model_name], 'Invalid Layer Number'
 
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
     os.makedirs(CACHE_DIR, exist_ok=True)
