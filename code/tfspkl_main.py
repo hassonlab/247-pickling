@@ -8,17 +8,17 @@ Description: Contains code to pickle 247 data
 Copyright (c) 2020 Your Company
 '''
 import os
-import nltk
 import pickle
+
+import gensim.downloader as api
+import nltk
 import numpy as np
 import pandas as pd
-import gensim.downloader as api
-
 from tfspkl_build_matrices import build_design_matrices
 from tfspkl_config import build_config
 from tfspkl_parser import arg_parser
-from utils import main_timer
 from transformers import AutoTokenizer
+from utils import main_timer
 
 
 def save_pickle(args, item, file_name):
@@ -181,7 +181,8 @@ def add_word_freqs(df):
     grouped = df.word.str.lower().to_frame().groupby('word')
     df['word_freq_overall'] = grouped.word.transform('count')
 
-    first = df[['word', 'production']].applymap(lambda x: x.lower() if type(x) == str else x)
+    first = df[['word', 'production'
+                ]].applymap(lambda x: x.lower() if type(x) == str else x)
     grouped = first.groupby(['word', 'production'])
     df['word_freq_phase'] = grouped.word.transform('count')
     return df
@@ -208,13 +209,19 @@ def add_vocab_columns(df):
     df['in_glove'] = df.word.str.lower().apply(lambda x: x in glove.vocab)
 
     # Add language models
-    names = ['gpt2', 'bert-base-cased',
-             'facebook/blenderbot_small-90M', 'facebook/blenderbot-3B']
+    names = [
+        'gpt2', 'bert-base-cased', 'facebook/blenderbot_small-90M',
+        'facebook/blenderbot-3B'
+    ]
+    CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
     for model in names:
-        tokenizer = AutoTokenizer.from_pretrained(model, add_prefix_space=True)
+        tokenizer = AutoTokenizer.from_pretrained(model,
+                                                  add_prefix_space=True,
+                                                  cache_dir=CACHE_DIR,
+                                                  local_files_only=True)
         key = model.split('/')[-1].replace('-', '_')
-        df[f'in_{key}'] = df.word.apply(lambda x:
-                                        len(tokenizer.tokenize(x)) == 1)
+        df[f'in_{key}'] = df.word.apply(
+            lambda x: len(tokenizer.tokenize(x)) == 1)
 
     return df
 

@@ -221,6 +221,7 @@ def model_forward_pass(args, data_dl):
         all_embeddings = []
         all_logits = []
         for batch_idx, batch in enumerate(data_dl):
+            print(batch)
             batch = batch.to(args.device)
             model_output = model(batch)
 
@@ -416,21 +417,28 @@ def select_tokenizer_and_model(args):
         exit(1)
 
     # Make sure the right model name is passed as an input argument
-    layer_dict = {'gpt2-xl': 48, 'bert-large-uncased-whole-word-masking': 24, 'bbot-small': 8, 'bbot': 12}
+    layer_dict = {
+        'gpt2-xl': 48,
+        'bert-large-uncased-whole-word-masking': 24,
+        'bbot-small': 8,
+        'bbot': 12
+    }
     args.layer_idx = layer_dict[
         model_name] if args.layer_idx is None else args.layer_idx
-    assert 0 <= args.layer_idx <= layer_dict[
-        model_name], 'Invalid Layer Number'
+    assert 0 <= args.layer_idx <= layer_dict[model_name], 'Invalid Layer Number'
 
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
+    print(CACHE_DIR)
     os.makedirs(CACHE_DIR, exist_ok=True)
 
     args.model = model_class.from_pretrained(model_name,
                                              output_hidden_states=True,
-                                             cache_dir=CACHE_DIR)
+                                             cache_dir=CACHE_DIR,
+                                             local_files_only=True)
     args.tokenizer = tokenizer_class.from_pretrained(model_name,
                                                      add_prefix_space=True,
-                                                     cache_dir=CACHE_DIR)
+                                                     cache_dir=CACHE_DIR,
+                                                     local_files_only=True)
 
     if args.history and args.context_length <= 0:
         args.context_length = args.tokenizer.max_len_single_sentence
