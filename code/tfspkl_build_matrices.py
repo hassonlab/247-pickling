@@ -8,8 +8,16 @@ from tfspkl_utils import (extract_conversation_contents, get_common_electrodes,
                           get_conversation_list)
 
 
-def function1(x):
-    split_list = x.split('conversation1')
+def extract_subject_and_electrode(input_str):
+    """Extract Subject and Electrode from the input string
+
+    Args:
+        input_str (str): conversation delimier. Defaults to ','.
+
+    Returns:
+        tuple: (subject, electrode)
+    """    
+    split_list = input_str.split('conversation1')
     electrode = split_list[-1].strip('_')
     subject = int(split_list[0][2:5])
     return (subject, electrode)
@@ -31,11 +39,13 @@ def build_design_matrices(CONFIG, delimiter=','):
     """
     if CONFIG['sig_elec_file']:
         try:
-            bobbi = pd.read_csv(CONFIG['sig_elec_file'],
+            # If the electrode file is in Bobbi's original format
+            sigelec_list = pd.read_csv(CONFIG['sig_elec_file'],
                                 header=None)[0].tolist()
-            sigelec_list = [function1(item) for item in bobbi]
+            sigelec_list = [extract_subject_and_electrode(item) for item in sigelec_list]
             df = pd.DataFrame(sigelec_list, columns=['subject', 'electrode'])
         except:
+            # If the electrode file is in the new format
             df = pd.read_csv(CONFIG['sig_elec_file'],
                              columns=['subject', 'electrode'])
         else:

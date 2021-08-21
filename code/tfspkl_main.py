@@ -146,9 +146,9 @@ def add_conversation_name(args, conversation, name):
     return conversation
 
 
-def process_labels(args, trimmed_stitch_index, labels, conversations):
+def process_labels(args, stitch_index, labels, conversations):
     """Adjust label onsets to account for stitched signal length.
-    Also peform stemming on the labels.
+    Also perform stemming on the labels.
 
     Args:
         trimmed_stitch_index (list): stitch indices of trimmed signal
@@ -157,14 +157,14 @@ def process_labels(args, trimmed_stitch_index, labels, conversations):
     Returns:
         DataFrame: labels
     """
-    trimmed_stitch_index.insert(0, 0)
-    trimmed_stitch_index.pop(-1)
+    stitch_index.insert(0, 0)
+    stitch_index.pop(-1)
 
     new_labels = []
 
     len_to_add = 0
     for conv_id, (conversation_name, start, sub_list) in enumerate(
-            zip(conversations, trimmed_stitch_index, labels), 1):
+            zip(conversations, stitch_index, labels), 1):
 
         sub_list = create_sentence(args, sub_list)
         sub_list = shift_onsets(sub_list, start)
@@ -189,6 +189,14 @@ def add_word_freqs(df):
 
 
 def create_production_flag(df):
+    """Create 'production' column with True or False
+
+    Args:
+        df (dataframe): label dataframe
+
+    Returns:
+        [dataframe]: same dataframe with a new column
+    """    
     df['production'] = (df['speaker'] == 'Speaker1').astype(int)
     return df
 
@@ -269,9 +277,13 @@ def create_labels_pickles(args,
 
 @main_timer
 def main():
+    # Read commandline arguments
     args = arg_parser()
+
+    # Build variables needed for the project
     args = build_config(args)
 
+    # Return signals and labels from *.mat and conversation.txt files
     (full_signal, full_stitch_index, trimmed_signal, trimmed_stitch_index,
      binned_signal, bin_stitch_index, full_labels, trimmed_labels,
      convo_full_examples_size, convo_trimmed_examples_size, electrodes,
