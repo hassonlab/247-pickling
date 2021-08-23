@@ -11,9 +11,10 @@ import os
 import pickle
 
 import gensim.downloader as api
-import nltk
 import numpy as np
 import pandas as pd
+from nltk.stem import PorterStemmer as ps
+from nltk.stem import WordNetLemmatizer as lt
 from tfspkl_build_matrices import build_design_matrices
 from tfspkl_config import build_config
 from tfspkl_parser import arg_parser
@@ -29,7 +30,7 @@ def save_pickle(args, item, file_name):
     file_name = os.path.join(args.PKL_DIR, file_name) + add_ext
 
     with open(file_name, 'wb') as fh:
-        pickle.dump(item, fh)
+        pickle.dump(item, fh, protocol=4)
     return
 
 
@@ -42,8 +43,8 @@ def find_switch_points(array):
 def get_sentence_length(section):
     """Sentence length = offset of the last word - onset of first word
     """
-    last_word_offset = section.iloc[-1, 2]
-    first_word_onset = section.iloc[0, 1]
+    last_word_offset = section.offset.loc[section.offset.last_valid_index()]
+    first_word_onset = section.onset.loc[section.onset.first_valid_index()]
     return last_word_offset - first_word_onset
 
 
@@ -84,7 +85,8 @@ def convert_labels_to_df(labels):
 
 
 def split_convo_to_sections(conversation):
-    convo_df = convert_labels_to_df(conversation)
+    # convo_df = convert_labels_to_df(conversation)
+    convo_df = conversation
     speaker_switch_idx = find_switch_points(convo_df.speaker.values)
     sentence_df = np.split(convo_df, speaker_switch_idx, axis=0)
     return sentence_df
@@ -196,7 +198,7 @@ def create_production_flag(df):
 
     Returns:
         [dataframe]: same dataframe with a new column
-    """    
+    """
     df['production'] = (df['speaker'] == 'Speaker1').astype(int)
     return df
 
@@ -229,17 +231,27 @@ def add_vocab_columns(df):
                                                   local_files_only=True)
         key = model.split('/')[-1].replace('-', '_')
         df[f'in_{key}'] = df.word.apply(
-            lambda x: len(tokenizer.tokenize(x)) == 1)
+            lambda x: calc_tokenizer_length(tokenizer, x))
 
     return df
 
 
-def add_stemming(df):
-    lt = nltk.stem.WordNetLemmatizer()
-    df['lemmatized_word'] = df.word.str.strip().apply(lt.lemmatize)
+def calc_tokenizer_length(tokenizer, word):
+    return False if pd.isnull(word) else len(tokenizer.tokenize(word)) == 1
 
-    ps = nltk.stem.PorterStemmer()
-    df['stemmed_word'] = df.word.str.strip().apply(ps.stem)
+
+def apply_lemmatize(word):
+    return None if pd.isnull(word) else lt().lemmatize(word)
+
+
+def apply_stemming(word):
+    return None if pd.isnull(word) else ps().stem(word)
+
+
+def add_lemmatize_stemming(df):
+    df['lemmatized_word'] = df.word.str.strip().apply(
+        lambda x: apply_lemmatize(x))
+    df['stemmed_word'] = df.word.str.strip().apply(lambda x: apply_stemming(x))
 
     return df
 
@@ -253,7 +265,7 @@ def create_labels_pickles(args,
     labels_df = process_labels(args, stitch_index, labels, convs)
     labels_df = create_production_flag(labels_df)
     labels_df = add_word_freqs(labels_df)
-    labels_df = add_stemming(labels_df)
+    labels_df = add_lemmatize_stemming(labels_df)
     labels_df = add_vocab_columns(labels_df)
     # labels_df = create_folds(labels_df, args.num_folds)
 

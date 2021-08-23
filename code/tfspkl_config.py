@@ -37,7 +37,8 @@ def build_config(args):
         dict: combined configuration information
     """
     args.subject = str(args.subject)
-    args.exclude_words = ["sp", "{lg}", "{ns}"]
+    args.exclude_words = ["sp", "{lg}", "{ns}", "{LG}", "{NS}", "SP"]
+    args.non_words = ['hm', 'huh', 'mhm', 'mm', 'oh', 'uh', 'uhuh', 'um']
     create_directory_paths(args)
 
     write_config(vars(args))

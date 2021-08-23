@@ -4,7 +4,8 @@ import os
 import numpy as np
 import pandas as pd
 from electrode_utils import return_electrode_array
-from tfspkl_utils import (extract_conversation_contents, get_common_electrodes,
+from tfspkl_utils import (combine_podcast_datums,
+                          extract_conversation_contents, get_common_electrodes,
                           get_conversation_list)
 
 
@@ -16,7 +17,7 @@ def extract_subject_and_electrode(input_str):
 
     Returns:
         tuple: (subject, electrode)
-    """    
+    """
     split_list = input_str.split('conversation1')
     electrode = split_list[-1].strip('_')
     subject = int(split_list[0][2:5])
@@ -41,8 +42,10 @@ def build_design_matrices(CONFIG, delimiter=','):
         try:
             # If the electrode file is in Bobbi's original format
             sigelec_list = pd.read_csv(CONFIG['sig_elec_file'],
-                                header=None)[0].tolist()
-            sigelec_list = [extract_subject_and_electrode(item) for item in sigelec_list]
+                                       header=None)[0].tolist()
+            sigelec_list = [
+                extract_subject_and_electrode(item) for item in sigelec_list
+            ]
             df = pd.DataFrame(sigelec_list, columns=['subject', 'electrode'])
         except:
             # If the electrode file is in the new format
@@ -96,7 +99,6 @@ def build_design_matrices(CONFIG, delimiter=','):
 
 
 def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
-    exclude_words = CONFIG["exclude_words"]
     suffix = '/misc/*trimmed.txt'
 
     conversations = get_conversation_list(CONFIG, subject)
@@ -149,7 +151,14 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
         full_stitch_index.append(signal_length)
         a = ecogs.shape[0]
 
-        examples = extract_conversation_contents(datum_fn, exclude_words)
+        if CONFIG['project_id'] == 'tfs':
+            examples_df = extract_conversation_contents(CONFIG, datum_fn)
+        elif CONFIG['project_id'] == 'podcast':
+            examples_df = combine_podcast_datums(CONFIG, datum_fn)
+        else:
+            raise Exception('Invalid Project Id')
+
+        # examples = examples_df.values.tolist()
 
         cutoff_portion = signal_length % bin_size
         if cutoff_portion:
@@ -160,9 +169,11 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
         convo_binned_signal = np.vsplit(ecogs, split_indices)
 
         # TODO: think about this line
-        trimmed_examples = list(
-            filter(lambda x: x[2] < signal_length, examples))
-        convo_all_examples_size.append(len(examples))
+        # trimmed_examples = list(
+        #     filter(lambda x: x[2] < signal_length, examples))
+        trimmed_examples = examples_df[examples_df.offset.isnull()
+                                       | examples_df.offset < signal_length]
+        convo_all_examples_size.append(len(examples_df))
         convo_trimmed_examples_size.append(len(trimmed_examples))
 
         trimmed_signal.append(ecogs)
@@ -177,11 +188,12 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
 
         binned_signal.append(mean_binned_signal)
 
-        all_examples.append(examples)
+        all_examples.append(examples_df)
         all_trimmed_examples.append(trimmed_examples)
 
-        print(os.path.basename(conversation), a, len(examples), ecogs.shape[0],
-              len(trimmed_examples), mean_binned_signal.shape[0])
+        print(os.path.basename(conversation), a, len(examples_df),
+              ecogs.shape[0], len(trimmed_examples),
+              mean_binned_signal.shape[0])
 
     full_signal = np.concatenate(full_signal)
     full_stitch_index = np.cumsum(full_stitch_index).tolist()
