@@ -102,6 +102,12 @@ def tokenize_and_explode(args, df):
     df = check_token_is_root(args, df)
     df = add_glove_embeddings(df, dim=50)
 
+    # Add a token index for each word's token
+    for value in df['index'].unique():
+        if value is not None:
+            flag = df['index'] == value
+            df.loc[flag, 'token_idx'] = np.arange(sum(flag))
+
     return df
 
 
@@ -546,13 +552,8 @@ def main():
     select_tokenizer_and_model(args)
     setup_environ(args)
 
-    if args.project_id == 'tfs':
-        utterance_df = load_pickle(args)
-        utterance_df = select_conversation(args, utterance_df)
-    elif args.project_id == 'podcast':
-        utterance_df = tokenize_podcast_transcript(args)
-    else:
-        raise Exception('Invalid Project ID')
+    utterance_df = load_pickle(args)
+    utterance_df = select_conversation(args, utterance_df)
 
     if args.history:
         if args.embedding_type == 'gpt2-xl':
@@ -565,9 +566,9 @@ def main():
         else:
             df = generate_embeddings(args, utterance_df)
 
-    if args.project_id == 'podcast':
-        df = align_podcast_tokens(args, df)
-        df = create_folds(df, 10)
+    # if args.project_id == 'podcast':
+    #     df = align_podcast_tokens(args, df)
+    df = create_folds(df, 10)
 
     save_pickle(df.to_dict('records'), args.output_file)
 
