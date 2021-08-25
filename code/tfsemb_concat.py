@@ -56,6 +56,9 @@ def parse_arguments():
     parser.add_argument('--pkl-identifier', type=str, default=None)
     parser.add_argument('--project-id', type=str, default=None)
 
+    # import sys
+    # sys.argv = ['tfsemb_concat.py', '--project-id', 'podcast', '--pkl-identifier', 'full', '--subject', '661', '--embedding-type', 'gpt2-xl', '--history', '--context-length', '1024']
+
     return parser.parse_args()
 
 
@@ -74,22 +77,30 @@ def main():
                                    args.subject, 'embeddings', stra,
                                    args.pkl_identifier)
 
-    conversation_pickles = sorted(os.listdir(args.output_dir))
-    assert len(conversation_pickles) == num_convs, 'Bad conversation size'
+    all_layers = sorted(os.listdir(args.output_dir))
 
-    all_df = []
-    for conversation in conversation_pickles:
-        conv_pkl = os.path.join(args.output_dir, conversation)
-        all_df.append(load_pickle(conv_pkl))
+    for layer in all_layers:
+        conversation_pickles = sorted(
+            os.listdir(os.path.join(args.output_dir, layer)))
+        assert len(conversation_pickles) == num_convs, 'Bad conversation size'
 
-    emb_out_dir = os.path.join(os.getcwd(), 'results', args.project_id,
-                               args.subject, 'pickles')
-    emb_out_file = '_'.join(
-        [args.subject, args.pkl_identifier, stra, 'embeddings'])
+    for layer in all_layers:
+        print(layer)
+        conversation_pickles = sorted(
+            os.listdir(os.path.join(args.output_dir, layer)))
+        all_df = []
+        for conversation in conversation_pickles:
+            conv_pkl = os.path.join(args.output_dir, layer, conversation)
+            all_df.append(load_pickle(conv_pkl))
 
-    all_df = pd.concat(all_df, ignore_index=True)
-    all_df = all_df.to_dict('records')
-    save_pickle(all_df, os.path.join(emb_out_dir, emb_out_file))
+        emb_out_dir = os.path.join(os.getcwd(), 'results', args.project_id,
+                                   args.subject, 'pickles')
+        emb_out_file = '_'.join(
+            [args.subject, args.pkl_identifier, stra, layer, 'embeddings'])
+
+        all_df = pd.concat(all_df, ignore_index=True)
+        all_df = all_df.to_dict('records')
+        save_pickle(all_df, os.path.join(emb_out_dir, emb_out_file))
 
 
 if __name__ == '__main__':

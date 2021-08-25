@@ -162,6 +162,18 @@ def process_extracted_embeddings(concat_output):
     return extracted_embeddings
 
 
+def process_extracted_embeddings_all_layers(layer_embeddings_dict):
+    layer_embeddings = dict()
+    for layer_idx in range(1, 49):
+        concat_output = []
+        for item_dict in layer_embeddings_dict:
+            concat_output.append(item_dict[layer_idx])
+        layer_embeddings[layer_idx] = process_extracted_embeddings(
+            concat_output)
+
+    return layer_embeddings
+
+
 def process_extracted_logits(args, concat_logits, sentence_token_ids):
     """Get the probability for the _correct_ word"""
     # (batch_size, max_len, vocab_size)
@@ -216,6 +228,18 @@ def extract_select_vectors(batch_idx, array):
     return x
 
 
+def extract_select_vectors_all_layers(batch_idx, array):
+
+    array_actual = tuple(y.cpu() for y in array)
+
+    all_layers_x = dict()
+    for layer_idx in range(1, 49):
+        array = array_actual[layer_idx]
+        all_layers_x[layer_idx] = extract_select_vectors(batch_idx, array)
+
+    return all_layers_x
+
+
 def model_forward_pass(args, data_dl):
     model = args.model
     device = args.device
@@ -226,8 +250,8 @@ def model_forward_pass(args, data_dl):
 
         all_embeddings = []
         all_logits = []
+        all_embeddings1 = []
         for batch_idx, batch in enumerate(data_dl):
-            print(batch)
             batch = batch.to(args.device)
             model_output = model(batch)
 
@@ -235,12 +259,15 @@ def model_forward_pass(args, data_dl):
             logits = model_output.logits.cpu()
 
             embeddings = extract_select_vectors(batch_idx, embeddings)
+            embeddings1 = extract_select_vectors_all_layers(
+                batch_idx, model_output.hidden_states)
             logits = extract_select_vectors(batch_idx, logits)
 
             all_embeddings.append(embeddings)
+            all_embeddings1.append(embeddings1)
             all_logits.append(logits)
 
-    return all_embeddings, all_logits
+    return all_embeddings, all_embeddings1, all_logits
 
 
 def get_conversation_tokens(df, conversation):
@@ -289,9 +316,10 @@ def generate_embeddings_with_context(args, df):
         model_input = make_input_from_tokens(args, token_list)
 
         input_dl = make_dataloader_from_input(model_input)
-        embeddings, logits = model_forward_pass(args, input_dl)
+        embeddings, embeddings1, logits = model_forward_pass(args, input_dl)
 
         embeddings = process_extracted_embeddings(embeddings)
+        embeddings1 = process_extracted_embeddings_all_layers(embeddings1)
         assert embeddings.shape[0] == len(token_list)
         final_embeddings.append(embeddings)
 
@@ -303,6 +331,11 @@ def generate_embeddings_with_context(args, df):
 
     # TODO: convert embeddings dtype from object to float
     df['embeddings'] = np.concatenate(final_embeddings, axis=0).tolist()
+
+    for key, item in embeddings1.items():
+        col_name = '_'.join(['embeddings', 'layer', f'{key:02d}'])
+        df[col_name] = np.concatenate([item], axis=0).tolist()
+
     df['top1_pred'] = final_top1_word
     df['top1_pred_prob'] = final_top1_prob
     df['true_pred_prob'] = final_true_y_prob
@@ -475,8 +508,8 @@ def parse_arguments():
     parser.add_argument('--layer-idx', nargs='?', type=int, default=None)
 
     # custom_args = [
-    #     '--project-id', 'podcast', '--pkl-identifier', 'full',
-    #     '--conversation-id', '1', '--subject', '661', '--history',
+    #     '--project-id', 'tfs', '--pkl-identifier', 'full',
+    #     '--conversation-id', '1', '--subject', '625', '--history',
     #     '--context-length', '1024', '--embedding-type', 'gpt2-xl'
     # ]
 
