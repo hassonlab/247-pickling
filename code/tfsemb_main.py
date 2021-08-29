@@ -13,7 +13,7 @@ import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
-from utils import create_folds, lcs, main_timer
+from utils import lcs, main_timer
 
 
 def save_pickle(item, file_name):
@@ -250,24 +250,20 @@ def model_forward_pass(args, data_dl):
 
         all_embeddings = []
         all_logits = []
-        all_embeddings1 = []
         for batch_idx, batch in enumerate(data_dl):
             batch = batch.to(args.device)
             model_output = model(batch)
 
-            embeddings = model_output.hidden_states[args.layer_idx].cpu()
             logits = model_output.logits.cpu()
 
-            embeddings = extract_select_vectors(batch_idx, embeddings)
-            embeddings1 = extract_select_vectors_all_layers(
+            embeddings = extract_select_vectors_all_layers(
                 batch_idx, model_output.hidden_states)
             logits = extract_select_vectors(batch_idx, logits)
 
             all_embeddings.append(embeddings)
-            all_embeddings1.append(embeddings1)
             all_logits.append(logits)
 
-    return all_embeddings, all_embeddings1, all_logits
+    return all_embeddings, all_logits
 
 
 def get_conversation_tokens(df, conversation):
@@ -316,11 +312,12 @@ def generate_embeddings_with_context(args, df):
         model_input = make_input_from_tokens(args, token_list)
 
         input_dl = make_dataloader_from_input(model_input)
-        embeddings, embeddings1, logits = model_forward_pass(args, input_dl)
+        embeddings, logits = model_forward_pass(args, input_dl)
 
-        embeddings = process_extracted_embeddings(embeddings)
-        embeddings1 = process_extracted_embeddings_all_layers(embeddings1)
-        assert embeddings.shape[0] == len(token_list)
+        embeddings = process_extracted_embeddings_all_layers(embeddings)
+
+        for _, item in embeddings.items():
+            assert item.shape[0] == len(token_list)
         final_embeddings.append(embeddings)
 
         top1_word, top1_prob, true_y_prob, entropy = process_extracted_logits(
@@ -330,9 +327,8 @@ def generate_embeddings_with_context(args, df):
         final_true_y_prob.extend(true_y_prob)
 
     # TODO: convert embeddings dtype from object to float
-    df['embeddings'] = np.concatenate(final_embeddings, axis=0).tolist()
 
-    for key, item in embeddings1.items():
+    for key, item in embeddings.items():
         col_name = '_'.join(['embeddings', 'layer', f'{key:02d}'])
         df[col_name] = np.concatenate([item], axis=0).tolist()
 
@@ -598,10 +594,6 @@ def main():
             df = generate_glove_embeddings(args, utterance_df)
         else:
             df = generate_embeddings(args, utterance_df)
-
-    # if args.project_id == 'podcast':
-    #     df = align_podcast_tokens(args, df)
-    df = create_folds(df, 10)
 
     save_pickle(df.to_dict('records'), args.output_file)
 
