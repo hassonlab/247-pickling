@@ -434,7 +434,6 @@ def select_tokenizer_and_model(args):
     assert 0 <= args.layer_idx <= layer_dict[model_name], 'Invalid Layer Number'
 
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
-    print(CACHE_DIR)
     os.makedirs(CACHE_DIR, exist_ok=True)
 
     args.model = model_class.from_pretrained(model_name,
@@ -474,76 +473,7 @@ def parse_arguments():
     parser.add_argument('--project-id', type=str, default=None)
     parser.add_argument('--layer-idx', nargs='?', type=int, default=None)
 
-    # custom_args = [
-    #     '--project-id', 'podcast', '--pkl-identifier', 'full',
-    #     '--conversation-id', '1', '--subject', '661', '--history',
-    #     '--context-length', '1024', '--embedding-type', 'gpt2-xl'
-    # ]
-
     return parser.parse_args()
-
-
-def tokenize_transcript(file_name):
-    # Read all words and tokenize them
-    with open(file_name, 'r') as fp:
-        data = fp.readlines()
-
-    data = [item.strip().split(' ') for item in data]
-    data = [item for sublist in data for item in sublist]
-    return data
-
-
-def tokenize_podcast_transcript(args):
-    """Tokenize the podcast transcript and return as dataframe
-
-    Args:
-        args (Namespace): namespace object containing project parameters
-                            (command line arguments and others)
-
-    Returns:
-        DataFrame: containing tokenized transcript
-    """
-    DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-    story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
-    # story_file = os.path.join(DATA_DIR, 'pieman_transcript.txt')
-
-    data = tokenize_transcript(story_file)
-
-    df = pd.DataFrame(data, columns=['word'])
-    df['conversation_id'] = 1
-
-    return df
-
-
-def align_podcast_tokens(args, df):
-    """Align the embeddings tokens with datum (containing onset/offset)
-
-    Args:
-        args (Namespace): namespace object containing project parameters
-        df (DataFrame): embeddings dataframe
-
-    Returns:
-        df (DataFrame): aligned/filtered dataframe (goes into encoding)
-    """
-    DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-    cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
-    # cloze_file = os.path.join(DATA_DIR, 'piemanAligned_all.txt')
-
-    cloze_df = pd.read_csv(cloze_file, sep=',')
-    words = list(map(str.lower, cloze_df.word.tolist()))
-
-    model_tokens = df['token2word'].tolist()
-
-    # Align the two lists
-    mask1, mask2 = lcs(words, model_tokens)
-
-    cloze_df = cloze_df.iloc[mask1, :].reset_index(drop=True)
-    df = df.iloc[mask2, :].reset_index(drop=True)
-
-    df_final = pd.concat([df, cloze_df], axis=1)
-    df = df_final.loc[:, ~df_final.columns.duplicated()]
-
-    return df
 
 
 @main_timer
@@ -565,10 +495,6 @@ def main():
             df = generate_glove_embeddings(args, utterance_df)
         else:
             df = generate_embeddings(args, utterance_df)
-
-    # if args.project_id == 'podcast':
-    #     df = align_podcast_tokens(args, df)
-    df = create_folds(df, 10)
 
     save_pickle(df.to_dict('records'), args.output_file)
 
