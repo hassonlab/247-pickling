@@ -13,11 +13,11 @@ then
     echo "It's tiger"
     module load anaconda
     source activate 247-main
-elif [[ "$HOSTNAME" == *"della-gpu"* ]]
+elif [[ "$HOSTNAME" == *"della"* ]]
 then
     echo "It's della-gpu"
-    module load anaconda3/2020.11
-    source activate torch-env
+    module load anaconda3/2021.5
+    source activate 247-main
 else
     module load anacondapy
     source activate srm
