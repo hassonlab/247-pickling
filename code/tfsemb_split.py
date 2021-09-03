@@ -6,6 +6,23 @@ import pickle
 import pandas as pd
 
 
+def split_embeddings(args, df):
+    args.emb_out_file = '_'.join(
+        [args.subject, args.pkl_identifier, args.stra, 'embeddings'])
+
+    filter_col = sorted(
+        [col for col in df if col.startswith('embeddings_layer_')])
+    embeddings_df = df[filter_col]
+    common_df = df.drop(filter_col, axis=1)
+
+    for column in filter_col:
+        common_df[column] = embeddings_df[column]
+        all_df = all_df.to_dict('records')
+        save_pickle(all_df, os.path.join(args.emb_out_dir, args.emb_out_file))
+
+    pass
+
+
 def load_pickle(pickle_name):
     """Load the datum pickle and returns as a dataframe
 
@@ -74,32 +91,34 @@ def main():
         [args.embedding_type, 'cnxt',
          str(args.context_length)])
     args.output_dir = os.path.join(os.getcwd(), 'results', args.project_id,
-                                   args.subject, 'embeddings_AllInOne', args.stra,
-                                   args.pkl_identifier)
+                                   args.subject, 'embeddings_AllInOne',
+                                   args.stra, args.pkl_identifier, 'layer_00')
 
-    layer_folders = sorted(os.listdir(args.output_dir))
+    conversation_pickles = sorted(
+        glob.glob(os.path.join(args.output_dir, '*.pkl')))
+    assert len(conversation_pickles) == num_convs, 'Bad conversation size'
 
-    for layer_folder in layer_folders:
-        print(layer_folder)
-        conversation_pickles = sorted(glob.glob(os.path.join(args.output_dir, layer_folder, '*')))
-        assert len(conversation_pickles) == num_convs, 'Bad conversation size'
-        
-        all_df = []
-        for conversation in conversation_pickles:
-            conv_pkl = os.path.join(args.output_dir, conversation)
-            all_df.append(load_pickle(conv_pkl))
+    for idx, conversation in enumerate(conversation_pickles):
+        conversation_name = os.path.split(conversation)[-1]
+        print(conversation_name)
+        conv_pkl = os.path.join(args.output_dir, conversation)
+        df = load_pickle(conv_pkl)
 
-        args.emb_out_dir = os.path.join(os.getcwd(), 'results', args.project_id,
-                                        args.subject, 'pickles')
-        strb = '_'.join([args.stra, layer_folder])
-        args.emb_out_file = '_'.join(
-            [args.subject, args.pkl_identifier, strb, 'embeddings'])
+        filter_col = sorted(
+            [col for col in df if col.startswith('embeddings_layer_')])
+        embeddings_df = df[filter_col]
+        df = df.drop(filter_col, axis=1)
 
-        all_df = pd.concat(all_df, ignore_index=True)
+        for idx, column in enumerate(filter_col, 1):
+            output_dir = os.path.join(os.getcwd(), 'results', args.project_id,
+                            args.subject, 'embeddings_AllInOne',
+                            args.stra, args.pkl_identifier, f'layer_{idx:02}')
+            os.makedirs(output_dir, exist_ok=True)
 
-        all_df = all_df.to_dict('records')
-        save_pickle(all_df, os.path.join(args.emb_out_dir, args.emb_out_file))
+            df['embeddings'] = embeddings_df[column]
+            df.to_pickle(os.path.join(output_dir, conversation_name))
 
+    os.rmdir(args.output_dir)
 
 if __name__ == '__main__':
     main()
