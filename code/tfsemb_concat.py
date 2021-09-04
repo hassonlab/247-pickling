@@ -1,5 +1,6 @@
 import argparse
 import os
+import glob
 import pickle
 
 import pandas as pd
@@ -90,10 +91,10 @@ def main():
         [args.embedding_type, 'cnxt',
          str(args.context_length)])
     args.output_dir = os.path.join(os.getcwd(), 'results', args.project_id,
-                                   args.subject, 'embeddings', args.stra,
-                                   args.pkl_identifier)
+                                   args.subject, 'embeddings_AllInOne_della', args.stra, 
+                                   args.pkl_identifier, 'layer_48')
 
-    conversation_pickles = sorted(os.listdir(args.output_dir))
+    conversation_pickles = sorted(glob.glob(os.path.join(args.output_dir, '*.pkl')))
     assert len(conversation_pickles) == num_convs, 'Bad conversation size'
 
     all_df = []
