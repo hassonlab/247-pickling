@@ -70,19 +70,23 @@ def main():
     else:
         num_convs = 1
 
-    args.stra = '_'.join(
-        [args.embedding_type, 'cnxt',
-         str(args.context_length)])
+    stra = args.embedding_type
+    if 'gpt2' in args.embedding_type:
+        stra = f'{stra}_cnxt_{args.context_length}'
     args.output_dir = os.path.join(os.getcwd(), 'results', args.project_id,
-                                   args.subject, 'embeddings_AllInOne', args.stra,
+                                   args.subject, 'embeddings', stra,
                                    args.pkl_identifier)
 
     layer_folders = sorted(os.listdir(args.output_dir))
 
     for layer_folder in layer_folders:
-        print(layer_folder)
+        print(f'Merginng {layer_folder}')
         conversation_pickles = sorted(glob.glob(os.path.join(args.output_dir, layer_folder, '*')))
-        assert len(conversation_pickles) == num_convs, 'Bad conversation size'
+        n = len(conversation_pickles)
+        if n != num_convs:
+            print(f'Bad conversation size: found {n} out of {num_convs}',
+                  f'in {args.output_dir}')
+            continue
         
         all_df = []
         for conversation in conversation_pickles:
@@ -91,7 +95,7 @@ def main():
 
         args.emb_out_dir = os.path.join(os.getcwd(), 'results', args.project_id,
                                         args.subject, 'pickles')
-        strb = '_'.join([args.stra, layer_folder])
+        strb = '_'.join([stra, layer_folder])
         args.emb_out_file = '_'.join(
             [args.subject, args.pkl_identifier, strb, 'embeddings'])
 

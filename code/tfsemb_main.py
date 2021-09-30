@@ -100,7 +100,6 @@ def tokenize_and_explode(args, df):
         args.tokenizer.convert_tokens_to_string).str.strip().str.lower()
     df = convert_token_to_idx(df, args.tokenizer)
     df = check_token_is_root(args, df)
-    df = add_glove_embeddings(df, dim=50)
 
     # Add a token index for each word's token
     for value in df['index'].unique():
@@ -227,7 +226,6 @@ def model_forward_pass(args, data_dl):
         all_embeddings = []
         all_logits = []
         for batch_idx, batch in enumerate(data_dl):
-            print(batch)
             batch = batch.to(args.device)
             model_output = model(batch)
 
@@ -359,7 +357,7 @@ def get_vector(x, glove):
 
 def generate_glove_embeddings(args, df):
     glove = api.load('glove-wiki-gigaword-50')
-    df['embeddings'] = df['word'].apply(lambda x: get_vector(x, glove))
+    df['embeddings'] = df['word'].apply(lambda x: get_vector(x.lower(), glove))
 
     return df
 
@@ -383,7 +381,9 @@ def setup_environ(args):
     if args.gpus > 1:
         args.model = nn.DataParallel(args.model)
 
-    stra = '_'.join([args.embedding_type, 'cnxt', str(args.context_length)])
+    stra = args.embedding_type
+    if 'gpt2' in args.embedding_type:
+        stra = f'{stra}_cnxt_{args.context_length}'
 
     # TODO: if multiple conversations are specified in input
     if args.conversation_id:
@@ -485,16 +485,15 @@ def main():
     utterance_df = load_pickle(args)
     utterance_df = select_conversation(args, utterance_df)
 
-    if args.history:
-        if args.embedding_type == 'gpt2-xl':
+    if args.embedding_type == 'glove50':
+        df = generate_glove_embeddings(args, utterance_df)
+    elif args.embedding_type == 'gpt2-xl':
+        if args.history:
             df = generate_embeddings_with_context(args, utterance_df)
         else:
             print('TODO: Generate embeddings for this model with context')
     else:
-        if args.embedding_type == 'glove50':
-            df = generate_glove_embeddings(args, utterance_df)
-        else:
-            df = generate_embeddings(args, utterance_df)
+        df = generate_embeddings(args, utterance_df)
 
     save_pickle(df.to_dict('records'), args.output_file)
 
