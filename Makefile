@@ -1,10 +1,21 @@
+# Instructions
+# ------------
+# The first time you should run link-data
+
+# For podcast to create a 777 pickle with all electrodes (signal and label)
+# glove and gpt2 embeddings:
+#   1. create-sig-pickle for 777
+#   2. create-pickle for 661
+#   3. generate-embeddings for 661 glove and gpt2
+#   4. run concatenate-embeddings for 661 glove and gpt2
+#   5. run copy-embeddings
+
 # Miscellaneous: \
 247 Subjects IDs: 625 and 676 \
 Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 777: Is the code the collection of significant electrodes
 
-# NOTE: link data from tigressdata before running any scripts \
-(Recommend running this before running every target)
+# NOTE: link data from tigressdata before running any scripts
 PRJCT_ID := podcast
 # {tfs | podcast}
 
@@ -14,43 +25,27 @@ ifeq ($(PRJCT_ID), podcast)
 else
 	$(eval DIR_KEY := conversations-car)
 endif
-
 	# create directory
 	mkdir -p data/$(PRJCT_ID)
-
-	# delete bad symlinks
+	# delete old symlinks
 	find data/$(PRJCT_ID)/ -xtype l -delete
-
 	# create symlinks from original data store
 	ln -sf /projects/HASSON/247/data/$(DIR_KEY)/* data/$(PRJCT_ID)/
-
-ifeq ($(PRJCT_ID), podcast)
-	cp /projects/HASSON/247/data/podcast/podcast-transcription.txt data/$(PRJCT_ID)/
-	cp /projects/HASSON/247/data/podcast/podcast-datum-cloze.csv data/$(PRJCT_ID)/
-else
-	$(eval DIR_KEY := conversations-car)
-endif
 
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
 %-pickle: CMD := python
 # {echo | python}
 %-pickle: PRJCT_ID := podcast
 # {tfs | podcast}
-%-pickle: SID_LIST=661 662 717 723 741 742 743 763 798
+%-pickle: SID_LIST = 777
 # {625 676 | 661 662 717 723 741 742 743 763 798 | 777}
-%-pickle: MEL := 500
-# Setting a large number will extract all common \
-									electrodes across all conversations
-%-pickle: MINF := 0
 
 create-pickle:
 	mkdir -p logs
 	for sid in $(SID_LIST); do \
 		$(CMD) code/tfspkl_main.py \
-					--project-id $(PRJCT_ID) \
-					--subject $$sid \
-					--max-electrodes $(MEL) \
-					--vocab-min-freq $(MINF); \
+			--project-id $(PRJCT_ID) \
+			--subject $$sid; \
 		done
 
 # create pickle fof significant electrodes
@@ -58,14 +53,12 @@ create-sig-pickle:
 	mkdir -p logs
 	$(CMD) code/tfspkl_main.py \
 			--project-id $(PRJCT_ID) \
-			--sig-elec-file /scratch/gpfs/hgazula/phase-5000-sig-elec-glove50d-perElec-FDR-01_newVer_1000perm-LH.csv \
-			--max-electrodes $(MEL) \
-			--vocab-min-freq $(MINF);
+			--sig-elec-file data/$(PRJCT_ID)/all-electrodes.csv
 
 # upload pickles to google cloud bucket
 upload-pickle:
 	for sid in $(SID_LIST); do \
-		gsutil -m cp -r results/$(PRJCT_ID)/$$sid/pickles/*.pkl gs://247-podcast-data/$(PRJCT_ID)_pickles/$$sid; \
+		gsutil -m rsync results/$(PRJCT_ID)/$$sid/pickles/ gs://247-podcast-data/$(PRJCT_ID)-pickles/$$sid; \
 	done
 
 # download pickles from google cloud bucket
@@ -76,7 +69,7 @@ download-247-pickles:
 
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: CMD := sbatch submit.sh
+%-embeddings: CMD := python
 # {echo | python | sbatch submit.sh}
 %-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
@@ -90,7 +83,7 @@ download-247-pickles:
 # {glove50 | bert | gpt2-xl}
 %-embeddings: CNXT_LEN := 1024
 %-embeddings: HIST := --history
-%-embeddings: LAYER := ${shell seq 1 3}
+%-embeddings: LAYER := 48
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 
@@ -122,11 +115,10 @@ concatenate-embeddings:
 				--context-length $(CNXT_LEN); \
 
 # Podcast: copy embeddings to other subjects as well
+# for sid in 662 717 723 741 742 763 798 777; do 
 copy-embeddings:
-	for SID_LIST=662 717 723 741 742 763 798 | 777}; do \
-		rsync /scratch/gpfs/$(shell whoami)/247-pickling/results/podcast/661/
+	@for fn in results/podcast/661/pickles/*embeddings.pkl; do \
+		for sid in 777; do \
+			cp -pf $$fn $$(echo $$fn | sed "s/661/$$sid/g"); \
+		done; \
 	done
-
-# Sync results with the /projects/HASSON folder
-sync-results:
-	rsync -ah /scratch/gpfs/$(shell whoami)/247-pickling/results/* /projects/HASSON/247/results_new_infra/pickling/
