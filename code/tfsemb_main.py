@@ -13,7 +13,7 @@ import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
-from utils import create_folds, lcs, main_timer
+from utils import lcs, main_timer
 
 
 def save_pickle(item, file_name):
@@ -417,6 +417,7 @@ def select_tokenizer_and_model(args):
         model_class = BartForConditionalGeneration
         model_name = 'bart'
     elif args.embedding_type == 'glove50':
+        args.layer_idx = 1
         return
     else:
         print('No model found for', args.model_name)

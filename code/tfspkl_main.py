@@ -267,24 +267,11 @@ def create_labels_pickles(args,
     labels_df = add_word_freqs(labels_df)
     labels_df = add_lemmatize_stemming(labels_df)
     labels_df = add_vocab_columns(labels_df)
-    # labels_df = create_folds(labels_df, args.num_folds)
 
     labels_dict = dict(labels=labels_df.to_dict('records'),
                        convo_label_size=convo_labels_size)
     pkl_name = '_'.join([args.subject, label_str, 'labels'])
     save_pickle(args, labels_dict, pkl_name)
-
-    # NOTE - commenting this out because fold splitting should be done in
-    # the analysis pipeline
-    # if args.vocab_min_freq:
-    #     labels_df = filter_on_freq(args, labels_df)
-    #     labels_df = create_folds(labels_df, args.num_folds, 'stratify')
-
-    #     label_folds = labels_df.to_dict('records')
-    #     pkl_name = '_'.join(
-    #         [args.subject, label_str, 'labels_MWF',
-    #          str(args.vocab_min_freq)])
-    #     save_pickle(label_folds, pkl_name)
 
 
 @main_timer

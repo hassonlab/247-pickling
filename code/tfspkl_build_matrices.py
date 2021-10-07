@@ -111,7 +111,7 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
         electrode_names = [electrode_names[i] for i in idx]
         electrodes = [electrodes[i] for i in idx]
 
-        assert set(electrode_names) == set(electrode_labels)
+        assert len(set(electrode_names) - set(electrode_labels)) == 0
 
     if subject:
         subject_id = [subject for i in electrodes]

@@ -27,7 +27,7 @@ def arg_parser(default_args: Optional[List] = None):
                        nargs='*',
                        type=int,
                        action='append')
-    group.add_argument('--max-electrodes', type=int, default=250)
+    group.add_argument('--max-electrodes', type=int, default=1e4)
 
     group1 = parser.add_mutually_exclusive_group()
     group1.add_argument('--subject', type=int, default=0)
