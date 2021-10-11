@@ -57,6 +57,9 @@ def parse_arguments():
     parser.add_argument('--pkl-identifier', type=str, default=None)
     parser.add_argument('--project-id', type=str, default=None)
 
+    # import sys
+    # sys.argv = ['tfsemb_concat.py', '--project-id', 'podcast', '--pkl-identifier', 'full', '--subject', '661', '--embedding-type', 'gpt2-xl', '--history', '--context-length', '1024']
+
     return parser.parse_args()
 
 

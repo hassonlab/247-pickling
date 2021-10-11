@@ -161,6 +161,18 @@ def process_extracted_embeddings(concat_output):
     return extracted_embeddings
 
 
+def process_extracted_embeddings_all_layers(layer_embeddings_dict):
+    layer_embeddings = dict()
+    for layer_idx in range(1, 49):
+        concat_output = []
+        for item_dict in layer_embeddings_dict:
+            concat_output.append(item_dict[layer_idx])
+        layer_embeddings[layer_idx] = process_extracted_embeddings(
+            concat_output)
+
+    return layer_embeddings
+
+
 def process_extracted_logits(args, concat_logits, sentence_token_ids):
     """Get the probability for the _correct_ word"""
     # (batch_size, max_len, vocab_size)
@@ -215,6 +227,18 @@ def extract_select_vectors(batch_idx, array):
     return x
 
 
+def extract_select_vectors_all_layers(batch_idx, array):
+
+    array_actual = tuple(y.cpu() for y in array)
+
+    all_layers_x = dict()
+    for layer_idx in range(1, 49):
+        array = array_actual[layer_idx]
+        all_layers_x[layer_idx] = extract_select_vectors(batch_idx, array)
+
+    return all_layers_x
+
+
 def model_forward_pass(args, data_dl):
     model = args.model
     device = args.device
@@ -229,10 +253,10 @@ def model_forward_pass(args, data_dl):
             batch = batch.to(args.device)
             model_output = model(batch)
 
-            embeddings = model_output.hidden_states[args.layer_idx].cpu()
             logits = model_output.logits.cpu()
 
-            embeddings = extract_select_vectors(batch_idx, embeddings)
+            embeddings = extract_select_vectors_all_layers(
+                batch_idx, model_output.hidden_states)
             logits = extract_select_vectors(batch_idx, logits)
 
             all_embeddings.append(embeddings)
@@ -289,8 +313,10 @@ def generate_embeddings_with_context(args, df):
         input_dl = make_dataloader_from_input(model_input)
         embeddings, logits = model_forward_pass(args, input_dl)
 
-        embeddings = process_extracted_embeddings(embeddings)
-        assert embeddings.shape[0] == len(token_list)
+        embeddings = process_extracted_embeddings_all_layers(embeddings)
+
+        for _, item in embeddings.items():
+            assert item.shape[0] == len(token_list)
         final_embeddings.append(embeddings)
 
         top1_word, top1_prob, true_y_prob, entropy = process_extracted_logits(
@@ -300,7 +326,11 @@ def generate_embeddings_with_context(args, df):
         final_true_y_prob.extend(true_y_prob)
 
     # TODO: convert embeddings dtype from object to float
-    df['embeddings'] = np.concatenate(final_embeddings, axis=0).tolist()
+
+    for key, item in embeddings.items():
+        col_name = '_'.join(['embeddings', 'layer', f'{key:02d}'])
+        df[col_name] = np.concatenate([item], axis=0).tolist()
+
     df['top1_pred'] = final_top1_word
     df['top1_pred_prob'] = final_top1_prob
     df['true_pred_prob'] = final_true_y_prob
