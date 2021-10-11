@@ -100,7 +100,6 @@ def tokenize_and_explode(args, df):
         args.tokenizer.convert_tokens_to_string).str.strip().str.lower()
     df = convert_token_to_idx(df, args.tokenizer)
     df = check_token_is_root(args, df)
-    df = add_glove_embeddings(df, dim=50)
 
     # Add a token index for each word's token
     for value in df['index'].unique():
@@ -388,7 +387,7 @@ def get_vector(x, glove):
 
 def generate_glove_embeddings(args, df):
     glove = api.load('glove-wiki-gigaword-50')
-    df['embeddings'] = df['word'].apply(lambda x: get_vector(x, glove))
+    df['embeddings'] = df['word'].apply(lambda x: get_vector(x.lower(), glove))
 
     return df
 
@@ -412,7 +411,9 @@ def setup_environ(args):
     if args.gpus > 1:
         args.model = nn.DataParallel(args.model)
 
-    stra = '_'.join([args.embedding_type, 'cnxt', str(args.context_length)])
+    stra = args.embedding_type
+    if 'gpt2' in args.embedding_type:
+        stra = f'{stra}_cnxt_{args.context_length}'
 
     # TODO: if multiple conversations are specified in input
     if args.conversation_id:
@@ -446,6 +447,7 @@ def select_tokenizer_and_model(args):
         model_class = BartForConditionalGeneration
         model_name = 'bart'
     elif args.embedding_type == 'glove50':
+        args.layer_idx = 1
         return
     else:
         print('No model found for', args.model_name)
@@ -463,7 +465,6 @@ def select_tokenizer_and_model(args):
     assert 0 <= args.layer_idx <= layer_dict[model_name], 'Invalid Layer Number'
 
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
-    print(CACHE_DIR)
     os.makedirs(CACHE_DIR, exist_ok=True)
 
     args.model = model_class.from_pretrained(model_name,
@@ -503,76 +504,7 @@ def parse_arguments():
     parser.add_argument('--project-id', type=str, default=None)
     parser.add_argument('--layer-idx', nargs='?', type=int, default=None)
 
-    # custom_args = [
-    #     '--project-id', 'tfs', '--pkl-identifier', 'full',
-    #     '--conversation-id', '1', '--subject', '625', '--history',
-    #     '--context-length', '1024', '--embedding-type', 'gpt2-xl'
-    # ]
-
     return parser.parse_args()
-
-
-def tokenize_transcript(file_name):
-    # Read all words and tokenize them
-    with open(file_name, 'r') as fp:
-        data = fp.readlines()
-
-    data = [item.strip().split(' ') for item in data]
-    data = [item for sublist in data for item in sublist]
-    return data
-
-
-def tokenize_podcast_transcript(args):
-    """Tokenize the podcast transcript and return as dataframe
-
-    Args:
-        args (Namespace): namespace object containing project parameters
-                            (command line arguments and others)
-
-    Returns:
-        DataFrame: containing tokenized transcript
-    """
-    DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-    story_file = os.path.join(DATA_DIR, 'podcast-transcription.txt')
-    # story_file = os.path.join(DATA_DIR, 'pieman_transcript.txt')
-
-    data = tokenize_transcript(story_file)
-
-    df = pd.DataFrame(data, columns=['word'])
-    df['conversation_id'] = 1
-
-    return df
-
-
-def align_podcast_tokens(args, df):
-    """Align the embeddings tokens with datum (containing onset/offset)
-
-    Args:
-        args (Namespace): namespace object containing project parameters
-        df (DataFrame): embeddings dataframe
-
-    Returns:
-        df (DataFrame): aligned/filtered dataframe (goes into encoding)
-    """
-    DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-    cloze_file = os.path.join(DATA_DIR, 'podcast-datum-cloze.csv')
-    # cloze_file = os.path.join(DATA_DIR, 'piemanAligned_all.txt')
-
-    cloze_df = pd.read_csv(cloze_file, sep=',')
-    words = list(map(str.lower, cloze_df.word.tolist()))
-
-    model_tokens = df['token2word'].tolist()
-
-    # Align the two lists
-    mask1, mask2 = lcs(words, model_tokens)
-
-    cloze_df = cloze_df.iloc[mask1, :].reset_index(drop=True)
-    df = df.iloc[mask2, :].reset_index(drop=True)
-
-    df_final = pd.concat([df, cloze_df], axis=1)
-    df = df_final.loc[:, ~df_final.columns.duplicated()]
-
-    return df
 
 
 @main_timer
@@ -584,16 +516,15 @@ def main():
     utterance_df = load_pickle(args)
     utterance_df = select_conversation(args, utterance_df)
 
-    if args.history:
-        if args.embedding_type == 'gpt2-xl':
+    if args.embedding_type == 'glove50':
+        df = generate_glove_embeddings(args, utterance_df)
+    elif args.embedding_type == 'gpt2-xl':
+        if args.history:
             df = generate_embeddings_with_context(args, utterance_df)
         else:
             print('TODO: Generate embeddings for this model with context')
     else:
-        if args.embedding_type == 'glove50':
-            df = generate_glove_embeddings(args, utterance_df)
-        else:
-            df = generate_embeddings(args, utterance_df)
+        df = generate_embeddings(args, utterance_df)
 
     save_pickle(df.to_dict('records'), args.output_file)
 
