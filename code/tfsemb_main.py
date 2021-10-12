@@ -13,19 +13,28 @@ import torch.utils.data as data
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
                           GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
-from utils import lcs, main_timer
+from utils import main_timer
 
 
-def save_pickle(item, file_name):
+def save_pickle(args, item, file_name, embeddings=None):
     """Write 'item' to 'file_name.pkl'
     """
     add_ext = '' if file_name.endswith('.pkl') else '.pkl'
 
     file_name = file_name + add_ext
-    os.makedirs(os.path.dirname(file_name), exist_ok=True)
 
-    with open(file_name, 'wb') as fh:
-        pickle.dump(item, fh)
+    if embeddings is not None:
+        for layer_idx, embedding in embeddings.items():
+            item['embeddings'] = embedding.tolist()
+            filename = file_name % layer_idx
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            with open(filename, 'wb') as fh:
+                pickle.dump(item.to_dict('records'), fh)
+    else:
+        filename = file_name % args.layer_idx[0]
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, 'wb') as fh:
+            pickle.dump(item.to_dict('records'), fh)
     return
 
 
@@ -161,9 +170,9 @@ def process_extracted_embeddings(concat_output):
     return extracted_embeddings
 
 
-def process_extracted_embeddings_all_layers(layer_embeddings_dict):
+def process_extracted_embeddings_all_layers(args, layer_embeddings_dict):
     layer_embeddings = dict()
-    for layer_idx in range(1, 49):
+    for layer_idx in args.layer_idx:
         concat_output = []
         for item_dict in layer_embeddings_dict:
             concat_output.append(item_dict[layer_idx])
@@ -210,7 +219,7 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
     # probability of correct word
     true_y_probability = [None] + prediction_probabilities.gather(
         1, true_y).squeeze(-1).tolist()
-    #TODO: probabilities of all words
+    # TODO: probabilities of all words
 
     return top1_words, top1_probabilities, true_y_probability, entropy
 
@@ -227,12 +236,12 @@ def extract_select_vectors(batch_idx, array):
     return x
 
 
-def extract_select_vectors_all_layers(batch_idx, array):
+def extract_select_vectors_all_layers(batch_idx, array, layers=None):
 
     array_actual = tuple(y.cpu() for y in array)
 
     all_layers_x = dict()
-    for layer_idx in range(1, 49):
+    for layer_idx in layers:
         array = array_actual[layer_idx]
         all_layers_x[layer_idx] = extract_select_vectors(batch_idx, array)
 
@@ -256,7 +265,7 @@ def model_forward_pass(args, data_dl):
             logits = model_output.logits.cpu()
 
             embeddings = extract_select_vectors_all_layers(
-                batch_idx, model_output.hidden_states)
+                batch_idx, model_output.hidden_states, args.layer_idx)
             logits = extract_select_vectors(batch_idx, logits)
 
             all_embeddings.append(embeddings)
@@ -313,8 +322,7 @@ def generate_embeddings_with_context(args, df):
         input_dl = make_dataloader_from_input(model_input)
         embeddings, logits = model_forward_pass(args, input_dl)
 
-        embeddings = process_extracted_embeddings_all_layers(embeddings)
-
+        embeddings = process_extracted_embeddings_all_layers(args, embeddings)
         for _, item in embeddings.items():
             assert item.shape[0] == len(token_list)
         final_embeddings.append(embeddings)
@@ -325,11 +333,12 @@ def generate_embeddings_with_context(args, df):
         final_top1_prob.extend(top1_prob)
         final_true_y_prob.extend(true_y_prob)
 
-    # TODO: convert embeddings dtype from object to float
-
-    for key, item in embeddings.items():
-        col_name = '_'.join(['embeddings', 'layer', f'{key:02d}'])
-        df[col_name] = np.concatenate([item], axis=0).tolist()
+    if len(final_embeddings) > 1:
+        # TODO concat all embeddings and return a dictionary
+        # previous: np.concatenate(final_embeddings, axis=0)
+        raise NotImplementedError
+    else:
+        final_embeddings = final_embeddings[0]
 
     df['top1_pred'] = final_top1_word
     df['top1_pred_prob'] = final_top1_prob
@@ -337,7 +346,7 @@ def generate_embeddings_with_context(args, df):
     df['surprise'] = -df['true_pred_prob'] * np.log2(df['true_pred_prob'])
     df['entropy'] = entropy
 
-    return df
+    return df, final_embeddings
 
 
 def generate_embeddings(args, df):
@@ -418,10 +427,7 @@ def setup_environ(args):
     # TODO: if multiple conversations are specified in input
     if args.conversation_id:
         args.output_dir = os.path.join(RESULTS_DIR, args.subject, 'embeddings',
-                                       stra, args.pkl_identifier,
-                                       f'layer_{args.layer_idx:02d}')
-        os.makedirs(args.output_dir, exist_ok=True)
-
+                                       stra, args.pkl_identifier, 'layer_%02d')
         output_file_name = args.conversation_list[args.conversation_id - 1]
         args.output_file = os.path.join(args.output_dir, output_file_name)
 
@@ -447,7 +453,7 @@ def select_tokenizer_and_model(args):
         model_class = BartForConditionalGeneration
         model_name = 'bart'
     elif args.embedding_type == 'glove50':
-        args.layer_idx = 1
+        args.layer_idx = [1]
         return
     else:
         print('No model found for', args.model_name)
@@ -460,9 +466,13 @@ def select_tokenizer_and_model(args):
         'bbot-small': 8,
         'bbot': 12
     }
-    args.layer_idx = layer_dict[
-        model_name] if args.layer_idx is None else args.layer_idx
-    assert 0 <= args.layer_idx <= layer_dict[model_name], 'Invalid Layer Number'
+
+    if len(args.layer_idx) == 0:
+        args.layer_idx = np.arange(1, layer_dict[model_name])
+    else:
+        layers = np.array(args.layer_idx)
+        good = np.all((layers >= 0) & (layers <= layer_dict[model_name]))
+        assert good, 'Invalid layer number'
 
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -502,7 +512,7 @@ def parse_arguments():
     parser.add_argument('--conversation-id', type=int, default=0)
     parser.add_argument('--pkl-identifier', type=str, default=None)
     parser.add_argument('--project-id', type=str, default=None)
-    parser.add_argument('--layer-idx', nargs='?', type=int, default=None)
+    parser.add_argument('--layer-idx', nargs='*', type=int, default=[])
 
     return parser.parse_args()
 
@@ -516,17 +526,18 @@ def main():
     utterance_df = load_pickle(args)
     utterance_df = select_conversation(args, utterance_df)
 
+    embeddings = None
     if args.embedding_type == 'glove50':
         df = generate_glove_embeddings(args, utterance_df)
     elif args.embedding_type == 'gpt2-xl':
         if args.history:
-            df = generate_embeddings_with_context(args, utterance_df)
+            df, embeddings = generate_embeddings_with_context(args, utterance_df)
         else:
             print('TODO: Generate embeddings for this model with context')
     else:
         df = generate_embeddings(args, utterance_df)
 
-    save_pickle(df.to_dict('records'), args.output_file)
+    save_pickle(args, df, args.output_file, embeddings)
 
     return
 

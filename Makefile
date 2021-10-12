@@ -9,6 +9,7 @@
 #   3. generate-embeddings for 661 glove and gpt2
 #   4. run concatenate-embeddings for 661 glove and gpt2
 #   5. run copy-embeddings
+#   6. (optionally) run upload-pickle
 
 # Miscellaneous: \
 247 Subjects IDs: 625 and 676 \
@@ -61,6 +62,11 @@ upload-pickle:
 		gsutil -m rsync results/$(PRJCT_ID)/$$sid/pickles/ gs://247-podcast-data/$(PRJCT_ID)-pickles/$$sid; \
 	done
 
+# upload raw data to google cloud bucket
+upload-data:
+	gsutil -m rsync -rd data/tfs/676 gs://247-podcast-data/247-data/676/
+	gsutil -m rsync -rd data/tfs/625 gs://247-podcast-data/247-data/625/
+
 # download pickles from google cloud bucket
 download-247-pickles:
 	mkdir -p results/{625,676}
@@ -69,7 +75,7 @@ download-247-pickles:
 
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: CMD := python
+%-embeddings: CMD := sbatch submit.sh
 # {echo | python | sbatch submit.sh}
 %-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
@@ -83,36 +89,35 @@ download-247-pickles:
 # {glove50 | bert | gpt2-xl}
 %-embeddings: CNXT_LEN := 1024
 %-embeddings: HIST := --history
-%-embeddings: LAYER := 48
+%-embeddings: LAYER := $(shell seq 1 48)
+# {48 | 1 48 | 1 }
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 
 # generates embeddings (for each conversation separately)
 generate-embeddings:
 	mkdir -p logs
-	for layer in $(LAYER); do \
-		for conv_id in $(CONV_IDS); do \
-			$(CMD) code/tfsemb_main.py \
-						--project-id $(PRJCT_ID) \
-						--pkl-identifier $(PKL_IDENTIFIER) \
-						--subject $(SID) \
-						--conversation-id $$conv_id \
-						--embedding-type $(EMB_TYPE) \
-						$(HIST) \
-						--context-length $(CNXT_LEN) \
-						--layer-idx $$layer; \
-		done; \
+	for conv_id in $(CONV_IDS); do \
+		$(CMD) code/tfsemb_main.py \
+			--project-id $(PRJCT_ID) \
+			--pkl-identifier $(PKL_IDENTIFIER) \
+			--subject $(SID) \
+			--conversation-id $$conv_id \
+			--embedding-type $(EMB_TYPE) \
+			$(HIST) \
+			--context-length $(CNXT_LEN) \
+			--layer-idx $(LAYER); \
 	done;
 
 # concatenate embeddings from all conversations
 concatenate-embeddings:
 	python code/tfsemb_concat.py \
-				--project-id $(PRJCT_ID) \
-				--pkl-identifier $(PKL_IDENTIFIER) \
-				--subject $(SID) \
-				--embedding-type $(EMB_TYPE) \
-				$(HIST) \
-				--context-length $(CNXT_LEN); \
+		--project-id $(PRJCT_ID) \
+		--pkl-identifier $(PKL_IDENTIFIER) \
+		--subject $(SID) \
+		--embedding-type $(EMB_TYPE) \
+		$(HIST) \
+		--context-length $(CNXT_LEN); \
 
 # Podcast: copy embeddings to other subjects as well
 # for sid in 662 717 723 741 742 763 798 777; do 
