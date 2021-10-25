@@ -73,7 +73,7 @@ def add_glove_embeddings(df, dim=None):
 
 
 def check_token_is_root(args, df):
-    if args.embedding_type == 'gpt2-xl':
+    if 'gpt2' in args.embedding_type:
         df['gpt2-xl_token_is_root'] = df['word'] == df['token'].apply(
             args.tokenizer.convert_tokens_to_string).str.strip()
     elif args.embedding_type == 'bert':
@@ -120,7 +120,7 @@ def tokenize_and_explode(args, df):
 
 
 def get_token_indices(args, num_tokens):
-    if args.embedding_type == 'gpt2-xl':
+    if 'gpt2' in args.embedding_type:
         start, stop = 0, num_tokens
     elif args.embedding_type == 'bert':
         start, stop = 1, num_tokens + 1
@@ -308,7 +308,7 @@ def make_dataloader_from_input(windows):
 
 def generate_embeddings_with_context(args, df):
     df = tokenize_and_explode(args, df)
-    if args.embedding_type == 'gpt2-xl':
+    if 'gpt2' in args.embedding_type:
         args.tokenizer.pad_token = args.tokenizer.eos_token
 
     final_embeddings = []
@@ -360,7 +360,7 @@ def generate_embeddings(args, df):
     df = tokenize_and_explode(args, df)
     unique_sentence_list = get_unique_sentences(df)
 
-    if args.embedding_type == 'gpt2-xl':
+    if 'gpt2' in args.embedding_type:
         tokenizer.pad_token = tokenizer.eos_token
 
     tokens = tokenizer(unique_sentence_list, padding=True, return_tensors='pt')
@@ -436,10 +436,11 @@ def setup_environ(args):
 
 def select_tokenizer_and_model(args):
 
-    if args.embedding_type == 'gpt2-xl':
+    if 'gpt2' in args.embedding_type:
         tokenizer_class = GPT2Tokenizer
         model_class = GPT2LMHeadModel
-        model_name = 'gpt2-xl'
+        model_name = args.embedding_type
+        assert model_name in ['gpt2', 'gpt2-large', 'gpt2-xl']
     elif args.embedding_type == 'roberta':
         tokenizer_class = RobertaTokenizer
         model_class = RobertaForMaskedLM
@@ -462,13 +463,15 @@ def select_tokenizer_and_model(args):
     # Make sure the right model name is passed as an input argument
     layer_dict = {
         'gpt2-xl': 48,
+        'gpt2-large': 36,
+        'gpt2': 12,
         'bert-large-uncased-whole-word-masking': 24,
         'bbot-small': 8,
         'bbot': 12
     }
 
     if len(args.layer_idx) == 0:
-        args.layer_idx = np.arange(1, layer_dict[model_name])
+        args.layer_idx = np.arange(1, layer_dict[model_name] + 1)
     else:
         layers = np.array(args.layer_idx)
         good = np.all((layers >= 0) & (layers <= layer_dict[model_name]))
@@ -529,7 +532,7 @@ def main():
     embeddings = None
     if args.embedding_type == 'glove50':
         df = generate_glove_embeddings(args, utterance_df)
-    elif args.embedding_type == 'gpt2-xl':
+    elif 'gpt2' in args.embedding_type:
         if args.history:
             df, embeddings = generate_embeddings_with_context(args, utterance_df)
         else:
