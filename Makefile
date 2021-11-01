@@ -11,13 +11,19 @@
 #   5. run copy-embeddings
 #   6. (optionally) run upload-pickle
 
+# For 247
+#   1. create-pickle for subject
+#   2. generate-embeddings for glove
+#   3. generate-embeddings for gpt2
+#   4. upload pickle
+
 # Miscellaneous: \
 247 Subjects IDs: 625 and 676 \
 Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 777: Is the code the collection of significant electrodes
 
 # NOTE: link data from tigressdata before running any scripts
-PRJCT_ID := podcast
+PRJCT_ID := tfs
 # {tfs | podcast}
 
 link-data:
@@ -47,9 +53,9 @@ create-pickle:
 		$(CMD) code/tfspkl_main.py \
 			--project-id $(PRJCT_ID) \
 			--subject $$sid; \
-		done
+	done
 
-# create pickle fof significant electrodes
+# create pickle of significant electrodes (just for podcast)
 create-sig-pickle:
 	mkdir -p logs
 	$(CMD) code/tfspkl_main.py \
@@ -57,9 +63,12 @@ create-sig-pickle:
 			--sig-elec-file data/$(PRJCT_ID)/all-electrodes.csv
 
 # upload pickles to google cloud bucket
+# on bucket we use 247 not tfs, so manually adjust as needed
+# upload-pickle: pid=247
+upload-pickle: pid=podcast
 upload-pickle:
 	for sid in $(SID_LIST); do \
-		gsutil -m rsync results/$(PRJCT_ID)/$$sid/pickles/ gs://247-podcast-data/$(PRJCT_ID)-pickles/$$sid; \
+		gsutil -m rsync results/$(PRJCT_ID)/$$sid/pickles/ gs://247-podcast-data/$(pid)-pickles/$$sid; \
 	done
 
 # upload raw data to google cloud bucket
@@ -70,27 +79,27 @@ upload-data:
 # download pickles from google cloud bucket
 download-247-pickles:
 	mkdir -p results/{625,676}
-	gsutil -m rsync -x "^(?!.*625).*" gs://247-podcast-data/247_pickles/ results/625/
-	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247_pickles/ results/676/
+	gsutil -m rsync -x "^(?!.*625).*" gs://247-podcast-data/247-pickles/ results/625/
+	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247-pickles/ results/676/
 
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: CMD := sbatch submit.sh
+%-embeddings: CMD := python
 # {echo | python | sbatch submit.sh}
-%-embeddings: PRJCT_ID := podcast
+%-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 661
+%-embeddings: SID := 625
 # {625 | 676 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 1)
-# {54 for 625 | 79 for 676 | 1 for 661}
+%-embeddings: CONV_IDS = $(shell seq 1 54)
+# {54 for 625 | 78 for 676 | 1 for 661}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
 %-embeddings: EMB_TYPE := gpt2-xl
-# {glove50 | bert | gpt2-xl}
+# {glove50 | bert | gpt2-xl | gpt2 | gpt2-large }
 %-embeddings: CNXT_LEN := 1024
 %-embeddings: HIST := --history
-%-embeddings: LAYER := $(shell seq 1 48)
-# {48 | 1 48 | 1 }
+# %-embeddings: LAYER := --layer-idx $(shell seq 1 12)
+# {48 | 12 for gpt2 | 36 for gpt2-large | 48 for gpt2-xl }
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 
@@ -105,8 +114,8 @@ generate-embeddings:
 			--conversation-id $$conv_id \
 			--embedding-type $(EMB_TYPE) \
 			$(HIST) \
-			--context-length $(CNXT_LEN) \
-			--layer-idx $(LAYER); \
+			$(LAYER) \
+			--context-length $(CNXT_LEN); \
 	done;
 
 # concatenate embeddings from all conversations
