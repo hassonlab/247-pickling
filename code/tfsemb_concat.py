@@ -6,7 +6,7 @@ import pickle
 import pandas as pd
 
 
-def load_pickle(pickle_name):
+def load_pickle(pickle_name, key=None):
     """Load the datum pickle and returns as a dataframe
 
     Args:
@@ -18,7 +18,10 @@ def load_pickle(pickle_name):
     with open(pickle_name, 'rb') as fh:
         datum = pickle.load(fh)
 
-    df = pd.DataFrame.from_dict(datum)
+    if key is None:
+        df = pd.DataFrame.from_dict(datum)
+    else:
+        df = pd.DataFrame.from_dict(datum[key])
 
     return df
 
@@ -57,9 +60,6 @@ def parse_arguments():
     parser.add_argument('--pkl-identifier', type=str, default=None)
     parser.add_argument('--project-id', type=str, default=None)
 
-    # import sys
-    # sys.argv = ['tfsemb_concat.py', '--project-id', 'podcast', '--pkl-identifier', 'full', '--subject', '661', '--embedding-type', 'gpt2-xl', '--history', '--context-length', '1024']
-
     return parser.parse_args()
 
 
@@ -69,7 +69,7 @@ def main():
     if args.subject == '625':
         num_convs = 54
     elif args.subject == '676':
-        num_convs = 79
+        num_convs = 78
     else:
         num_convs = 1
 
@@ -80,10 +80,14 @@ def main():
                                    args.subject, 'embeddings', stra,
                                    args.pkl_identifier)
 
+    trimmed_labels = os.path.join(os.getcwd(), 'results', args.project_id,
+                                  args.subject, 'pickles',
+                                  f'{args.subject}_trimmed_labels.pkl')
+
     layer_folders = sorted(os.listdir(args.output_dir))
 
     for layer_folder in layer_folders:
-        print(f'Merginng {layer_folder}')
+        print(f'Merging {layer_folder}')
         conversation_pickles = sorted(glob.glob(os.path.join(args.output_dir, layer_folder, '*')))
         n = len(conversation_pickles)
         if n != num_convs:
@@ -104,8 +108,21 @@ def main():
 
         all_df = pd.concat(all_df, ignore_index=True)
 
-        all_df = all_df.to_dict('records')
-        save_pickle(all_df, os.path.join(args.emb_out_dir, args.emb_out_file))
+        all_exs = all_df.to_dict('records')
+        save_pickle(all_exs, os.path.join(args.emb_out_dir, args.emb_out_file))
+
+        if 'layer_48' == layer_folder or 'glove' in args.embedding_type:
+            trimmed_df = load_pickle(trimmed_labels, key='labels')
+            all_df.set_index(['conversation_id', 'index'], inplace=True)
+            trimmed_df.set_index(['conversation_id', 'index'], inplace=True)
+            all_df['adjusted_onset'] = None
+            all_df['adjusted_offset'] = None
+            all_df.update(trimmed_df)
+            all_df.dropna(subset=['adjusted_onset'], inplace=True)
+            all_df.reset_index(inplace=True)
+            all_exs = all_df.to_dict('records')
+            fn = args.emb_out_file.replace('full', 'trimmed')
+            save_pickle(all_exs, os.path.join(args.emb_out_dir, fn))
 
 
 if __name__ == '__main__':
