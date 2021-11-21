@@ -421,7 +421,7 @@ def setup_environ(args):
         args.model = nn.DataParallel(args.model)
 
     stra = args.embedding_type
-    if 'gpt2' in args.embedding_type:
+    if any([item in args.embedding_type for item in ['gpt2', 'bert']]):
         stra = f'{stra}_cnxt_{args.context_length}'
 
     # TODO: if multiple conversations are specified in input
@@ -532,7 +532,7 @@ def main():
     embeddings = None
     if args.embedding_type == 'glove50':
         df = generate_glove_embeddings(args, utterance_df)
-    elif 'gpt2' in args.embedding_type:
+    elif any([item in args.embedding_type for item in ['gp2', 'bert']]):
         if args.history:
             df, embeddings = generate_embeddings_with_context(args, utterance_df)
         else:

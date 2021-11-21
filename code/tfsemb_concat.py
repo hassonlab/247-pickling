@@ -74,7 +74,7 @@ def main():
         num_convs = 1
 
     stra = args.embedding_type
-    if 'gpt2' in args.embedding_type:
+    if any([item in args.embedding_type for item in ['gpt2', 'bert']]):
         stra = f'{stra}_cnxt_{args.context_length}'
     args.output_dir = os.path.join(os.getcwd(), 'results', args.project_id,
                                    args.subject, 'embeddings', stra,
