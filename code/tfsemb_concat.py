@@ -69,7 +69,7 @@ def main():
     if args.subject == '625':
         num_convs = 54
     elif args.subject == '676':
-        num_convs = 78
+        num_convs = 76
     else:
         num_convs = 1
 
@@ -111,13 +111,13 @@ def main():
         all_exs = all_df.to_dict('records')
         save_pickle(all_exs, os.path.join(args.emb_out_dir, args.emb_out_file))
 
-        if 'layer_48' == layer_folder or 'glove' in args.embedding_type:
+        if 'glove' in args.embedding_type or layer_folder in ['layer_48', 'layer_16', 'layer_8']:
             trimmed_df = load_pickle(trimmed_labels, key='labels')
             all_df.set_index(['conversation_id', 'index'], inplace=True)
             trimmed_df.set_index(['conversation_id', 'index'], inplace=True)
             all_df['adjusted_onset'] = None
             all_df['adjusted_offset'] = None
-            all_df.update(trimmed_df)
+            all_df.update(trimmed_df)  # merge
             all_df.dropna(subset=['adjusted_onset'], inplace=True)
             all_df.reset_index(inplace=True)
             all_exs = all_df.to_dict('records')

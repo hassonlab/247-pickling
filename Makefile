@@ -94,7 +94,7 @@ download-247-pickles:
 # {54 for 625 | 78 for 676 | 1 for 661}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
-%-embeddings: EMB_TYPE := gpt2-xl
+%-embeddings: EMB_TYPE := blenderbot-small
 # {glove50 | bert | gpt2-xl | gpt2 | gpt2-large }
 %-embeddings: CNXT_LEN := 1024
 %-embeddings: HIST := --history
@@ -102,6 +102,8 @@ download-247-pickles:
 # {48 | 12 for gpt2 | 36 for gpt2-large | 48 for gpt2-xl }
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
+
+# 38 and 39 failed
 
 # generates embeddings (for each conversation separately)
 generate-embeddings:
