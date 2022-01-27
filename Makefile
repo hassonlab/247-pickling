@@ -84,7 +84,7 @@ download-247-pickles:
 
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: CMD := python
+%-embeddings: CMD := sbatch submit.sh
 # {echo | python | sbatch submit.sh}
 %-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}

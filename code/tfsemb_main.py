@@ -314,17 +314,25 @@ def transformer_forward_pass(args, data_dl):
             decoder_ids = torch.LongTensor(batch['decoder_ids']).to(device)
             outputs = model(input_ids.unsqueeze(0),
                             decoder_input_ids=decoder_ids.unsqueeze(0))
-
             # After: get all relevant layers
             embeddings = {i: outputs[decoderkey][i-8].cpu()[0, :-1, :]
                           for i in decoderlayers}
             logits = outputs.logits.cpu()[0, :-1, :]
 
             if batch_idx > 0:
-                prev_ntokens = len(all_embeddings[-1][9]) + 1
-                portion = (0, slice(-prev_ntokens, -1), slice(512))
-                encoder_embs = {i: outputs[encoderkey][i][portion].cpu()
-                                for i in encoderlayers}
+                prev_ntokens = len(all_embeddings[-1][9]) + 1 # previous tokens
+                for token_idx in range(prev_ntokens-1):
+                    if token_idx == 0:
+                        portion = (0, slice(-prev_ntokens, -1), slice(512))
+                        encoder_embs = {i: outputs[encoderkey][i][portion].cpu()
+                                        for i in encoderlayers} # take embeddings with original model (all word tokens)
+                    else:
+                        input_ids = torch.cat([input_ids[0:-2],input_ids[-1:]]) # delete last word token
+                        outputs = model(input_ids.unsqueeze(0),
+                                            decoder_input_ids = decoder_ids.unsqueeze(0)) # rerun model
+                        portion = (0, slice(-2, -1), slice(512)) # second to last token embedding
+                        for i in encoderlayers:
+                            encoder_embs[i][-token_idx-1] = outputs[encoderkey][i][portion].cpu() # update embeddings
                 all_embeddings[-1].update(encoder_embs)
                 # [all_embeddings[-1][i].shape for i in range(1, 17)]
                 # tokenizer = args.tokenizer
@@ -365,7 +373,7 @@ def get_conversation_tokens(df, conversation):
 def make_conversational_input(args, df):
     '''
     Create a conversational context/response pair to be fed into an encoder
-    decoder transformer architecture. The context is a seires of utterances
+    decoder transformer architecture. The context is a series of utterances
     that precede a new utterance response.
 
     examples = [
@@ -441,7 +449,6 @@ def printe(example, args):
 
 def generate_conversational_embeddings(args, df):
     df = tokenize_and_explode(args, df)
-
     # This is a workaround. Blenderbot is limited to 128 tokens so having
     # long utterances breaks that. We remove them here, as well as the next
     # utterance to keep the turn taking the same.

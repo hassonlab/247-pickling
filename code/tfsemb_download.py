@@ -3,7 +3,9 @@
 import os
 from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
-                          GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
+                          GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer,
+                          BlenderbotSmallTokenizer, BlenderbotSmallForConditionalGeneration,
+                          BlenderbotModel, BlenderbotTokenizer, BertModel)
 from utils import main_timer
 
 def download_tokenizer_and_model(CACHE_DIR, tokenizer_class, model_class, model_name):
@@ -29,7 +31,9 @@ def download_tokenizers_and_models():
         download_tokenizer_and_model(CACHE_DIR, GPT2Tokenizer, GPT2LMHeadModel, model)
 
     download_tokenizer_and_model(CACHE_DIR, BertTokenizer, BertForMaskedLM, 'bert-large-uncased-whole-word-masking')
-
+    download_tokenizer_and_model(CACHE_DIR, BertTokenizer, BertModel, 'bert-base-cased')
+    download_tokenizer_and_model(CACHE_DIR, BlenderbotSmallTokenizer, BlenderbotSmallForConditionalGeneration, 'facebook/blenderbot_small-90M')
+    download_tokenizer_and_model(CACHE_DIR, BlenderbotTokenizer, BlenderbotModel, 'facebook/blenderbot-3B')
     # download_tokenizer_and_model(CACHE_DIR, RobertaTokenizer, RobertaForMaskedLM, 'roberta')
     # download_tokenizer_and_model(CACHE_DIR, BartTokenizer, BartForConditionalGeneration, 'bart')
 
