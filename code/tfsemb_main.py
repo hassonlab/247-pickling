@@ -753,6 +753,8 @@ def main():
     setup_environ(args)
 
     utterance_df = load_pickle(args)
+    if args.subject == '676' and 'blenderbot' in args.embedding_type:
+        utterance_df['conversation_id'] = np.where(utterance_df['conversation_id'] >= 38, utterance_df['conversation_id'] + 2, utterance_df['conversation_id'])
     utterance_df = select_conversation(args, utterance_df)
 
     embeddings = None

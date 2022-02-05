@@ -85,10 +85,13 @@ def main():
                                   f'{args.subject}_trimmed_labels.pkl')
 
     layer_folders = sorted(os.listdir(args.output_dir))
-
     for layer_folder in layer_folders:
         print(f'Merging {layer_folder}')
         conversation_pickles = sorted(glob.glob(os.path.join(args.output_dir, layer_folder, '*')))
+
+        conversation_pickles = [conversation for conversation in conversation_pickles if 
+        ('NY676_618_Part7_conversation2' not in conversation) and ('NY676_618_Part7_conversation3' not in conversation)]
+
         n = len(conversation_pickles)
         if n != num_convs:
             print(f'Bad conversation size: found {n} out of {num_convs}',
