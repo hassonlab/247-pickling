@@ -42,9 +42,9 @@ endif
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
 %-pickle: CMD := python
 # {echo | python}
-%-pickle: PRJCT_ID := podcast
+%-pickle: PRJCT_ID := tfs
 # {tfs | podcast}
-%-pickle: SID_LIST = 777
+%-pickle: SID_LIST = 676
 # {625 676 | 661 662 717 723 741 742 743 763 798 | 777}
 
 create-pickle:
@@ -88,13 +88,13 @@ download-247-pickles:
 # {echo | python | sbatch submit.sh}
 %-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 625
+%-embeddings: SID := 676
 # {625 | 676 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 54)
+%-embeddings: CONV_IDS = $(shell seq 1 78)
 # {54 for 625 | 78 for 676 | 1 for 661}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
-%-embeddings: EMB_TYPE := blenderbot-small
+%-embeddings: EMB_TYPE := glove50
 # {glove50 | bert | gpt2-xl | gpt2 | gpt2-large }
 %-embeddings: CNXT_LEN := 1024
 %-embeddings: HIST := --history

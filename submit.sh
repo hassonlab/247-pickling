@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH -o './logs/%A.out'
-
+ 
 if [[ "$HOSTNAME" == *"tiger"* ]]
 then
     echo "It's tiger"
