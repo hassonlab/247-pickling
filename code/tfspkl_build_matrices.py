@@ -97,19 +97,11 @@ def build_design_matrices(CONFIG, delimiter=','):
             convo_trimmed_examples_size, electrodes, electrode_names,
             conversations, subject_id)
 
-# def not_bad_convo(conversation):
-#     bad_convs = ['NY676_618_Part7_conversation2', 'NY676_618_Part7_conversation3']
-#     for bad_conv in bad_convs:
-#         if bad_conv in conversation:
-#             return False
-#     return True
 
 def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
     suffix = '/misc/*trimmed.txt'
 
     conversations = get_conversation_list(CONFIG, subject)
-    # conversations = [conversation for conversation in conversations if not_bad_convo(conversation)]
-
     electrodes, electrode_names = get_common_electrodes(CONFIG, conversations)
 
     if electrode_labels:
@@ -137,9 +129,6 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
 
 
     for conversation in conversations:
-        # if os.path.basename(conversation) in bad_convs:
-        #     print('Skipping bad conversation:', conversation)
-        #     continue
         try:  # Check if files exists
             datum_fn = glob.glob(conversation + suffix)[0]
         except IndexError:
