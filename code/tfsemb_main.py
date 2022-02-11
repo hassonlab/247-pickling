@@ -16,7 +16,7 @@ from transformers import (BartForConditionalGeneration, BartTokenizer,
                           BlenderbotSmallTokenizer,
                           BlenderbotSmallForConditionalGeneration)
 from utils import main_timer
-
+# from tfspkl_build_matrices import not_bad_convo
 
 def save_pickle(args, item, file_name, embeddings=None):
     """Write 'item' to 'file_name.pkl'
@@ -636,6 +636,7 @@ def setup_environ(args):
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)
     args.conversation_list = sorted(os.listdir(args.input_dir))
+    # args.conversation_list = [conv for conv in args.conversation_list if not_bad_convo(conv)]
 
     args.gpus = torch.cuda.device_count()
     if args.gpus > 1:
@@ -753,11 +754,10 @@ def main():
     setup_environ(args)
 
     utterance_df = load_pickle(args)
-    if args.subject == '676':
-        utterance_df['conversation_id'] = np.where(utterance_df['conversation_id'] >= 38, utterance_df['conversation_id'] + 2, utterance_df['conversation_id'])
     utterance_df = select_conversation(args, utterance_df)
-    
+
     if len(utterance_df) == 0:
+        print("Conversation data does not exist or has been deleted")
         return
 
     embeddings = None
