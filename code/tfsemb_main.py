@@ -531,7 +531,6 @@ def generate_embeddings_with_context(args, df):
     df = tokenize_and_explode(args, df)
     if 'gpt2' in args.embedding_type:
         args.tokenizer.pad_token = args.tokenizer.eos_token
-
     final_embeddings = []
     final_top1_word = []
     final_top1_prob = []
@@ -577,7 +576,6 @@ def generate_embeddings(args, df):
 
     model = model.to(device)
     model.eval()
-
     df = tokenize_and_explode(args, df)
     unique_sentence_list = get_unique_sentences(df)
 
@@ -587,7 +585,6 @@ def generate_embeddings(args, df):
     tokens = tokenizer(unique_sentence_list, padding=True, return_tensors='pt')
     input_ids_val = tokens['input_ids']
     attention_masks_val = tokens['attention_mask']
-
     dataset = data.TensorDataset(input_ids_val, attention_masks_val)
     data_dl = data.DataLoader(dataset, batch_size=8, shuffle=False)
 
@@ -601,7 +598,6 @@ def generate_embeddings(args, df):
             }
             model_output = model(**inputs)
             concat_output.append(model_output[-1][-1].detach().cpu().numpy())
-
     embeddings = np.concatenate(concat_output, axis=0)
     emb_df = map_embeddings_to_tokens(args, df, embeddings)
 
@@ -762,7 +758,7 @@ def main():
     embeddings = None
     if args.embedding_type == 'glove50':
         df = generate_glove_embeddings(args, utterance_df)
-    elif any([item in args.embedding_type for item in ['gp2', 'bert']]):
+    elif any([item in args.embedding_type for item in ['gpt2', 'bert']]):
         if args.history:
             df, embeddings = generate_embeddings_with_context(args, utterance_df)
         else:

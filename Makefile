@@ -90,7 +90,7 @@ download-247-pickles:
 # {tfs | podcast}
 %-embeddings: SID := 676
 # {625 | 676 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 49 49) 
+%-embeddings: CONV_IDS = $(shell seq 1 78) 
 # {54 for 625 | 78 for 676 | 1 for 661}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
