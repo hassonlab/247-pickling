@@ -68,8 +68,10 @@ def main():
 
     if args.subject == '625':
         num_convs = 54
-    elif args.subject == '676':
+    elif args.subject == '676' and 'blenderbot' in args.embedding_type:
         num_convs = 76
+    elif args.subject == '676':
+        num_convs = 78
     else:
         num_convs = 1
 
@@ -85,10 +87,10 @@ def main():
                                   f'{args.subject}_trimmed_labels.pkl')
 
     layer_folders = sorted(os.listdir(args.output_dir))
-
     for layer_folder in layer_folders:
         print(f'Merging {layer_folder}')
         conversation_pickles = sorted(glob.glob(os.path.join(args.output_dir, layer_folder, '*')))
+
         n = len(conversation_pickles)
         if n != num_convs:
             print(f'Bad conversation size: found {n} out of {num_convs}',

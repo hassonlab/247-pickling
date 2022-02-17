@@ -127,11 +127,8 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
     convo_all_examples_size = []
     convo_trimmed_examples_size = []
 
-    bad_convs = ['NY676_618_Part7_conversation2', 'NY676_618_Part7_conversation3']
+
     for conversation in conversations:
-        if os.path.basename(conversation) in bad_convs:
-            print('Skipping bad conversation:', conversation)
-            continue
         try:  # Check if files exists
             datum_fn = glob.glob(conversation + suffix)[0]
         except IndexError:
