@@ -225,10 +225,19 @@ def add_vocab_columns(df):
     ]
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
     for model in names:
-        tokenizer = AutoTokenizer.from_pretrained(model,
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(model,
+                                                  add_prefix_space=True,
+                                                  cache_dir=CACHE_DIR,
+                                                  local_files_only=False)
+        except FileNotFoundError as e:
+            tokenizer = AutoTokenizer.from_pretrained(model,
                                                   add_prefix_space=True,
                                                   cache_dir=CACHE_DIR,
                                                   local_files_only=True)
+        except:
+            raise Exception('Need manual intervention')
+
         key = model.split('/')[-1].replace('-', '_')
         df[f'in_{key}'] = df.word.apply(
             lambda x: calc_tokenizer_length(tokenizer, x))
