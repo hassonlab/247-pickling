@@ -702,14 +702,24 @@ def select_tokenizer_and_model(args):
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
     os.makedirs(CACHE_DIR, exist_ok=True)
 
-    args.model = model_class.from_pretrained(model_name,
+    try:
+        args.model = model_class.from_pretrained(model_name,
+                                                output_hidden_states=True,
+                                                cache_dir=CACHE_DIR,
+                                                local_files_only=True)
+        args.tokenizer = tokenizer_class.from_pretrained(model_name,
+                                                        add_prefix_space=True,
+                                                        cache_dir=CACHE_DIR,
+                                                        local_files_only=True)
+    except:
+        args.model = model_class.from_pretrained(model_name,
                                              output_hidden_states=True,
                                              cache_dir=CACHE_DIR,
-                                             local_files_only=True)
-    args.tokenizer = tokenizer_class.from_pretrained(model_name,
-                                                     add_prefix_space=True,
-                                                     cache_dir=CACHE_DIR,
-                                                     local_files_only=True)
+                                             local_files_only=False)
+        args.tokenizer = tokenizer_class.from_pretrained(model_name,
+                                                        add_prefix_space=True,
+                                                        cache_dir=CACHE_DIR,
+                                                        local_files_only=False)
 
     if args.history and args.context_length <= 0:
         args.context_length = args.tokenizer.max_len_single_sentence
