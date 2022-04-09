@@ -45,7 +45,7 @@ endif
 %-pickle: PRJCT_ID := tfs
 # {tfs | podcast}
 %-pickle: SID_LIST = 676
-# {625 676 | 661 662 717 723 741 742 743 763 798 | 777}
+# {625 676 7170 | 661 662 717 723 741 742 743 763 798 | 777}
 
 create-pickle:
 	mkdir -p logs

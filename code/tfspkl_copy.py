@@ -2,7 +2,6 @@ import glob
 import os
 from shutil import copy2
 
-
 PRJCT_DIR = '/scratch/gpfs/hgazula/247-pickling/results/podcast/'
 
 
@@ -18,7 +17,7 @@ def create_dest_filename(src_file, subject):
     dest_file_name = str(subject) + '_' + temp
 
     full_dest = os.path.join(PRJCT_DIR, str(subject), 'pickles',
-                            dest_file_name)
+                             dest_file_name)
     return full_dest
 
 
@@ -28,9 +27,11 @@ if __name__ == '__main__':
     trim_emb = '_trimmed_*_embeddings.pkl'
 
     src_file_path = os.path.join(PRJCT_DIR, src_subj_id, 'pickles')
-    
-    full_src1 = sorted(glob.glob(os.path.join(src_file_path, src_subj_id + full_emb)))
-    trim_src1 = sorted(glob.glob(os.path.join(src_file_path, src_subj_id + trim_emb)))
+
+    full_src1 = sorted(
+        glob.glob(os.path.join(src_file_path, src_subj_id + full_emb)))
+    trim_src1 = sorted(
+        glob.glob(os.path.join(src_file_path, src_subj_id + trim_emb)))
 
     for subject in [662, 717, 723, 741, 742, 743, 763, 798, 777]:
         for src_file in full_src1:

@@ -38,11 +38,6 @@ def arg_parser(default_args: Optional[List] = None):
     parser.add_argument('--num-folds', type=int, default=5)
     parser.add_argument('--project-id', type=str, default=None)
 
-    # custom_args = [
-    #     '--project-id', 'podcast', '--subject', '661', '--max-electrodes',
-    #     '500', '--vocab-min-freq', '0'
-    # ]
-
     if not default_args:
         args = parser.parse_args()
     else:

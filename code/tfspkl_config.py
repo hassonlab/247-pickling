@@ -1,3 +1,4 @@
+import glob
 import json
 import os
 
@@ -22,6 +23,9 @@ def create_directory_paths(args):
         sig_file_path, sig_file_name = os.path.split(args.sig_elec_file)
         if not sig_file_path:
             args.sig_elec_file = os.path.join(DATA_DIR, sig_file_name)
+
+    crude_flag_file = glob.glob(os.path.join(CONV_DIRS, '*alignment.txt'))
+    args.crude_flag_file = crude_flag_file[0] if crude_flag_file else None
 
     return
 

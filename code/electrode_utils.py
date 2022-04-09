@@ -1,5 +1,6 @@
 import glob
 import sys
+import warnings
 from functools import partial
 from multiprocessing import Pool
 
@@ -27,10 +28,10 @@ def get_electrode(CONFIG, elec_id):
         sys.exit()
 
     mat_fn = glob.glob(search_str)
-    if len(mat_fn) == 0:
-        print(f'[WARNING] electrode {electrode} DNE in {search_str}')
+    if mat_fn:
+        return loadmat(mat_fn[0])['p1st'].squeeze().astype(np.float32)
+    else:
         return None
-    return loadmat(mat_fn[0])['p1st'].squeeze().astype(np.float32)
 
 
 def get_electrode_mp(elec_id, CONFIG):
@@ -54,6 +55,11 @@ def return_electrode_array(CONFIG, conv, elect):
                 lambda x: x is not None,
                 pool.map(partial(get_electrode_mp, CONFIG=CONFIG), elec_ids)))
 
+    ecogs = put_signals_into_array(ecogs)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        ecogs = standardize_matrix(ecogs)
+
     ecogs = standardize_matrix(ecogs)
     assert (ecogs.ndim == 2 and ecogs.shape[1] == len(elect))
 
@@ -63,3 +69,11 @@ def return_electrode_array(CONFIG, conv, elect):
 def standardize_matrix(ecogs):
     ecogs = np.asarray(ecogs).T
     return (ecogs - np.mean(ecogs, axis=0)) / np.std(ecogs, axis=0)
+
+
+def put_signals_into_array(ecogs):
+    signal_length = max([item.size for item in ecogs])
+    ecogs = [
+        item if item else np.repeat(np.nan, signal_length) for item in ecogs
+    ]
+    return ecogs

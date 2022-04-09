@@ -4,7 +4,9 @@ import string
 import sys
 
 import mat73
+import numpy as np
 import pandas as pd
+import scipy.io as sio
 from utils import lcs
 
 
@@ -44,19 +46,14 @@ def get_common_electrodes(CONFIG, convs):
     Returns:
         [type]: [description]
     """
-    all_elec_ids_list = [
-        get_electrode_ids(CONFIG, conversation) for conversation in convs
-    ]
     all_elec_labels_list = [
         get_electrode_labels(conversation) for conversation in convs
     ]
 
-    common_electrodes = list(set.intersection(*map(set, all_elec_ids_list)))
-    common_labels = sorted(list(
-        set.intersection(*map(set, all_elec_labels_list))),
-                           key=lambda x: all_elec_labels_list[0].index(x))
-
-    common_labels = [common_labels[elec - 1] for elec in common_electrodes]
+    # This line works on the assumption that the headers of all files have
+    # the same electrode names and thus we are taking the last
+    common_labels = all_elec_labels_list[-1]
+    common_electrodes = list(range(1, len(common_labels) + 1))
 
     return common_electrodes, common_labels
 
@@ -193,8 +190,15 @@ def get_electrode_labels(conversation_dir):
     if not os.path.exists(header_file):
         return
 
-    header = mat73.loadmat(header_file)
-    labels = header.header.label
+    try:
+        header = mat73.loadmat(header_file)
+        labels = header.header.label
+    except TypeError as e:
+        header = sio.loadmat(header_file)
+        labels = list(np.concatenate(header['header'][0][0][9][0]))
+        labels = [
+            item for item in labels if not item.startswith(('DC', 'E', 'T'))
+        ]
 
     return labels
 
