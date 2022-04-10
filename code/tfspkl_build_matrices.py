@@ -84,18 +84,14 @@ def build_design_matrices(CONFIG, delimiter=','):
         trimmed_signal = np.concatenate(trimmed_signal, axis=1)
         binned_signal = np.concatenate(binned_signal, axis=1)
 
-    else:
-        (full_signal, full_stitch_index, trimmed_signal, trimmed_stitch_index,
-         binned_signal, bin_stitch_index, all_examples, all_trimmed_examples,
-         convo_all_examples_size, convo_trimmed_examples_size, electrodes,
-         electrode_names, conversations,
-         subject_id) = process_data_for_pickles(CONFIG)
+        return (full_signal, full_stitch_index, trimmed_signal,
+                trimmed_stitch_index, binned_signal, bin_stitch_index,
+                all_examples, all_trimmed_examples, convo_all_examples_size,
+                convo_trimmed_examples_size, electrodes, electrode_names,
+                conversations, subject_id)
 
-    return (full_signal, full_stitch_index, trimmed_signal,
-            trimmed_stitch_index, binned_signal, bin_stitch_index,
-            all_examples, all_trimmed_examples, convo_all_examples_size,
-            convo_trimmed_examples_size, electrodes, electrode_names,
-            conversations, subject_id)
+    else:
+        return process_data_for_pickles(CONFIG)
 
 
 def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
@@ -126,7 +122,6 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
 
     convo_all_examples_size = []
     convo_trimmed_examples_size = []
-
 
     for conversation in conversations:
         try:  # Check if files exists

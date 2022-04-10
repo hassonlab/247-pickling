@@ -6,7 +6,7 @@ import os
 def create_directory_paths(args):
     # Format directory logistics
     DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-    CONV_DIRS = DATA_DIR + '/%s/' % args.subject
+    CONV_DIRS = os.path.join(DATA_DIR, args.subject)
     SAVE_DIR = os.path.join(os.getcwd(), 'results', args.project_id,
                             args.subject)
     PKL_DIR = os.path.join(SAVE_DIR, 'pickles')
