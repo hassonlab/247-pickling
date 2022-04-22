@@ -2,6 +2,7 @@ import argparse
 import os
 import pickle
 import string
+import glob
 
 import gensim.downloader as api
 import numpy as np
@@ -631,7 +632,8 @@ def setup_environ(args):
     args.pickle_name = os.path.join(PKL_DIR, labels_file)
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)
-    args.conversation_list = sorted(os.listdir(args.input_dir))
+
+    args.conversation_list = sorted(glob.glob1(args.input_dir, 'NY*Part*conversation*'))
 
     args.gpus = torch.cuda.device_count()
     if args.gpus > 1:

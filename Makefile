@@ -73,8 +73,8 @@ upload-pickle:
 
 # upload raw data to google cloud bucket
 upload-data:
-	gsutil -m rsync -rd data/tfs/676 gs://247-podcast-data/247-data/676/
-	gsutil -m rsync -rd data/tfs/625 gs://247-podcast-data/247-data/625/
+	gsutil -m rsync -rd data/tfs/7170 gs://247-podcast-data/247-data/7170/
+
 
 # download pickles from google cloud bucket
 download-247-pickles:
@@ -88,10 +88,10 @@ download-247-pickles:
 # {echo | python | sbatch submit.sh}
 %-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 676
+%-embeddings: SID := 7170
 # {625 | 676 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 78) 
-# {54 for 625 | 78 for 676 | 1 for 661}
+%-embeddings: CONV_IDS = $(shell seq 1 24) 
+# {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
 %-embeddings: EMB_TYPE := gpt2-xl
