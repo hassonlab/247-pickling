@@ -241,10 +241,17 @@ def extract_select_vectors(batch_idx, array):
     if batch_idx == 0:
         x = array[0, :-1, :].clone()
         if array.shape[0] > 1:
-            rem_sentences_preds = array[1:, -2, :].clone()
+            try: 
+                rem_sentences_preds = array[1:, -2, :].clone()
+            except:
+                rem_sentences_preds = array[1:, -1, :].clone()
+
             x = torch.cat([x, rem_sentences_preds], axis=0)
     else:
-        x = array[:, -2, :].clone()
+        try:
+            x = array[:, -2, :].clone()
+        except:
+            x = array[:, -1, :].clone()
 
     return x
 

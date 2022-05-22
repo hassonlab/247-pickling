@@ -86,19 +86,19 @@ download-247-pickles:
 ## settings for targets: generate-embeddings, concatenate-embeddings
 %-embeddings: CMD := sbatch submit.sh
 # {echo | python | sbatch submit.sh}
-%-embeddings: PRJCT_ID := tfs
+%-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
-%-embeddings: SID := 676
+%-embeddings: SID := 661
 # {625 | 676 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 78) 
+%-embeddings: CONV_IDS = $(shell seq 1 1) 
 # {54 for 625 | 78 for 676 | 1 for 661}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
 %-embeddings: EMB_TYPE := gpt2-xl
 # {glove50 | bert | gpt2-xl | gpt2 | gpt2-large | blenderbot-small }
-%-embeddings: CNXT_LEN := 1024
+%-embeddings: CNXT_LEN := $(shell seq 1 15)
 %-embeddings: HIST := --history
-%-embeddings: LAYER := --layer-idx 48
+%-embeddings: LAYER := --layer-idx
 # {48 | 12 for gpt2 | 36 for gpt2-large | 48 for gpt2-xl }
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
@@ -108,27 +108,31 @@ and hence only generate once using subject: 661
 # generates embeddings (for each conversation separately)
 generate-embeddings:
 	mkdir -p logs
-	for conv_id in $(CONV_IDS); do \
-		$(CMD) code/tfsemb_main.py \
-			--project-id $(PRJCT_ID) \
-			--pkl-identifier $(PKL_IDENTIFIER) \
-			--subject $(SID) \
-			--conversation-id $$conv_id \
-			--embedding-type $(EMB_TYPE) \
-			$(HIST) \
-			$(LAYER) \
-			--context-length $(CNXT_LEN); \
+	for cnxt_len in $(CNXT_LEN); do \
+		for conv_id in $(CONV_IDS); do \
+			 $(CMD) code/tfsemb_main.py \
+				--project-id $(PRJCT_ID) \
+				--pkl-identifier $(PKL_IDENTIFIER) \
+				--subject $(SID) \
+				--conversation-id $$conv_id \
+				--embedding-type $(EMB_TYPE) \
+				$(HIST) \
+				$(LAYER) \
+				--context-length $$cnxt_len; \
+		done; \
 	done;
 
 # concatenate embeddings from all conversations
 concatenate-embeddings:
-	python code/tfsemb_concat.py \
-		--project-id $(PRJCT_ID) \
-		--pkl-identifier $(PKL_IDENTIFIER) \
-		--subject $(SID) \
-		--embedding-type $(EMB_TYPE) \
-		$(HIST) \
-		--context-length $(CNXT_LEN); \
+	for cnxt_len in $(CNXT_LEN); do \
+		python code/tfsemb_concat.py \
+			--project-id $(PRJCT_ID) \
+			--pkl-identifier $(PKL_IDENTIFIER) \
+			--subject $(SID) \
+			--embedding-type $(EMB_TYPE) \
+			$(HIST) \
+			--context-length $$cnxt_len; \
+	done;
 
 # Podcast: copy embeddings to other subjects as well
 # for sid in 662 717 723 741 742 763 798 777; do 
