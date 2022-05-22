@@ -10,11 +10,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
-from transformers import (BartForConditionalGeneration, BartTokenizer,
-                          BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
-                          GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer,
-                          BlenderbotSmallTokenizer,
-                          BlenderbotSmallForConditionalGeneration)
+from transformers import (AutoModelForCausalLM, AutoTokenizer,
+                          BartForConditionalGeneration, BartTokenizer,
+                          BertForMaskedLM, BertTokenizer,
+                          BlenderbotSmallForConditionalGeneration,
+                          BlenderbotSmallTokenizer, GPT2LMHeadModel,
+                          GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
 from utils import main_timer
 
 
@@ -78,6 +79,9 @@ def add_glove_embeddings(df, dim=None):
 def check_token_is_root(args, df):
     if 'gpt2' in args.embedding_type:
         df['gpt2-xl_token_is_root'] = df['word'] == df['token'].apply(
+            args.tokenizer.convert_tokens_to_string).str.strip()
+    elif 'gpt-neo' in args.embedding_type:
+        df['gpt-neo_token_is_root'] = df['word'] == df['token'].apply(
             args.tokenizer.convert_tokens_to_string).str.strip()
     elif 'blenderbot' in args.embedding_type:
         df['bbot_token_is_root'] = df['word'] == df['token'].apply(
@@ -165,7 +169,7 @@ def process_extracted_embeddings(args, concat_output):
     """(batch_size, max_len, embedding_size)"""
     # concatenate all batches
     concatenated_embeddings = torch.cat(concat_output, dim=0).numpy()
-    extracted_embeddings = concatenated_embeddings 
+    extracted_embeddings = concatenated_embeddings
 
     if 'gpt2' in args.embedding_type:
         emb_dim = concatenated_embeddings.shape[-1]
@@ -185,8 +189,8 @@ def process_extracted_embeddings_all_layers(args, layer_embeddings_dict):
         concat_output = []
         for item_dict in layer_embeddings_dict:
             concat_output.append(item_dict[layer_idx])
-        layer_embeddings[layer_idx] = process_extracted_embeddings(args,
-                                                                   concat_output)
+        layer_embeddings[layer_idx] = process_extracted_embeddings(
+            args, concat_output)
 
     return layer_embeddings
 
@@ -218,7 +222,7 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
         dim=1)
     predicted_tokens = args.tokenizer.convert_ids_to_tokens(
         top1_probabilities_idx)
-    predicted_words = predicted_tokens 
+    predicted_words = predicted_tokens
     if 'gpt2' in args.embedding_type:
         predicted_words = [
             args.tokenizer.convert_tokens_to_string(token)
@@ -241,7 +245,7 @@ def extract_select_vectors(batch_idx, array):
     if batch_idx == 0:
         x = array[0, :-1, :].clone()
         if array.shape[0] > 1:
-            try: 
+            try:
                 rem_sentences_preds = array[1:, -2, :].clone()
             except:
                 rem_sentences_preds = array[1:, -1, :].clone()
@@ -322,24 +326,37 @@ def transformer_forward_pass(args, data_dl):
             outputs = model(input_ids.unsqueeze(0),
                             decoder_input_ids=decoder_ids.unsqueeze(0))
             # After: get all relevant layers
-            embeddings = {i: outputs[decoderkey][i-8].cpu()[0, :-1, :]
-                          for i in decoderlayers}
+            embeddings = {
+                i: outputs[decoderkey][i - 8].cpu()[0, :-1, :]
+                for i in decoderlayers
+            }
             logits = outputs.logits.cpu()[0, :-1, :]
 
             if batch_idx > 0:
-                prev_ntokens = len(all_embeddings[-1][9]) + 1 # previous tokens
-                for token_idx in range(prev_ntokens-1):
+                prev_ntokens = len(
+                    all_embeddings[-1][9]) + 1  # previous tokens
+                for token_idx in range(prev_ntokens - 1):
                     if token_idx == 0:
                         portion = (0, slice(-prev_ntokens, -1), slice(512))
-                        encoder_embs = {i: outputs[encoderkey][i][portion].cpu()
-                                        for i in encoderlayers} # take embeddings with original model (all word tokens)
+                        encoder_embs = {
+                            i: outputs[encoderkey][i][portion].cpu()
+                            for i in encoderlayers
+                        }  # take embeddings with original model (all word tokens)
                     else:
-                        input_ids = torch.cat([input_ids[0:-2],input_ids[-1:]]) # delete last word token
-                        outputs = model(input_ids.unsqueeze(0),
-                                            decoder_input_ids = decoder_ids.unsqueeze(0)) # rerun model
-                        portion = (0, slice(-2, -1), slice(512)) # second to last token embedding
+                        input_ids = torch.cat(
+                            [input_ids[0:-2],
+                             input_ids[-1:]])  # delete last word token
+                        outputs = model(
+                            input_ids.unsqueeze(0),
+                            decoder_input_ids=decoder_ids.unsqueeze(
+                                0))  # rerun model
+                        portion = (0, slice(-2, -1), slice(512)
+                                   )  # second to last token embedding
                         for i in encoderlayers:
-                            encoder_embs[i][-token_idx-1] = outputs[encoderkey][i][portion].cpu() # update embeddings
+                            encoder_embs[i][
+                                -token_idx -
+                                1] = outputs[encoderkey][i][portion].cpu(
+                                )  # update embeddings
                 all_embeddings[-1].update(encoder_embs)
                 # [all_embeddings[-1][i].shape for i in range(1, 17)]
                 # tokenizer = args.tokenizer
@@ -405,8 +422,10 @@ def make_conversational_input(args, df):
 
     sep_id = [sep] if sep is not None else [eos]
     bos_id = [bos] if bos is not None else [sep]
-    convo = [bos_id + row.token_id.values.tolist() + sep_id for _, row in
-             df.groupby('sentence_idx')]
+    convo = [
+        bos_id + row.token_id.values.tolist() + sep_id
+        for _, row in df.groupby('sentence_idx')
+    ]
 
     # add empty context at begnning to get states of first utterance
     # add empty context at the end to get encoder states of last utterance
@@ -426,12 +445,12 @@ def make_conversational_input(args, df):
     for j, response in enumerate(convo):
         if j == 0:
             continue
-        context = create_context(convo, j-1)
+        context = create_context(convo, j - 1)
         if len(context) > 0:
             examples.append({
                 'encoder_ids': context,
                 'decoder_ids': response[:-1]
-                })
+            })
 
     # Ensure we maintained correct number of tokens per utterance
     first = np.array([len(e['decoder_ids']) - 1 for e in examples])
@@ -462,7 +481,7 @@ def generate_conversational_embeddings(args, df):
     utt_lens = df.sentence_idx.value_counts(sort=False)
     long_utts = utt_lens.index[utt_lens > 128 - 2].values
     long_utts = np.concatenate((long_utts, long_utts + 1))
-    df = df[~ df.sentence_idx.isin(long_utts)]
+    df = df[~df.sentence_idx.isin(long_utts)]
     print('Removing long utterances', long_utts)
     assert len(df), 'No utterances left after'
 
@@ -545,7 +564,6 @@ def generate_embeddings_with_context(args, df):
     for conversation in df.conversation_id.unique():
         token_list = get_conversation_tokens(df, conversation)
         model_input = make_input_from_tokens(args, token_list)
-
         input_dl = make_dataloader_from_input(model_input)
         embeddings, logits = model_forward_pass(args, input_dl)
 
@@ -682,6 +700,14 @@ def select_tokenizer_and_model(args):
         model_class = BlenderbotSmallForConditionalGeneration
         model_name = 'facebook/blenderbot_small-90M'
         args.layer_idx = []  # NOTE hardcoded. always generate all layers.
+    elif args.embedding_type == 'gpt-neo-2.7B':
+        tokenizer_class = AutoTokenizer
+        model_class = AutoModelForCausalLM
+        model_name = 'EleutherAI/gpt-neo-2.7B'
+    elif args.embedding_type == 'gpt-neo-1.3B':
+        tokenizer_class = AutoTokenizer
+        model_class = AutoModelForCausalLM
+        model_name = 'EleutherAI/gpt-neo-1.3B'
     elif args.embedding_type == 'glove50':
         args.layer_idx = [1]
         return
@@ -696,7 +722,9 @@ def select_tokenizer_and_model(args):
         'gpt2': 12,
         'bert-large-uncased-whole-word-masking': 24,
         'facebook/blenderbot_small-90M': 16,  # 8 encoder, 8 decoder
-        'blenderbot': 12
+        'blenderbot': 12,
+        'EleutherAI/gpt-neo-1.3B': 24,
+        'EleutherAI/gpt-neo-2.7B': 32
     }
 
     if len(args.layer_idx) == 0:
@@ -711,22 +739,23 @@ def select_tokenizer_and_model(args):
 
     try:
         args.model = model_class.from_pretrained(model_name,
-                                                output_hidden_states=True,
-                                                cache_dir=CACHE_DIR,
-                                                local_files_only=True)
+                                                 output_hidden_states=True,
+                                                 cache_dir=CACHE_DIR,
+                                                 local_files_only=True)
         args.tokenizer = tokenizer_class.from_pretrained(model_name,
-                                                        add_prefix_space=True,
-                                                        cache_dir=CACHE_DIR,
-                                                        local_files_only=True)
+                                                         add_prefix_space=True,
+                                                         cache_dir=CACHE_DIR,
+                                                         local_files_only=True)
     except:
         args.model = model_class.from_pretrained(model_name,
-                                             output_hidden_states=True,
-                                             cache_dir=CACHE_DIR,
-                                             local_files_only=False)
-        args.tokenizer = tokenizer_class.from_pretrained(model_name,
-                                                        add_prefix_space=True,
-                                                        cache_dir=CACHE_DIR,
-                                                        local_files_only=False)
+                                                 output_hidden_states=True,
+                                                 cache_dir=CACHE_DIR,
+                                                 local_files_only=False)
+        args.tokenizer = tokenizer_class.from_pretrained(
+            model_name,
+            add_prefix_space=True,
+            cache_dir=CACHE_DIR,
+            local_files_only=False)
 
     if args.history and args.context_length <= 0:
         args.context_length = args.tokenizer.max_len_single_sentence
@@ -775,9 +804,11 @@ def main():
     embeddings = None
     if args.embedding_type == 'glove50':
         df = generate_glove_embeddings(args, utterance_df)
-    elif any([item in args.embedding_type for item in ['gpt2', 'bert']]):
+    elif any(
+        [item in args.embedding_type for item in ['gpt2', 'bert', 'gpt-neo']]):
         if args.history:
-            df, embeddings = generate_embeddings_with_context(args, utterance_df)
+            df, embeddings = generate_embeddings_with_context(
+                args, utterance_df)
         else:
             print('TODO: Generate embeddings for this model with context')
     elif 'blenderbot' in args.embedding_type:
