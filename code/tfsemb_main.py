@@ -549,7 +549,7 @@ def make_input_from_tokens(args, token_list):
 
 def make_dataloader_from_input(windows):
     input_ids = torch.tensor(windows)
-    data_dl = data.DataLoader(input_ids, batch_size=2, shuffle=False)
+    data_dl = data.DataLoader(input_ids, batch_size=1, shuffle=False)
     return data_dl
 
 

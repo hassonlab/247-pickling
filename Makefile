@@ -84,7 +84,7 @@ download-247-pickles:
 
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: CMD := sbatch submit.sh
+%-embeddings: CMD := python
 # {echo | python | sbatch submit.sh}
 %-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
@@ -95,11 +95,13 @@ download-247-pickles:
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
 %-embeddings: EMB_TYPE := gpt2-xl
-# {glove50 | bert | gpt2-xl | gpt2 | gpt2-large | blenderbot-small }
-%-embeddings: CNXT_LEN := $(shell seq 1 15)
+# {glove50 | bert | gpt2-xl | gpt2 | gpt2-large | blenderbot-small | 
+# gpt-neo-1.3B | gpt-neo-2.7B}
+%-embeddings: CNXT_LEN := 2048
 %-embeddings: HIST := --history
-%-embeddings: LAYER := --layer-idx
-# {48 | 12 for gpt2 | 36 for gpt2-large | 48 for gpt2-xl }
+%-embeddings: LAYER := --layer-idx 48
+# {48 | 12 for gpt2 | 36 for gpt2-large | 48 for gpt2-xl |
+# 24 for gpt-neo-1.3B | 32 for gpt-neo-2.7B }
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 
