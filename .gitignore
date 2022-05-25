@@ -11,3 +11,4 @@ data/*
 !.gitkeep
 .cache
 .vscode
+submit.sh

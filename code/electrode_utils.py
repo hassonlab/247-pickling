@@ -22,7 +22,7 @@ def get_electrode(CONFIG, elec_id):
     if CONFIG['project_id'] == 'podcast':
         search_str = conversation + f'/preprocessed_all/*_{electrode}.mat'
     elif CONFIG['project_id'] == 'tfs':
-        search_str = conversation + f'/preprocessed/*_{electrode}.mat'
+        search_str = conversation + f'/preprocessed_allElec/*_{electrode}.mat'
     else:
         print('Incorrect Project ID')
         sys.exit()
@@ -50,17 +50,13 @@ def return_electrode_array(CONFIG, conv, elect):
     """
     elec_ids = ((conv, electrode) for electrode in elect)
     with Pool() as pool:
-        ecogs = list(
-            filter(
-                lambda x: x is not None,
-                pool.map(partial(get_electrode_mp, CONFIG=CONFIG), elec_ids)))
+        ecogs = pool.map(partial(get_electrode_mp, CONFIG=CONFIG), elec_ids)
 
     ecogs = put_signals_into_array(ecogs)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
         ecogs = standardize_matrix(ecogs)
 
-    ecogs = standardize_matrix(ecogs)
     assert (ecogs.ndim == 2 and ecogs.shape[1] == len(elect))
 
     return ecogs
@@ -72,8 +68,9 @@ def standardize_matrix(ecogs):
 
 
 def put_signals_into_array(ecogs):
-    signal_length = max([item.size for item in ecogs])
+    signal_length = max([item.size for item in ecogs if item is not None])
     ecogs = [
-        item if item else np.repeat(np.nan, signal_length) for item in ecogs
+        np.repeat(np.nan, signal_length) if item is None else item
+        for item in ecogs
     ]
     return ecogs

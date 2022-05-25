@@ -40,11 +40,11 @@ endif
 	ln -sf /projects/HASSON/247/data/$(DIR_KEY)/* data/$(PRJCT_ID)/
 
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
-%-pickle: CMD := sbatch submit.sh
+%-pickle: CMD := python
 # {echo | python}
 %-pickle: PRJCT_ID := tfs
 # {tfs | podcast}
-%-pickle: SID_LIST = 676
+%-pickle: SID_LIST = 7170
 # {625 676 7170 | 661 662 717 723 741 742 743 763 798 | 777}
 
 create-pickle:
@@ -89,7 +89,8 @@ download-247-pickles:
 %-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
 %-embeddings: SID := 7170
-# {625 | 676 | 661} 
+# tfs: {625 | 676 | 7170}
+# poscast: {661} 
 %-embeddings: CONV_IDS = $(shell seq 1 24) 
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170}
 %-embeddings: PKL_IDENTIFIER := full
