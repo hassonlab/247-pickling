@@ -11,11 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
 from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BartForConditionalGeneration, BartTokenizer,
-                          BertForMaskedLM, BertTokenizer,
-                          BlenderbotSmallForConditionalGeneration,
-                          BlenderbotSmallTokenizer, GPT2LMHeadModel,
-                          GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer)
+                          AutoModelForSeq2SeqLM)
 from utils import main_timer
 
 
@@ -676,63 +672,50 @@ def setup_environ(args):
     return
 
 
-def select_tokenizer_and_model(args):
+def get_model_layer_count(args):
+    model = args.model
+    max_layers = getattr(
+        model.config, 'n_layer',
+        getattr(model.config, 'num_layers',
+                getattr(model.config, 'num_hidden_layers', None)))
 
-    if 'gpt2' in args.embedding_type:
-        tokenizer_class = GPT2Tokenizer
-        model_class = GPT2LMHeadModel
-        model_name = args.embedding_type
-        assert model_name in ['gpt2', 'gpt2-large', 'gpt2-xl']
-    elif args.embedding_type == 'roberta':
-        tokenizer_class = RobertaTokenizer
-        model_class = RobertaForMaskedLM
-        model_name = 'roberta'
-    elif args.embedding_type == 'bert':
-        tokenizer_class = BertTokenizer
-        model_class = BertForMaskedLM
-        model_name = 'bert-large-uncased-whole-word-masking'
-    elif args.embedding_type == 'bart':
-        tokenizer_class = BartTokenizer
-        model_class = BartForConditionalGeneration
-        model_name = 'bart'
-    elif args.embedding_type == 'blenderbot-small':
-        tokenizer_class = BlenderbotSmallTokenizer
-        model_class = BlenderbotSmallForConditionalGeneration
-        model_name = 'facebook/blenderbot_small-90M'
-        args.layer_idx = []  # NOTE hardcoded. always generate all layers.
-    elif args.embedding_type == 'gpt-neo-2.7B':
-        tokenizer_class = AutoTokenizer
-        model_class = AutoModelForCausalLM
-        model_name = 'EleutherAI/gpt-neo-2.7B'
-    elif args.embedding_type == 'gpt-neo-1.3B':
-        tokenizer_class = AutoTokenizer
-        model_class = AutoModelForCausalLM
-        model_name = 'EleutherAI/gpt-neo-1.3B'
-    elif args.embedding_type == 'glove50':
-        args.layer_idx = [1]
-        return
-    else:
-        print('No model found for', args.model_name)
-        exit(1)
-
-    # Make sure the right model name is passed as an input argument
-    layer_dict = {
-        'gpt2-xl': 48,
-        'gpt2-large': 36,
-        'gpt2': 12,
-        'bert-large-uncased-whole-word-masking': 24,
-        'facebook/blenderbot_small-90M': 16,  # 8 encoder, 8 decoder
-        'blenderbot': 12,
-        'EleutherAI/gpt-neo-1.3B': 24,
-        'EleutherAI/gpt-neo-2.7B': 32
-    }
-
-    if len(args.layer_idx) == 0:
-        args.layer_idx = np.arange(1, layer_dict[model_name] + 1)
+    # NOTE: layer_idx is shifted by 1 because the first item in hidden_states
+    # corresponds to the output of the embeddings_layer
+    if args.layer_idx == 'all':
+        args.layer_idx = np.arange(1, max_layers + 1)
+    elif args.layer_idx == 'last':
+        args.layer_idx = [max_layers]
     else:
         layers = np.array(args.layer_idx)
-        good = np.all((layers >= 0) & (layers <= layer_dict[model_name]))
+        good = np.all((layers >= 0) & (layers <= max_layers))
         assert good, 'Invalid layer number'
+
+    return args
+
+
+def select_tokenizer_and_model(args):
+
+    causal_models = [
+        'gpt2', 'gpt2-xl', 'gpt2-large', 'EleutherAI/gpt-neo-2.7B',
+        'EleutherAI/gpt-neo-1.3B', "facebook/opt-125m", "facebook/opt-350m",
+        "facebook/opt-1.3b", "facebook/opt-2.7b", "facebook/opt-6.7b",
+        "facebook/opt-30b"
+    ]
+    seq2seq_models = ["facebook/blenderbot_small-90M"]
+
+    model_name = args.embedding_type
+
+    if model_name == 'glove50':
+        args.layer_idx = [1]
+        return
+
+    if model_name in causal_models:
+        model_class = AutoModelForCausalLM
+    elif model_name in seq2seq_models:
+        model_class = AutoModelForSeq2SeqLM
+    else:
+        print('No model found for', model_name)
+        exit(1)
 
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -742,20 +725,21 @@ def select_tokenizer_and_model(args):
                                                  output_hidden_states=True,
                                                  cache_dir=CACHE_DIR,
                                                  local_files_only=True)
-        args.tokenizer = tokenizer_class.from_pretrained(model_name,
-                                                         add_prefix_space=True,
-                                                         cache_dir=CACHE_DIR,
-                                                         local_files_only=True)
+        args.tokenizer = AutoTokenizer.from_pretrained(model_name,
+                                                       add_prefix_space=True,
+                                                       cache_dir=CACHE_DIR,
+                                                       local_files_only=True)
     except:
         args.model = model_class.from_pretrained(model_name,
                                                  output_hidden_states=True,
                                                  cache_dir=CACHE_DIR,
                                                  local_files_only=False)
-        args.tokenizer = tokenizer_class.from_pretrained(
-            model_name,
-            add_prefix_space=True,
-            cache_dir=CACHE_DIR,
-            local_files_only=False)
+        args.tokenizer = AutoTokenizer.from_pretrained(model_name,
+                                                       add_prefix_space=True,
+                                                       cache_dir=CACHE_DIR,
+                                                       local_files_only=False)
+
+    args = get_model_layer_count(args)
 
     if args.history and args.context_length <= 0:
         args.context_length = args.tokenizer.max_len_single_sentence
@@ -767,9 +751,6 @@ def select_tokenizer_and_model(args):
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model-name',
-                        type=str,
-                        default='bert-large-uncased-whole-word-masking')
     parser.add_argument('--embedding-type', type=str, default='glove')
     parser.add_argument('--context-length', type=int, default=0)
     parser.add_argument('--save-predictions',
@@ -783,9 +764,31 @@ def parse_arguments():
     parser.add_argument('--conversation-id', type=int, default=0)
     parser.add_argument('--pkl-identifier', type=str, default=None)
     parser.add_argument('--project-id', type=str, default=None)
-    parser.add_argument('--layer-idx', nargs='*', type=int, default=[])
+    parser.add_argument('--layer-idx', nargs='*', default=['all'])
 
-    return parser.parse_args()
+    import sys
+    sys.argv = [
+        "code/tfsemb_main.py", "--project-id", "podcast", "--pkl-identifier",
+        "full", "--subject", "661", "--conversation-id", "1",
+        "--embedding-type", "gpt2-xl", "--history", "--layer-idx", "all",
+        "--context-length", "2048"
+    ]
+
+    args = parser.parse_args()
+
+    if len(args.layer_idx) == 1:
+        if args.layer_idx[0].isdecimal():
+            args.layer_idx = int(args.layer_idx[0])
+        else:
+            args.layer_idx = args.layer_idx[0]
+    else:
+        try:
+            args.layer_idx = list(map(int, args.layer_idx))
+        except ValueError:
+            print('Invalid layer index')
+            exit(1)
+
+    return args
 
 
 @main_timer
