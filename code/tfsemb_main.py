@@ -658,9 +658,7 @@ def setup_environ(args):
     if args.gpus > 1:
         args.model = nn.DataParallel(args.model)
 
-    stra = args.embedding_type
-    if any([item in args.embedding_type for item in ['gpt2', 'bert']]):
-        stra = f'{stra}_cnxt_{args.context_length}'
+    stra = f'{args.embedding_type.split("/")[-1]}_cnxt_{args.context_length}'
 
     # TODO: if multiple conversations are specified in input
     if args.conversation_id:
