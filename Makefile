@@ -22,6 +22,9 @@
 Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 777: Is the code the collection of significant electrodes
 
+# Run all commands in one shell
+.ONESHELL:
+
 # NOTE: link data from tigressdata before running any scripts
 PRJCT_ID := tfs
 # {tfs | podcast}
@@ -146,3 +149,11 @@ copy-embeddings:
 			cp -pf $$fn $$(echo $$fn | sed "s/661/$$sid/g"); \
 		done; \
 	done
+
+
+# Download huggingface models to cache (before generating embeddings)
+# This target needs to be run on the head node
+cache-models: MODEL := gpt2-xl
+# {causal | seq2seq | or any model name specified in EMB_TYPE comments}
+cache-models:
+	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"
