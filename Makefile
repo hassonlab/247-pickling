@@ -83,6 +83,7 @@ download-247-pickles:
 	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247-pickles/ results/676/
 
 
+
 ## settings for targets: generate-embeddings, concatenate-embeddings
 %-embeddings: CMD := python
 # {echo | python | sbatch submit.sh}
@@ -95,13 +96,14 @@ download-247-pickles:
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
 %-embeddings: EMB_TYPE := gpt2-xl
-# {glove50 | bert | gpt2-xl | gpt2 | gpt2-large | blenderbot-small | 
-# gpt-neo-1.3B | gpt-neo-2.7B}
+# {'gpt2', 'gpt2-xl', 'gpt2-large', 'EleutherAI/gpt-neo-2.7B', \
+'EleutherAI/gpt-neo-1.3B', "facebook/opt-125m", "facebook/opt-350m", \
+"facebook/opt-1.3b", "facebook/opt-2.7b", "facebook/opt-6.7b", \
+"facebook/opt-30b", "facebook/blenderbot_small-90M"}
 %-embeddings: CNXT_LEN := 2048
 %-embeddings: HIST := --history
-%-embeddings: LAYER := --layer-idx 48
-# {48 | 12 for gpt2 | 36 for gpt2-large | 48 for gpt2-xl |
-# 24 for gpt-neo-1.3B | 32 for gpt-neo-2.7B }
+%-embeddings: LAYER := all
+# {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 
@@ -112,14 +114,14 @@ generate-embeddings:
 	mkdir -p logs
 	for cnxt_len in $(CNXT_LEN); do \
 		for conv_id in $(CONV_IDS); do \
-			 $(CMD) code/tfsemb_main.py \
+			 echo $(CMD) code/tfsemb_main.py \
 				--project-id $(PRJCT_ID) \
 				--pkl-identifier $(PKL_IDENTIFIER) \
 				--subject $(SID) \
 				--conversation-id $$conv_id \
 				--embedding-type $(EMB_TYPE) \
 				$(HIST) \
-				$(LAYER) \
+				--layer-idx $(LAYER) \
 				--context-length $$cnxt_len; \
 		done; \
 	done;
