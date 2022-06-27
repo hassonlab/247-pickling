@@ -11,8 +11,10 @@ CAUSAL_MODELS = [
     "gpt2",
     "gpt2-xl",
     "gpt2-large",
-    "EleutherAI/gpt-neo-2.7B",
+    "EleutherAI/gpt-neo-125M",
     "EleutherAI/gpt-neo-1.3B",
+    "EleutherAI/gpt-neo-2.7B",
+    "EleutherAI/gpt-neox-20b",
     "facebook/opt-125m",
     "facebook/opt-350m",
     "facebook/opt-1.3b",
@@ -26,20 +28,21 @@ SEQ2SEQ_MODELS = ["facebook/blenderbot_small-90M"]
 
 
 def download_tokenizer_and_model(CACHE_DIR, tokenizer_class, model_class, model_name):
+    print("Downloading model")
     model_class.from_pretrained(
         model_name,
         output_hidden_states=True,
         cache_dir=CACHE_DIR,
         local_files_only=False,
     )
-    print("Downloaded model for", model_name)
+
+    print("Downloading tokenizer")
     tokenizer_class.from_pretrained(
         model_name,
         add_prefix_space=True,
         cache_dir=CACHE_DIR,
         local_files_only=False,
     )
-    print("Downloaded tokenizer for", model_name)
 
 
 def download_tokenizers_and_models(model_name=None):
@@ -62,6 +65,7 @@ def download_tokenizers_and_models(model_name=None):
         exit(1)
 
     for model in MODELS:
+        print(f"Model Name: {model}")
         download_tokenizer_and_model(
             CACHE_DIR,
             AutoTokenizer,
