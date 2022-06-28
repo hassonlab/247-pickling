@@ -24,7 +24,7 @@ CAUSAL_MODELS = [
 ]
 SEQ2SEQ_MODELS = ["facebook/blenderbot_small-90M"]
 
-# TODO: Add MLM_MODELS (Masked Language Models  )
+# TODO: Add MLM_MODELS (Masked Language Models)
 
 
 def download_tokenizer_and_model(CACHE_DIR, tokenizer_class, model_class, model_name):
@@ -45,6 +45,23 @@ def download_tokenizer_and_model(CACHE_DIR, tokenizer_class, model_class, model_
     )
 
 
+def download_neox_model(CACHE_DIR):
+    # NOTE: This is a special case for gpt-neox-20b for a shortwhile
+    # Please contact me if you have questions about this
+    model_name = "gpt-neox-20b"
+    model_dir = os.path.join(CACHE_DIR, model_name)
+    if os.path.isdir(model_dir):
+        print(f"{model_name} checkpoints are already downloaded at {model_dir} ")
+    else:
+        try:
+            os.system("git lfs install")
+            os.system("git clone https://huggingface.co/EleutherAI/gpt-neox-20b")
+        except:
+            print("Possible git lfs version issues")
+
+    exit()
+
+
 def download_tokenizers_and_models(model_name=None):
 
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), ".cache")
@@ -52,7 +69,10 @@ def download_tokenizers_and_models(model_name=None):
 
     if model_name is None:
         print("Input argument cannot be empty")
-        exit(1)
+        return
+
+    if model_name == "EleutherAI/gpt-neox-20b":
+        download_neox_model(CACHE_DIR)
 
     if model_name == "causal" or model_name in CAUSAL_MODELS:
         model_class = AutoModelForCausalLM

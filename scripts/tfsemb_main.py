@@ -824,4 +824,6 @@ def main():
 
 
 if __name__ == "__main__":
+    # NOTE: Before running this script please refer to the cache-models target
+    # in the Makefile
     main()
