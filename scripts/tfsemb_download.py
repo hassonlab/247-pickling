@@ -1,14 +1,11 @@
 import os
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    AutoModelForSeq2SeqLM,
-)
+
+from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
 
 CAUSAL_MODELS = [
     "gpt2",
-    "gpt2-xl",
     "gpt2-large",
+    "gpt2-xl",
     "EleutherAI/gpt-neo-125M",
     "EleutherAI/gpt-neo-1.3B",
     "EleutherAI/gpt-neo-2.7B",
@@ -47,22 +44,33 @@ def download_tokenizer_and_model(
     return (model, tokenizer)
 
 
-def download_neox_model(CACHE_DIR):
+def download_neox_model(
     # NOTE: This is a special case for gpt-neox-20b for a shortwhile
-    # Please contact me if you have questions about this
-    model_name = "gpt-neox-20b"
+    CACHE_DIR,
+    tokenizer_class,
+    model_class,
+    model_name,
+    local_files_only=False,
+):
     model_dir = os.path.join(CACHE_DIR, model_name)
-    if os.path.isdir(model_dir):
-        print(f"{model_name} checkpoints are already downloaded at {model_dir} ")
+
+    if local_files_only:
+        if os.path.exists(model_dir):
+            download_tokenizer_and_model(
+                CACHE_DIR, tokenizer_class, model_class, model_dir, local_files_only
+            )
+        else:
+            print(f"Model directory {model_dir} does not exist")
+            exit(1)
     else:
         try:
             if "tiger" in os.uname().nodename:
                 os.system("module load git")
-            os.system("git lfs install")
+            os.system(f"cd {CACHE_DIR} && git lfs install")
             os.system("git clone https://huggingface.co/EleutherAI/gpt-neox-20b")
         except:
+            # FIXME: Raise appropriate exception
             print("Possible git lfs version issues")
-
     exit()
 
 
@@ -80,9 +88,6 @@ def download_tokenizers_and_models(model_name=None, local_files_only=False):
         print("Input argument cannot be empty")
         return
 
-    if model_name == "EleutherAI/gpt-neox-20b":
-        download_neox_model(CACHE_DIR)
-
     if model_name == "causal" or model_name in CAUSAL_MODELS:
         model_class = AutoModelForCausalLM
         MODELS = CAUSAL_MODELS if model_name == "causal" else [model_name]
@@ -95,6 +100,13 @@ def download_tokenizers_and_models(model_name=None, local_files_only=False):
 
     model_dict = {}
     for model_name in MODELS:
+        # Special case for gpt-neox-20b
+        if model_name == "EleutherAI/gpt-neox-20b":
+            download_neox_model(
+                CACHE_DIR, AutoTokenizer, model_class, model_name, local_files_only
+            )
+            continue
+
         print(f"Model Name: {model_name}")
         model_dict[model_name] = download_tokenizer_and_model(
             CACHE_DIR,
