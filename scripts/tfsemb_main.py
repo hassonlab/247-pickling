@@ -10,24 +10,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModelForSeq2SeqLM
+from scripts import tfsemb_download as tfsemb_dwnld
 from utils import main_timer
-
-
-CAUSAL_MODELS = [
-    "gpt2",
-    "gpt2-xl",
-    "gpt2-large",
-    "EleutherAI/gpt-neo-2.7B",
-    "EleutherAI/gpt-neo-1.3B",
-    "facebook/opt-125m",
-    "facebook/opt-350m",
-    "facebook/opt-1.3b",
-    "facebook/opt-2.7b",
-    "facebook/opt-6.7b",
-    "facebook/opt-30b",
-]
-SEQ2SEQ_MODELS = ["facebook/blenderbot_small-90M"]
 
 
 def save_pickle(args, item, file_name, embeddings=None):
@@ -137,7 +121,7 @@ def tokenize_and_explode(args, df):
 
 
 def get_token_indices(args, num_tokens):
-    if args.embedding_type in CAUSAL_MODELS:
+    if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
         start, stop = 0, num_tokens
     # elif args.embedding_type == "bert":
     #     start, stop = 1, num_tokens + 1
@@ -181,7 +165,7 @@ def process_extracted_embeddings(args, concat_output):
     concatenated_embeddings = torch.cat(concat_output, dim=0).numpy()
     extracted_embeddings = concatenated_embeddings
 
-    if args.embedding_type in CAUSAL_MODELS:
+    if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
         emb_dim = concatenated_embeddings.shape[-1]
 
         # the first token is always empty
@@ -230,7 +214,7 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
     top1_probabilities, top1_probabilities_idx = prediction_probabilities.max(dim=1)
     predicted_tokens = args.tokenizer.convert_ids_to_tokens(top1_probabilities_idx)
     predicted_words = predicted_tokens
-    if args.embedding_type in CAUSAL_MODELS:
+    if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
         predicted_words = [
             args.tokenizer.convert_tokens_to_string(token) for token in predicted_tokens
         ]
@@ -554,7 +538,7 @@ def make_dataloader_from_input(windows):
 
 def generate_causal_embeddings(args, df):
     df = tokenize_and_explode(args, df)
-    if args.embedding_type in CAUSAL_MODELS:
+    if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
         args.tokenizer.pad_token = args.tokenizer.eos_token
     final_embeddings = []
     final_top1_word = []
@@ -604,7 +588,7 @@ def generate_embeddings(args, df):
     df = tokenize_and_explode(args, df)
     unique_sentence_list = get_unique_sentences(df)
 
-    if args.embedding_type in CAUSAL_MODELS:
+    if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
         tokenizer.pad_token = tokenizer.eos_token
 
     tokens = tokenizer(unique_sentence_list, padding=True, return_tensors="pt")
@@ -711,43 +695,14 @@ def select_tokenizer_and_model(args):
         args.layer_idx = [1]
         return
 
-    if model_name in CAUSAL_MODELS:
-        model_class = AutoModelForCausalLM
-    elif model_name in SEQ2SEQ_MODELS:
-        model_class = AutoModelForSeq2SeqLM
-    else:
-        print("No model found for", model_name)
-        exit(1)
-
-    CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), ".cache")
-    os.makedirs(CACHE_DIR, exist_ok=True)
-
     try:
-        args.model = model_class.from_pretrained(
-            model_name,
-            output_hidden_states=True,
-            cache_dir=CACHE_DIR,
-            local_files_only=True,
-        )
-        args.tokenizer = AutoTokenizer.from_pretrained(
-            model_name,
-            add_prefix_space=True,
-            cache_dir=CACHE_DIR,
-            local_files_only=True,
-        )
-    except:
-        args.model = model_class.from_pretrained(
-            model_name,
-            output_hidden_states=True,
-            cache_dir=CACHE_DIR,
-            local_files_only=False,
-        )
-        args.tokenizer = AutoTokenizer.from_pretrained(
-            model_name,
-            add_prefix_space=True,
-            cache_dir=CACHE_DIR,
-            local_files_only=False,
-        )
+        args.model, args.tokenizer = tfsemb_dwnld.download_tokenizers_and_models(
+            model_name, True
+        )[model_name]
+    except OSError:
+        # NOTE: Please refer to make-target: cache-models for more information.
+        print("Model and tokenizer not found. Please download into cache first.")
+        exit(1)
 
     args = get_model_layer_count(args)
 
@@ -805,9 +760,9 @@ def main():
 
     if args.embedding_type == "glove50":
         generate_func = generate_glove_embeddings
-    elif args.embedding_type in CAUSAL_MODELS:
+    elif args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
         generate_func = generate_causal_embeddings
-    elif args.embedding_type in SEQ2SEQ_MODELS:
+    elif args.embedding_type in tfsemb_dwnld.SEQ2SEQ_MODELS:
         generate_func = generate_conversational_embeddings
     else:
         generate_func = generate_embeddings
