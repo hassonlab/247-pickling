@@ -56,6 +56,8 @@ def download_neox_model(CACHE_DIR):
         print(f"{model_name} checkpoints are already downloaded at {model_dir} ")
     else:
         try:
+            if "tiger" in os.uname().nodename:
+                os.system("module load git")
             os.system("git lfs install")
             os.system("git clone https://huggingface.co/EleutherAI/gpt-neox-20b")
         except:
