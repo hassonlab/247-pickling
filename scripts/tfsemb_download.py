@@ -9,8 +9,8 @@ from transformers import (
 
 CAUSAL_MODELS = [
     "gpt2",
-    "gpt2-xl",
     "gpt2-large",
+    "gpt2-xl",
     "EleutherAI/gpt-neo-125M",
     "EleutherAI/gpt-neo-1.3B",
     "EleutherAI/gpt-neo-2.7B",
@@ -85,6 +85,8 @@ def download_tokenizers_and_models(model_name=None):
         exit(1)
 
     for model in MODELS:
+        if model == "EleutherAI/gpt-neox-20b":
+            continue
         print(f"Model Name: {model}")
         download_tokenizer_and_model(
             CACHE_DIR,

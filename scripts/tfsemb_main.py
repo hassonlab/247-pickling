@@ -554,6 +554,7 @@ def make_dataloader_from_input(windows):
 
 def generate_causal_embeddings(args, df):
     df = tokenize_and_explode(args, df)
+    df = df.head(args.tokenizer.max_len_single_sentence + 16)
     if args.embedding_type in CAUSAL_MODELS:
         args.tokenizer.pad_token = args.tokenizer.eos_token
     final_embeddings = []

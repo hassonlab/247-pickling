@@ -26,7 +26,7 @@ Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 .ONESHELL:
 
 # NOTE: link data from tigressdata before running any scripts
-PRJCT_ID := tfs
+PRJCT_ID := podcast
 # {tfs | podcast}
 
 link-data:
@@ -45,7 +45,7 @@ endif
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
 %-pickle: CMD := sbatch submit.sh
 # {echo | python}
-%-pickle: PRJCT_ID := tfs
+%-pickle: PRJCT_ID := podcast
 # {tfs | podcast}
 %-pickle: SID_LIST = 676
 # {625 676 | 661 662 717 723 741 742 743 763 798 | 777}
@@ -98,9 +98,9 @@ download-247-pickles:
 # {54 for 625 | 78 for 676 | 1 for 661}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
-%-embeddings: EMB_TYPE := gpt2-xl
+%-embeddings: EMB_TYPE := EleutherAI/gpt-neox-20b
 # {'gpt2', 'gpt2-xl', 'gpt2-large', 'EleutherAI/gpt-neo-2.7B', \
-'EleutherAI/gpt-neo-1.3B', "facebook/opt-125m", "facebook/opt-350m", \
+'EleutherAI/gpt-neo-1.3B','EleutherAI/gpt-neox-20b', "facebook/opt-125m', "facebook/opt-350m", \
 "facebook/opt-1.3b", "facebook/opt-2.7b", "facebook/opt-6.7b", \
 "facebook/opt-30b", "facebook/blenderbot_small-90M"}
 %-embeddings: CNXT_LEN := 2048
@@ -153,7 +153,7 @@ copy-embeddings:
 
 # Download huggingface models to cache (before generating embeddings)
 # This target needs to be run on the head node
-cache-models: MODEL := gpt2-xl
+cache-models: MODEL := causal
 # {causal | seq2seq | or any model name specified in EMB_TYPE comments}
 cache-models:
 	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"
