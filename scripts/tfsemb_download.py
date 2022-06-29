@@ -1,5 +1,3 @@
-# Run python tfsemb_download
-
 import os
 from transformers import (
     AutoModelForCausalLM,
@@ -27,22 +25,26 @@ SEQ2SEQ_MODELS = ["facebook/blenderbot_small-90M"]
 # TODO: Add MLM_MODELS (Masked Language Models)
 
 
-def download_tokenizer_and_model(CACHE_DIR, tokenizer_class, model_class, model_name):
+def download_tokenizer_and_model(
+    CACHE_DIR, tokenizer_class, model_class, model_name, local_files_only
+):
     print("Downloading model")
-    model_class.from_pretrained(
+    model = model_class.from_pretrained(
         model_name,
         output_hidden_states=True,
         cache_dir=CACHE_DIR,
-        local_files_only=False,
+        local_files_only=local_files_only,
     )
 
     print("Downloading tokenizer")
-    tokenizer_class.from_pretrained(
+    tokenizer = tokenizer_class.from_pretrained(
         model_name,
         add_prefix_space=True,
         cache_dir=CACHE_DIR,
-        local_files_only=False,
+        local_files_only=local_files_only,
     )
+
+    return (model, tokenizer)
 
 
 def download_neox_model(CACHE_DIR):
@@ -54,6 +56,8 @@ def download_neox_model(CACHE_DIR):
         print(f"{model_name} checkpoints are already downloaded at {model_dir} ")
     else:
         try:
+            if "tiger" in os.uname().nodename:
+                os.system("module load git")
             os.system("git lfs install")
             os.system("git clone https://huggingface.co/EleutherAI/gpt-neox-20b")
         except:
@@ -62,10 +66,15 @@ def download_neox_model(CACHE_DIR):
     exit()
 
 
-def download_tokenizers_and_models(model_name=None):
-
+def set_cache_dir():
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), ".cache")
     os.makedirs(CACHE_DIR, exist_ok=True)
+    return CACHE_DIR
+
+
+def download_tokenizers_and_models(model_name=None, local_files_only=False):
+
+    CACHE_DIR = set_cache_dir()
 
     if model_name is None:
         print("Input argument cannot be empty")
@@ -84,17 +93,19 @@ def download_tokenizers_and_models(model_name=None):
         print("Invalid Model Name")
         exit(1)
 
-    for model in MODELS:
-        print(f"Model Name: {model}")
-        download_tokenizer_and_model(
+    model_dict = {}
+    for model_name in MODELS:
+        print(f"Model Name: {model_name}")
+        model_dict[model_name] = download_tokenizer_and_model(
             CACHE_DIR,
             AutoTokenizer,
             model_class,
-            model,
+            model_name,
+            local_files_only=local_files_only,
         )
 
-    return
+    return model_dict
 
 
 if __name__ == "__main__":
-    download_tokenizers_and_models("causal")
+    download_tokenizers_and_models("causal", local_files_only=False)
