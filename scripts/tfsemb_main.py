@@ -697,7 +697,7 @@ def select_tokenizer_and_model(args):
 
     try:
         args.model, args.tokenizer = tfsemb_dwnld.download_tokenizers_and_models(
-            model_name, True
+            model_name, local_files_only=True, debug=False
         )[model_name]
     except OSError:
         # NOTE: Please refer to make-target: cache-models for more information.
