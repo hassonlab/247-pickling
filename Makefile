@@ -26,7 +26,7 @@ Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 .ONESHELL:
 
 # NOTE: link data from tigressdata before running any scripts
-PRJCT_ID := tfs
+PRJCT_ID := podcast
 # {tfs | podcast}
 
 link-data:
@@ -45,7 +45,7 @@ endif
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
 %-pickle: CMD := sbatch submit.sh
 # {echo | python}
-%-pickle: PRJCT_ID := tfs
+%-pickle: PRJCT_ID := podcast
 # {tfs | podcast}
 %-pickle: SID_LIST = 676
 # {625 676 | 661 662 717 723 741 742 743 763 798 | 777}
