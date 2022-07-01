@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
-from scripts import tfsemb_download as tfsemb_dwnld
+import tfsemb_download as tfsemb_dwnld
 from utils import main_timer
 
 

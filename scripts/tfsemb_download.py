@@ -106,7 +106,7 @@ def clone_model_repo(
 def set_cache_dir():
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), ".cache")
     assert (
-        CACHE_DIR == f"scratch/gpfs/{os.getlogin()}/.cache"
+        CACHE_DIR == f"/scratch/gpfs/{os.getlogin()}/.cache"
     ), "Cache directory is not correct"
     os.makedirs(CACHE_DIR, exist_ok=True)
     return CACHE_DIR
