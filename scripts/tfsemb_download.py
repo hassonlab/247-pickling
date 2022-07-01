@@ -40,6 +40,7 @@ def download_tokenizer_and_model(
         tuple: (tokenizer, model)
     """
     print("Downloading model")
+
     model = model_class.from_pretrained(
         model_name,
         output_hidden_states=True,
@@ -95,19 +96,16 @@ def clone_model_repo(
             ):  # probably redundant, but just in case we are on tiger
                 os.system("module load git")
 
-            os.system(f"cd {CACHE_DIR} && git lfs install")
-            os.system(f"git clone https://huggingface.co/{model_name}")
+            os.system(f"git lfs install")
+            os.system(f"git clone https://huggingface.co/{model_name} {model_dir}")
         except:
             # FIXME: Raise appropriate exception
             print("Possible git lfs version issues")
-    return
+    exit(1)
 
 
 def set_cache_dir():
     CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), ".cache")
-    assert (
-        CACHE_DIR == f"/scratch/gpfs/{os.getlogin()}/.cache"
-    ), "Cache directory is not correct"
     os.makedirs(CACHE_DIR, exist_ok=True)
     return CACHE_DIR
 
@@ -159,6 +157,7 @@ def download_tokenizers_and_models(model_name=None, local_files_only=False, debu
 
         # check if caching was successful
         if debug:
+            print("Checking if model has been cached successfully")
             try:
                 cache_function(
                     CACHE_DIR,
