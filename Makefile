@@ -88,7 +88,7 @@ download-247-pickles:
 
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: CMD := python
+%-embeddings: CMD := sbatch submit.sh
 # {echo | python | sbatch submit.sh}
 %-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
@@ -98,12 +98,12 @@ download-247-pickles:
 # {54 for 625 | 78 for 676 | 1 for 661}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
-%-embeddings: EMB_TYPE := gpt2-xl
+%-embeddings: EMB_TYPE := gpt-neo-125M
 # {'gpt2', 'gpt2-xl', 'gpt2-large', 'EleutherAI/gpt-neo-2.7B', \
-'EleutherAI/gpt-neo-1.3B', "facebook/opt-125m", "facebook/opt-350m", \
+'EleutherAI/gpt-neo-1.3B','EleutherAI/gpt-neox-20b', "facebook/opt-125m", "facebook/opt-350m", \
 "facebook/opt-1.3b", "facebook/opt-2.7b", "facebook/opt-6.7b", \
 "facebook/opt-30b", "facebook/blenderbot_small-90M"}
-%-embeddings: CNXT_LEN := 2048
+%-embeddings: CNXT_LEN := 1024
 %-embeddings: HIST := --history
 %-embeddings: LAYER := all
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
@@ -117,7 +117,7 @@ generate-embeddings:
 	mkdir -p logs
 	for cnxt_len in $(CNXT_LEN); do \
 		for conv_id in $(CONV_IDS); do \
-			 echo $(CMD) code/tfsemb_main.py \
+			$(CMD) scripts/tfsemb_main.py \
 				--project-id $(PRJCT_ID) \
 				--pkl-identifier $(PKL_IDENTIFIER) \
 				--subject $(SID) \
@@ -129,10 +129,11 @@ generate-embeddings:
 		done; \
 	done;
 
+
 # concatenate embeddings from all conversations
 concatenate-embeddings:
 	for cnxt_len in $(CNXT_LEN); do \
-		python code/tfsemb_concat.py \
+		python scripts/tfsemb_concat.py \
 			--project-id $(PRJCT_ID) \
 			--pkl-identifier $(PKL_IDENTIFIER) \
 			--subject $(SID) \

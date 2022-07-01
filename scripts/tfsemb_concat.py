@@ -76,7 +76,7 @@ def main():
         num_convs = 1
 
     stra = args.embedding_type
-    if any([item in args.embedding_type for item in ['gpt2', 'bert']]):
+    if any([item in args.embedding_type for item in ['gpt2', 'bert','neo','opt']]):
         stra = f'{stra}_cnxt_{args.context_length}'
     args.output_dir = os.path.join(os.getcwd(), 'results', args.project_id,
                                    args.subject, 'embeddings', stra,
@@ -85,6 +85,7 @@ def main():
     trimmed_labels = os.path.join(os.getcwd(), 'results', args.project_id,
                                   args.subject, 'pickles',
                                   f'{args.subject}_trimmed_labels.pkl')
+    
 
     layer_folders = sorted(os.listdir(args.output_dir))
     for layer_folder in layer_folders:
@@ -113,18 +114,18 @@ def main():
         all_exs = all_df.to_dict('records')
         save_pickle(all_exs, os.path.join(args.emb_out_dir, args.emb_out_file))
 
-        if 'glove' in args.embedding_type or layer_folder in ['layer_48', 'layer_16', 'layer_8']:
-            trimmed_df = load_pickle(trimmed_labels, key='labels')
-            all_df.set_index(['conversation_id', 'index'], inplace=True)
-            trimmed_df.set_index(['conversation_id', 'index'], inplace=True)
-            all_df['adjusted_onset'] = None
-            all_df['adjusted_offset'] = None
-            all_df.update(trimmed_df)  # merge
-            all_df.dropna(subset=['adjusted_onset'], inplace=True)
-            all_df.reset_index(inplace=True)
-            all_exs = all_df.to_dict('records')
-            fn = args.emb_out_file.replace('full', 'trimmed')
-            save_pickle(all_exs, os.path.join(args.emb_out_dir, fn))
+        # if 'glove' in args.embedding_type or layer_folder in ['layer_48', 'layer_16', 'layer_8']:
+        #     trimmed_df = load_pickle(trimmed_labels, key='labels')
+        #     all_df.set_index(['conversation_id', 'index'], inplace=True)
+        #     trimmed_df.set_index(['conversation_id', 'index'], inplace=True)
+        #     all_df['adjusted_onset'] = None
+        #     all_df['adjusted_offset'] = None
+        #     all_df.update(trimmed_df)  # merge
+        #     all_df.dropna(subset=['adjusted_onset'], inplace=True)
+        #     all_df.reset_index(inplace=True)
+        #     all_exs = all_df.to_dict('records')
+        #     fn = args.emb_out_file.replace('full', 'trimmed')
+        #     save_pickle(all_exs, os.path.join(args.emb_out_dir, fn))
 
 
 if __name__ == '__main__':

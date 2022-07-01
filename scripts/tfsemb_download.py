@@ -1,21 +1,21 @@
 import os
-
+import torch
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
 
 CAUSAL_MODELS = [
-    "gpt2",
-    "gpt2-large",
-    "gpt2-xl",
-    "EleutherAI/gpt-neo-125M",
-    "EleutherAI/gpt-neo-1.3B",
-    "EleutherAI/gpt-neo-2.7B",
+    # "gpt2",
+    # "gpt2-large",
+    # "gpt2-xl",
+    # "EleutherAI/gpt-neo-125M",
+    # "EleutherAI/gpt-neo-1.3B",
+    # "EleutherAI/gpt-neo-2.7B",
     "EleutherAI/gpt-neox-20b",
-    "facebook/opt-125m",
-    "facebook/opt-350m",
-    "facebook/opt-1.3b",
-    "facebook/opt-2.7b",
-    "facebook/opt-6.7b",
-    "facebook/opt-30b",
+    # "facebook/opt-125m",
+    # "facebook/opt-350m",
+    # "facebook/opt-1.3b",
+    # "facebook/opt-2.7b",
+    # "facebook/opt-6.7b",
+    # "facebook/opt-30b",
 ]
 SEQ2SEQ_MODELS = ["facebook/blenderbot_small-90M"]
 

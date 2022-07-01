@@ -595,7 +595,7 @@ def generate_embeddings(args, df):
     input_ids_val = tokens["input_ids"]
     attention_masks_val = tokens["attention_mask"]
     dataset = data.TensorDataset(input_ids_val, attention_masks_val)
-    data_dl = data.DataLoader(dataset, batch_size=8, shuffle=False)
+    data_dl = data.DataLoader(dataset, batch_size=1, shuffle=False)
 
     with torch.no_grad():
         concat_output = []
