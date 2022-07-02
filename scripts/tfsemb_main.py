@@ -14,8 +14,9 @@ import tfsemb_download as tfsemb_dwnld
 from utils import main_timer
 
 
-def save_pickle(args, item, file_name, embeddings=None):
+def save_pickle(args, item, embeddings=None, base_df=False):
     """Write 'item' to 'file_name.pkl'"""
+    file_name = args.output_file
     add_ext = "" if file_name.endswith(".pkl") else ".pkl"
 
     file_name = file_name + add_ext
@@ -28,7 +29,8 @@ def save_pickle(args, item, file_name, embeddings=None):
             with open(filename, "wb") as fh:
                 pickle.dump(item.to_dict("records"), fh)
     else:
-        filename = file_name % args.layer_idx[0]
+        if not base_df:
+            filename = file_name % args.layer_idx[0]
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         with open(filename, "wb") as fh:
             pickle.dump(item.to_dict("records"), fh)
@@ -464,7 +466,6 @@ def printe(example, args):
 
 
 def generate_conversational_embeddings(args, df):
-    df = tokenize_and_explode(args, df)
     # This is a workaround. Blenderbot is limited to 128 tokens so having
     # long utterances breaks that. We remove them here, as well as the next
     # utterance to keep the turn taking the same.
@@ -532,12 +533,11 @@ def make_input_from_tokens(args, token_list):
 
 def make_dataloader_from_input(windows):
     input_ids = torch.tensor(windows)
-    data_dl = data.DataLoader(input_ids, batch_size=1, shuffle=False)
+    data_dl = data.DataLoader(input_ids, batch_size=16, shuffle=False)
     return data_dl
 
 
 def generate_causal_embeddings(args, df):
-    df = tokenize_and_explode(args, df)
     if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
         args.tokenizer.pad_token = args.tokenizer.eos_token
     final_embeddings = []
@@ -585,7 +585,7 @@ def generate_embeddings(args, df):
 
     model = model.to(device)
     model.eval()
-    df = tokenize_and_explode(args, df)
+
     unique_sentence_list = get_unique_sentences(df)
 
     if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
@@ -632,6 +632,10 @@ def setup_environ(args):
     DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)
     RESULTS_DIR = os.path.join(os.getcwd(), "results", args.project_id)
     PKL_DIR = os.path.join(RESULTS_DIR, args.subject, "pickles")
+    args.EMB_DIR = os.path.join(RESULTS_DIR, args.subject, "embeddings")
+
+    args.full_model_name = args.embedding_type
+    args.trimmed_model_name = args.embedding_type.split("/")[-1]
 
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -645,16 +649,14 @@ def setup_environ(args):
     if args.gpus > 1:
         args.model = nn.DataParallel(args.model)
 
-    stra = f'{args.embedding_type.split("/")[-1]}_cnxt_{args.context_length}'
+    stra = f"{args.trimmed_model_name}/cnxt_{args.context_length}"
 
     # TODO: if multiple conversations are specified in input
     if args.conversation_id:
         args.output_dir = os.path.join(
-            RESULTS_DIR,
-            args.subject,
-            "embeddings",
-            stra,
+            args.EMB_DIR,
             args.pkl_identifier,
+            stra,
             "layer_%02d",
         )
         output_file_name = args.conversation_list[args.conversation_id - 1]
@@ -689,7 +691,7 @@ def get_model_layer_count(args):
 
 def select_tokenizer_and_model(args):
 
-    model_name = args.embedding_type
+    model_name = args.full_model_name
 
     if model_name == "glove50":
         args.layer_idx = [1]
@@ -748,8 +750,8 @@ def parse_arguments():
 @main_timer
 def main():
     args = parse_arguments()
-    select_tokenizer_and_model(args)
     setup_environ(args)
+    select_tokenizer_and_model(args)
 
     utterance_df = load_pickle(args)
     utterance_df = select_conversation(args, utterance_df)
@@ -757,6 +759,8 @@ def main():
     if len(utterance_df) == 0:
         print("Conversation data does not exist")
         return
+
+    base_df = tokenize_and_explode(args, utterance_df)
 
     if args.embedding_type == "glove50":
         generate_func = generate_glove_embeddings
@@ -767,13 +771,13 @@ def main():
     else:
         generate_func = generate_embeddings
 
-    output = generate_func(args, utterance_df)
+    output = generate_func(args, base_df)
     if len(output) == 2:
         df, embeddings = output
     else:
         df = output
 
-    save_pickle(args, df, args.output_file, embeddings)
+    save_pickle(args, df, embeddings)
 
     return
 

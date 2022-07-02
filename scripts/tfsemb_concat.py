@@ -2,7 +2,7 @@ import argparse
 import os
 import glob
 import pickle
-
+import shutil
 import pandas as pd
 
 
@@ -58,6 +58,17 @@ def parse_arguments():
     return parser.parse_args()
 
 
+def removeEmptyfolders(path):
+    for (_path, _, _files) in os.walk(path, topdown=False):
+        if _files:
+            continue  # skip remove
+        try:
+            os.rmdir(_path)
+            print("Remove :", _path)
+        except OSError as ex:
+            pass
+
+
 def main():
     args = parse_arguments()
 
@@ -70,24 +81,26 @@ def main():
     else:
         num_convs = 1
 
-    stra = args.embedding_type.split("/")[-1]
-    stra = f"{stra}_cnxt_{args.context_length}"
-    args.output_dir = os.path.join(
+    PKL_ROOT_DIR = os.path.join(
         os.getcwd(),
         "results",
         args.project_id,
         args.subject,
-        "embeddings",
-        stra,
+    )
+
+    PKL_DIR = os.path.join(PKL_ROOT_DIR, "pickles")
+    EMB_DIR = os.path.join(PKL_ROOT_DIR, "embeddings")
+
+    stra = args.embedding_type.split("/")[-1]
+    stra = f"{stra}/cnxt_{args.context_length}"
+    args.output_dir = os.path.join(
+        EMB_DIR,
         args.pkl_identifier,
+        stra,
     )
 
     trimmed_labels = os.path.join(
-        os.getcwd(),
-        "results",
-        args.project_id,
-        args.subject,
-        "pickles",
+        PKL_DIR,
         f"{args.subject}_trimmed_labels.pkl",
     )
 
@@ -106,23 +119,21 @@ def main():
             )
             continue
 
-        all_df = []
-        for conversation in conversation_pickles:
-            conv_pkl = os.path.join(args.output_dir, conversation)
-            all_df.append(load_pickle(conv_pkl))
+        all_df = [
+            load_pickle(os.path.join(args.output_dir, conversation))
+            for conversation in conversation_pickles
+        ]
 
-        args.emb_out_dir = os.path.join(
-            os.getcwd(), "results", args.project_id, args.subject, "pickles"
+        strb = "/".join([stra, layer_folder])
+        args.emb_out_file = "/".join(
+            ["embeddings", args.pkl_identifier, strb, "embeddings.pkl"]
         )
-        strb = "_".join([stra, layer_folder])
-        args.emb_out_file = "_".join(
-            [args.subject, args.pkl_identifier, strb, "embeddings"]
-        )
-
         all_df = pd.concat(all_df, ignore_index=True)
 
         all_exs = all_df.to_dict("records")
-        save_pickle(all_exs, os.path.join(args.emb_out_dir, args.emb_out_file))
+        full_emb_out_file = os.path.join(PKL_DIR, args.emb_out_file)
+        os.makedirs(os.path.dirname(full_emb_out_file), exist_ok=True)
+        save_pickle(all_exs, full_emb_out_file)
 
         if "glove" in args.embedding_type or layer_folder in [
             "layer_48",
@@ -140,6 +151,10 @@ def main():
             all_exs = all_df.to_dict("records")
             fn = args.emb_out_file.replace("full", "trimmed")
             save_pickle(all_exs, os.path.join(args.emb_out_dir, fn))
+
+    # Deleting embeddings after concatenation
+    shutil.rmtree(args.output_dir, ignore_errors=True)
+    removeEmptyfolders(EMB_DIR)
 
 
 if __name__ == "__main__":

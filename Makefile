@@ -23,6 +23,7 @@ Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 777: Is the collection of significant electrodes
 
 # Other Notes:
+# For generate-embeddings
 # 1. Models greater than 6.7B parameters need a GPU with more than 40GB RAM
 # 2. This means currently we cannot run EleutherAI/gpt-neox-20b and 
 # facebook/opt-30b using huggingface on della GPUs
@@ -90,11 +91,7 @@ download-247-pickles:
 	gsutil -m rsync -x "^(?!.*625).*" gs://247-podcast-data/247-pickles/ results/625/
 	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247-pickles/ results/676/
 
-
-
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: CMD := python
-# {echo | python | sbatch submit.sh}
 %-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
 %-embeddings: SID := 661
@@ -116,6 +113,9 @@ download-247-pickles:
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
+%-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
+%-embeddings: CMD = python
+# {echo | python | sbatch submit.sh --job-name=$(JOB_NAME)}
 
 # 38 and 39 failed
 
