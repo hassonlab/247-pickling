@@ -20,7 +20,12 @@
 # Miscellaneous: \
 247 Subjects IDs: 625 and 676 \
 Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
-777: Is the code the collection of significant electrodes
+777: Is the collection of significant electrodes
+
+# Other Notes:
+# 1. Models greater than 6.7B parameters need a GPU with more than 40GB RAM
+# 2. This means currently we cannot run EleutherAI/gpt-neox-20b and 
+# facebook/opt-30b using huggingface on della GPUs
 
 # Run all commands in one shell
 .ONESHELL:
@@ -53,7 +58,7 @@ endif
 create-pickle:
 	mkdir -p logs
 	for sid in $(SID_LIST); do \
-		$(CMD) code/tfspkl_main.py \
+		$(CMD) scripts/tfspkl_main.py \
 			--project-id $(PRJCT_ID) \
 			--subject $$sid; \
 	done
@@ -61,7 +66,7 @@ create-pickle:
 # create pickle of significant electrodes (just for podcast)
 create-sig-pickle:
 	mkdir -p logs
-	$(CMD) code/tfspkl_main.py \
+	$(CMD) scripts/tfspkl_main.py \
 			--project-id $(PRJCT_ID) \
 			--sig-elec-file data/$(PRJCT_ID)/all-electrodes.csv
 
@@ -99,10 +104,12 @@ download-247-pickles:
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
 %-embeddings: EMB_TYPE := gpt2-xl
-# {'gpt2', 'gpt2-xl', 'gpt2-large', 'EleutherAI/gpt-neo-2.7B', \
-'EleutherAI/gpt-neo-1.3B', "facebook/opt-125m", "facebook/opt-350m", \
-"facebook/opt-1.3b", "facebook/opt-2.7b", "facebook/opt-6.7b", \
-"facebook/opt-30b", "facebook/blenderbot_small-90M"}
+# {"gpt2", "gpt2-xl", "gpt2-large", \
+"EleutherAI/gpt-neo-125M", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-neo-2.7B", \
+"EleutherAI/gpt-neox-20b", \
+"facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", \
+"facebook/opt-2.7b", "facebook/opt-6.7b", "facebook/opt-30b", \
+"facebook/blenderbot_small-90M"}
 %-embeddings: CNXT_LEN := 2048
 %-embeddings: HIST := --history
 %-embeddings: LAYER := all
@@ -117,7 +124,7 @@ generate-embeddings:
 	mkdir -p logs
 	for cnxt_len in $(CNXT_LEN); do \
 		for conv_id in $(CONV_IDS); do \
-			 echo $(CMD) code/tfsemb_main.py \
+			 $(CMD) scripts/tfsemb_main.py \
 				--project-id $(PRJCT_ID) \
 				--pkl-identifier $(PKL_IDENTIFIER) \
 				--subject $(SID) \
@@ -132,7 +139,7 @@ generate-embeddings:
 # concatenate embeddings from all conversations
 concatenate-embeddings:
 	for cnxt_len in $(CNXT_LEN); do \
-		python code/tfsemb_concat.py \
+		python scripts/tfsemb_concat.py \
 			--project-id $(PRJCT_ID) \
 			--pkl-identifier $(PKL_IDENTIFIER) \
 			--subject $(SID) \
