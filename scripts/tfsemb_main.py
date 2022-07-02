@@ -6,11 +6,12 @@ import string
 import gensim.downloader as api
 import numpy as np
 import pandas as pd
+import tfsemb_download as tfsemb_dwnld
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
-import tfsemb_download as tfsemb_dwnld
+from tfsemb_concat import save_pickle as svpkl
 from utils import main_timer
 
 
@@ -318,7 +319,8 @@ def transformer_forward_pass(args, data_dl):
             input_ids = torch.LongTensor(batch["encoder_ids"]).to(device)
             decoder_ids = torch.LongTensor(batch["decoder_ids"]).to(device)
             outputs = model(
-                input_ids.unsqueeze(0), decoder_input_ids=decoder_ids.unsqueeze(0)
+                input_ids.unsqueeze(0),
+                decoder_input_ids=decoder_ids.unsqueeze(0),
             )
             # After: get all relevant layers
             embeddings = {
@@ -569,6 +571,7 @@ def generate_causal_embeddings(args, df):
     else:
         final_embeddings = final_embeddings[0]
 
+    df = pd.DataFrame()
     df["top1_pred"] = final_top1_word
     df["top1_pred_prob"] = final_top1_prob
     df["true_pred_prob"] = final_true_y_prob
@@ -671,7 +674,9 @@ def get_model_layer_count(args):
         model.config,
         "n_layer",
         getattr(
-            model.config, "num_layers", getattr(model.config, "num_hidden_layers", None)
+            model.config,
+            "num_layers",
+            getattr(model.config, "num_hidden_layers", None),
         ),
     )
 
@@ -698,7 +703,7 @@ def select_tokenizer_and_model(args):
         return
 
     try:
-        args.model, args.tokenizer = tfsemb_dwnld.download_tokenizers_and_models(
+        (args.model, args.tokenizer,) = tfsemb_dwnld.download_tokenizers_and_models(
             model_name, local_files_only=True, debug=False
         )[model_name]
     except OSError:
@@ -762,6 +767,15 @@ def main():
 
     base_df = tokenize_and_explode(args, utterance_df)
 
+    # saving the base dataframe
+    model_dir = os.path.join(args.EMB_DIR, args.pkl_identifier, args.trimmed_model_name)
+    os.makedirs(model_dir, exist_ok=True)
+
+    base_df_file = os.path.join(model_dir, "base_df.pkl")
+    if not os.path.exists(base_df_file):
+        svpkl(base_df, base_df_file)
+
+    # Select generation function based on model type
     if args.embedding_type == "glove50":
         generate_func = generate_glove_embeddings
     elif args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
@@ -771,6 +785,7 @@ def main():
     else:
         generate_func = generate_embeddings
 
+    # Generate Embeddings
     output = generate_func(args, base_df)
     if len(output) == 2:
         df, embeddings = output

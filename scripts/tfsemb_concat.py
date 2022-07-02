@@ -41,7 +41,9 @@ def save_pickle(item, file_name):
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--model-name", type=str, default="bert-large-uncased-whole-word-masking"
+        "--model-name",
+        type=str,
+        default="bert-large-uncased-whole-word-masking",
     )
     parser.add_argument("--embedding-type", type=str, default="glove")
     parser.add_argument("--context-length", type=int, default=0)
@@ -91,8 +93,8 @@ def main():
     PKL_DIR = os.path.join(PKL_ROOT_DIR, "pickles")
     EMB_DIR = os.path.join(PKL_ROOT_DIR, "embeddings")
 
-    stra = args.embedding_type.split("/")[-1]
-    stra = f"{stra}/cnxt_{args.context_length}"
+    trimmed_model_name = args.embedding_type.split("/")[-1]
+    stra = f"{trimmed_model_name}/cnxt_{args.context_length}"
     args.output_dir = os.path.join(
         EMB_DIR,
         args.pkl_identifier,
@@ -103,6 +105,18 @@ def main():
         PKL_DIR,
         f"{args.subject}_trimmed_labels.pkl",
     )
+
+    # copy base_df from source to target
+    src = os.path.join(EMB_DIR, args.pkl_identifier, trimmed_model_name, "base_df.pkl")
+    dst = os.path.join(
+        PKL_DIR,
+        "embeddings",
+        args.pkl_identifier,
+        trimmed_model_name,
+        "base_df.pkl",
+    )
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    shutil.move(src, dst)
 
     layer_folders = sorted(os.listdir(args.output_dir))
     for layer_folder in layer_folders:
