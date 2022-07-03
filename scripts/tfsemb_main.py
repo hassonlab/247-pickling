@@ -713,11 +713,12 @@ def select_tokenizer_and_model(args):
 
     args = get_model_layer_count(args)
 
-    if args.history and args.context_length <= 0:
+    if args.context_length <= 0:
         args.context_length = args.tokenizer.max_len_single_sentence
-        assert (
-            args.context_length <= args.tokenizer.max_len_single_sentence
-        ), "given length is greater than max length"
+
+    assert (
+        args.context_length <= args.tokenizer.max_len_single_sentence
+    ), "given length is greater than max length"
 
     return
 
