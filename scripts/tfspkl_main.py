@@ -20,6 +20,7 @@ from tfspkl_config import build_config
 from tfspkl_parser import arg_parser
 from transformers import AutoTokenizer
 from utils import main_timer, save_pickle
+from tfsemb_download import tfsemb_dwnld
 
 
 def find_switch_points(array):
@@ -211,36 +212,22 @@ def add_vocab_columns(df):
     df["in_glove"] = df.word.str.lower().apply(lambda x: x in glove.vocab)
 
     # Add language models
-    names = [
-        "gpt2",
-        "bert-base-cased",
-        "facebook/blenderbot_small-90M",
-        "facebook/blenderbot-3B",
-    ]
-    CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), ".cache")
-    for model in names:
+    for model in [*tfsemb_dwnld.CAUSAL_MODELS, *tfsemb_dwnld.SEQ2SEQ_MODELS]:
         try:
-            tokenizer = AutoTokenizer.from_pretrained(
-                model,
-                add_prefix_space=True,
-                cache_dir=CACHE_DIR,
-                local_files_only=False,
-            )
-        except FileNotFoundError as e:
-            tokenizer = AutoTokenizer.from_pretrained(
-                model, add_prefix_space=True, cache_dir=CACHE_DIR, local_files_only=True
+            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
+                model, local_files_only=True
             )
         except:
-            raise Exception("Need manual intervention")
+            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
+                model, local_files_only=False
+            )
 
-        key = model.split("/")[-1].replace("-", "_")
-        df[f"in_{key}"] = df.word.apply(lambda x: calc_tokenizer_length(tokenizer, x))
+        key = model.split("/")[-1]
+        df[f"in_{key}"] = df.word.apply(
+            lambda x: x in tokenizer.get_vocab().keys()
+        )
 
     return df
-
-
-def calc_tokenizer_length(tokenizer, word):
-    return False if pd.isnull(word) else len(tokenizer.tokenize(word)) == 1
 
 
 def apply_lemmatize(word):
@@ -252,7 +239,9 @@ def apply_stemming(word):
 
 
 def add_lemmatize_stemming(df):
-    df["lemmatized_word"] = df.word.str.strip().apply(lambda x: apply_lemmatize(x))
+    df["lemmatized_word"] = df.word.str.strip().apply(
+        lambda x: apply_lemmatize(x)
+    )
     df["stemmed_word"] = df.word.str.strip().apply(lambda x: apply_stemming(x))
 
     return df
@@ -322,7 +311,9 @@ def main():
 
     # Create pickle with electrode maps
     electrode_map = dict(
-        subject=subject_id, electrode_id=electrodes, electrode_name=electrode_names
+        subject=subject_id,
+        electrode_id=electrodes,
+        electrode_name=electrode_names,
     )
     save_pickle(
         electrode_map,
