@@ -23,20 +23,17 @@ def arg_parser(default_args: Optional[List] = None):
     parser = argparse.ArgumentParser()
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--electrode-list',
-                       nargs='*',
-                       type=int,
-                       action='append')
-    group.add_argument('--max-electrodes', type=int, default=1e4)
+    group.add_argument("--electrode-list", nargs="*", type=int, action="append")
+    group.add_argument("--max-electrodes", type=int, default=1e4)
 
     group1 = parser.add_mutually_exclusive_group()
-    group1.add_argument('--subject', type=int, default=0)
-    group1.add_argument('--sig-elec-file', type=str, default='')
+    group1.add_argument("--subject", type=int, default=0)
+    group1.add_argument("--sig-elec-file", type=str, default="")
 
-    parser.add_argument('--bin-size', type=int, default=32)
-    parser.add_argument('--vocab-min-freq', type=int, default=0)
-    parser.add_argument('--num-folds', type=int, default=5)
-    parser.add_argument('--project-id', type=str, default=None)
+    parser.add_argument("--bin-size", type=int, default=32)
+    parser.add_argument("--vocab-min-freq", type=int, default=0)
+    parser.add_argument("--num-folds", type=int, default=5)
+    parser.add_argument("--project-id", type=str, default=None)
 
     # custom_args = [
     #     '--project-id', 'podcast', '--subject', '661', '--max-electrodes',

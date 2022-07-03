@@ -11,11 +11,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
-from tfsemb_concat import save_pickle as svpkl
-from utils import main_timer
+from utils import load_pickle, main_timer
+from utils import save_pickle as svpkl
 
 
-def save_pickle(args, item, embeddings=None, base_df=False):
+def save_pickle(args, item, embeddings=None):
     """Write 'item' to 'file_name.pkl'"""
     file_name = args.output_file
     add_ext = "" if file_name.endswith(".pkl") else ".pkl"
@@ -30,8 +30,7 @@ def save_pickle(args, item, embeddings=None, base_df=False):
             with open(filename, "wb") as fh:
                 pickle.dump(item.to_dict("records"), fh)
     else:
-        if not base_df:
-            filename = file_name % args.layer_idx[0]
+        filename = file_name % args.layer_idx[0]
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         with open(filename, "wb") as fh:
             pickle.dump(item.to_dict("records"), fh)
@@ -42,23 +41,6 @@ def select_conversation(args, df):
     if args.conversation_id:
         print("Selecting conversation", args.conversation_id)
         df = df[df.conversation_id == args.conversation_id]
-    return df
-
-
-def load_pickle(args):
-    """Load the datum pickle and returns as a dataframe
-
-    Args:
-        file (string): labels pickle from 247-decoding/tfs_pickling.py
-
-    Returns:
-        DataFrame: pickle contents returned as dataframe
-    """
-    with open(args.pickle_name, "rb") as fh:
-        datum = pickle.load(fh)
-
-    df = pd.DataFrame.from_dict(datum["labels"])
-
     return df
 
 
@@ -759,7 +741,7 @@ def main():
     setup_environ(args)
     select_tokenizer_and_model(args)
 
-    utterance_df = load_pickle(args)
+    utterance_df = load_pickle(args, "labels")
     utterance_df = select_conversation(args, utterance_df)
 
     if len(utterance_df) == 0:

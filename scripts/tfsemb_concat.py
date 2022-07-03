@@ -1,41 +1,11 @@
 import argparse
-import os
 import glob
+import os
 import pickle
 import shutil
+
 import pandas as pd
-
-
-def load_pickle(pickle_name, key=None):
-    """Load the datum pickle and returns as a dataframe
-
-    Args:
-        file (string): labels pickle from 247-decoding/tfs_pickling.py
-
-    Returns:
-        DataFrame: pickle contents returned as dataframe
-    """
-    with open(pickle_name, "rb") as fh:
-        datum = pickle.load(fh)
-
-    if key is None:
-        df = pd.DataFrame.from_dict(datum)
-    else:
-        df = pd.DataFrame.from_dict(datum[key])
-
-    return df
-
-
-def save_pickle(item, file_name):
-    """Write 'item' to 'file_name.pkl'"""
-    add_ext = "" if file_name.endswith(".pkl") else ".pkl"
-
-    file_name = file_name + add_ext
-    os.makedirs(os.path.dirname(file_name), exist_ok=True)
-
-    with open(file_name, "wb") as fh:
-        pickle.dump(item, fh)
-    return
+from utils import load_pickle, save_pickle
 
 
 def parse_arguments():
