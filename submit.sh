@@ -11,13 +11,15 @@ if [[ "$HOSTNAME" == *"tiger"* ]]
 then
     echo "It's tiger"
     module load anaconda
-    source activate 247-main
+    conda activate 247-main
 elif [[ "$HOSTNAME" == *"della"* ]]
 then
     echo "It's della-gpu"
+    module purge
     module load anaconda3/2021.11
     conda activate 247-main
 else
+    module purge
     module load anacondapy
     source activate srm
 fi

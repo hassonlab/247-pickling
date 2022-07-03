@@ -41,7 +41,9 @@ def save_pickle(item, file_name):
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--model-name", type=str, default="bert-large-uncased-whole-word-masking"
+        "--model-name",
+        type=str,
+        default="bert-large-uncased-whole-word-masking",
     )
     parser.add_argument("--embedding-type", type=str, default="glove")
     parser.add_argument("--context-length", type=int, default=0)
@@ -50,7 +52,6 @@ def parse_arguments():
     parser.add_argument("--suffix", type=str, default="")
     parser.add_argument("--verbose", action="store_true", default=False)
     parser.add_argument("--subject", type=str, default="625")
-    parser.add_argument("--history", action="store_true", default=False)
     parser.add_argument("--conversation-id", type=int, default=0)
     parser.add_argument("--pkl-identifier", type=str, default=None)
     parser.add_argument("--project-id", type=str, default=None)
@@ -91,8 +92,8 @@ def main():
     PKL_DIR = os.path.join(PKL_ROOT_DIR, "pickles")
     EMB_DIR = os.path.join(PKL_ROOT_DIR, "embeddings")
 
-    stra = args.embedding_type.split("/")[-1]
-    stra = f"{stra}/cnxt_{args.context_length}"
+    trimmed_model_name = args.embedding_type.split("/")[-1]
+    stra = f"{trimmed_model_name}/cnxt_{args.context_length}"
     args.output_dir = os.path.join(
         EMB_DIR,
         args.pkl_identifier,
@@ -103,6 +104,22 @@ def main():
         PKL_DIR,
         f"{args.subject}_trimmed_labels.pkl",
     )
+
+    # copy base_df from source to target
+    src = os.path.join(EMB_DIR, args.pkl_identifier, trimmed_model_name, "base_df.pkl")
+    dst = os.path.join(
+        PKL_DIR,
+        "embeddings",
+        args.pkl_identifier,
+        trimmed_model_name,
+        "base_df.pkl",
+    )
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    if os.path.exists(dst):
+        print("Base DataFrame Exists")
+    else:
+        print("Moving Base DataFrame")
+        shutil.move(src, dst)
 
     layer_folders = sorted(os.listdir(args.output_dir))
     for layer_folder in layer_folders:
@@ -135,22 +152,23 @@ def main():
         os.makedirs(os.path.dirname(full_emb_out_file), exist_ok=True)
         save_pickle(all_exs, full_emb_out_file)
 
-        if "glove" in args.embedding_type or layer_folder in [
-            "layer_48",
-            "layer_16",
-            "layer_8",
-        ]:
-            trimmed_df = load_pickle(trimmed_labels, key="labels")
-            all_df.set_index(["conversation_id", "index"], inplace=True)
-            trimmed_df.set_index(["conversation_id", "index"], inplace=True)
-            all_df["adjusted_onset"] = None
-            all_df["adjusted_offset"] = None
-            all_df.update(trimmed_df)  # merge
-            all_df.dropna(subset=["adjusted_onset"], inplace=True)
-            all_df.reset_index(inplace=True)
-            all_exs = all_df.to_dict("records")
-            fn = args.emb_out_file.replace("full", "trimmed")
-            save_pickle(all_exs, os.path.join(args.emb_out_dir, fn))
+        if False:
+            if "glove" in args.embedding_type or layer_folder in [
+                "layer_48",
+                "layer_16",
+                "layer_8",
+            ]:
+                trimmed_df = load_pickle(trimmed_labels, key="labels")
+                all_df.set_index(["conversation_id", "index"], inplace=True)
+                trimmed_df.set_index(["conversation_id", "index"], inplace=True)
+                all_df["adjusted_onset"] = None
+                all_df["adjusted_offset"] = None
+                all_df.update(trimmed_df)  # merge
+                all_df.dropna(subset=["adjusted_onset"], inplace=True)
+                all_df.reset_index(inplace=True)
+                all_exs = all_df.to_dict("records")
+                fn = args.emb_out_file.replace("full", "trimmed")
+                save_pickle(all_exs, os.path.join(args.emb_out_dir, fn))
 
     # Deleting embeddings after concatenation
     shutil.rmtree(args.output_dir, ignore_errors=True)
