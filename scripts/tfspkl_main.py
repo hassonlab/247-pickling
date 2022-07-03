@@ -8,19 +8,20 @@ Description: Contains code to pickle 247 data
 Copyright (c) 2020 Your Company
 """
 import os
-import pickle
 
 import gensim.downloader as api
+import nltk
 import numpy as np
 import pandas as pd
+import tfsemb_download as tfsemb_dwnld
 from nltk.stem import PorterStemmer as ps
 from nltk.stem import WordNetLemmatizer as lt
 from tfspkl_build_matrices import build_design_matrices
 from tfspkl_config import build_config
 from tfspkl_parser import arg_parser
-from transformers import AutoTokenizer
 from utils import main_timer, save_pickle
-from tfsemb_download import tfsemb_dwnld
+
+nltk.download("omw-1.4")
 
 
 def find_switch_points(array):
@@ -209,7 +210,9 @@ def add_vocab_columns(df):
 
     # Add glove
     glove = api.load("glove-wiki-gigaword-50")
-    df["in_glove"] = df.word.str.lower().apply(lambda x: x in glove.vocab)
+    df["in_glove"] = df.word.str.lower().apply(
+        lambda x: x in glove.index_to_key
+    )
 
     # Add language models
     for model in [*tfsemb_dwnld.CAUSAL_MODELS, *tfsemb_dwnld.SEQ2SEQ_MODELS]:
@@ -224,10 +227,14 @@ def add_vocab_columns(df):
 
         key = model.split("/")[-1]
         df[f"in_{key}"] = df.word.apply(
-            lambda x: x in tokenizer.get_vocab().keys()
+            lambda x: calc_tokenizer_length(tokenizer, x)
         )
 
     return df
+
+
+def calc_tokenizer_length(tokenizer, word):
+    return False if pd.isnull(word) else len(tokenizer.tokenize(word)) == 1
 
 
 def apply_lemmatize(word):
