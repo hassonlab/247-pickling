@@ -1,5 +1,9 @@
 import json
 import os
+from datetime import datetime
+from utils import get_git_revision_short_hash
+
+print(f"Git Commit Hash: {get_git_revision_short_hash()}")
 
 
 def create_directory_paths(args):
@@ -25,6 +29,9 @@ def create_directory_paths(args):
         sig_file_path, sig_file_name = os.path.split(args.sig_elec_file)
         if not sig_file_path:
             args.sig_elec_file = os.path.join(DATA_DIR, sig_file_name)
+
+    args.COMMIT_HASH = get_git_revision_short_hash()
+    args.CREATED_ON = f'{datetime.now().strftime("%A %m/%d/%Y %H:%M:%S")}'
 
     return
 

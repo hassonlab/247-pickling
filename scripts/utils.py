@@ -1,11 +1,29 @@
 import os
 import pickle
+import subprocess
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import tqdm
 from sklearn.model_selection import KFold, StratifiedKFold
+
+
+# https://stackoverflow.com/questions/14989858/get-the-current-git-hash-in-a-python-script
+def get_git_revision_hash() -> str:
+    return (
+        subprocess.check_output(["git", "rev-parse", "HEAD"])
+        .decode("ascii")
+        .strip()
+    )
+
+
+def get_git_revision_short_hash() -> str:
+    return (
+        subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+        .decode("ascii")
+        .strip()
+    )
 
 
 def load_pickle(pickle_name, key=None):
@@ -40,15 +58,17 @@ def save_pickle(item, file_name):
     return
 
 
+def get_current_time():
+    time_now = datetime.now()
+    print(f'Start Time: {time_now.strftime("%A %m/%d/%Y %H:%M:%S")}')
+    return time_now
+
+
 def main_timer(func):
     def function_wrapper():
-        start_time = datetime.now()
-        print(f'Start Time: {start_time.strftime("%A %m/%d/%Y %H:%M:%S")}')
-
+        start_time = get_current_time()
         func()
-
-        end_time = datetime.now()
-        print(f'End Time: {end_time.strftime("%A %m/%d/%Y %H:%M:%S")}')
+        end_time = get_current_time()
         print(f"Total runtime: {end_time - start_time} (HH:MM:SS)")
 
     return function_wrapper
