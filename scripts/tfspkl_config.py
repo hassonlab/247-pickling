@@ -5,14 +5,19 @@ import os
 def create_directory_paths(args):
     # Format directory logistics
     DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)
-    CONV_DIRS = DATA_DIR + "/%s/" % args.subject
-    SAVE_DIR = os.path.join(os.getcwd(), "results", args.project_id, args.subject)
+    CONV_DIRS = os.path.join(DATA_DIR, args.subject)
+    SAVE_DIR = os.path.join(
+        os.getcwd(), "results", args.project_id, args.subject
+    )
     PKL_DIR = os.path.join(SAVE_DIR, "pickles")
 
     os.makedirs(PKL_DIR, exist_ok=True)
 
     DIR_DICT = dict(
-        CONV_DIRS=CONV_DIRS, SAVE_DIR=SAVE_DIR, PKL_DIR=PKL_DIR, DATA_DIR=DATA_DIR
+        CONV_DIRS=CONV_DIRS,
+        SAVE_DIR=SAVE_DIR,
+        PKL_DIR=PKL_DIR,
+        DATA_DIR=DATA_DIR,
     )
     vars(args).update(DIR_DICT)
 
@@ -34,11 +39,10 @@ def build_config(args):
     Returns:
         dict: combined configuration information
     """
-    args.subject = str(args.subject)
     args.exclude_words = ["sp", "{lg}", "{ns}", "{LG}", "{NS}", "SP"]
     args.non_words = ["hm", "huh", "mhm", "mm", "oh", "uh", "uhuh", "um"]
-    create_directory_paths(args)
 
+    create_directory_paths(args)
     write_config(vars(args))
 
     return args

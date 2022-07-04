@@ -20,10 +20,10 @@ def load_pickle(pickle_name, key=None):
     with open(pickle_name, "rb") as fh:
         datum = pickle.load(fh)
 
-    if key is None:
-        df = pd.DataFrame.from_dict(datum)
-    else:
+    if key:
         df = pd.DataFrame.from_dict(datum[key])
+    else:
+        df = pd.DataFrame.from_dict(datum)
 
     return df
 

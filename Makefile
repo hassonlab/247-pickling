@@ -49,7 +49,7 @@ endif
 	ln -sf /projects/HASSON/247/data/$(DIR_KEY)/* data/$(PRJCT_ID)/
 
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
-%-pickle: CMD := sbatch submit.sh
+%-pickle: CMD := python
 # {echo | python}
 %-pickle: PRJCT_ID := tfs
 # {tfs | podcast}
@@ -108,7 +108,6 @@ download-247-pickles:
 "facebook/opt-2.7b", "facebook/opt-6.7b", "facebook/opt-30b", \
 "facebook/blenderbot_small-90M"}
 %-embeddings: CNXT_LEN := 16 32 64 128 256 1024
-%-embeddings: HIST := --history
 %-embeddings: LAYER := all
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
 # Note: embeddings file is the same for all podcast subjects \
@@ -130,7 +129,6 @@ generate-embeddings:
 				--subject $(SID) \
 				--conversation-id $$conv_id \
 				--embedding-type $(EMB_TYPE) \
-				$(HIST) \
 				--layer-idx $(LAYER) \
 				--context-length $$cnxt_len; \
 		done; \
@@ -144,7 +142,6 @@ concatenate-embeddings:
 			--pkl-identifier $(PKL_IDENTIFIER) \
 			--subject $(SID) \
 			--embedding-type $(EMB_TYPE) \
-			$(HIST) \
 			--context-length $$cnxt_len; \
 	done;
 

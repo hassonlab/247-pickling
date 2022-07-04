@@ -226,6 +226,7 @@ def add_vocab_columns(df):
             )
 
         key = model.split("/")[-1]
+        print(f"Adding column: (token) in_{key}")
         df[f"in_{key}"] = df.word.apply(
             lambda x: calc_tokenizer_length(tokenizer, x)
         )
@@ -254,18 +255,14 @@ def add_lemmatize_stemming(df):
     return df
 
 
-def create_labels_pickles(
-    args, stitch_index, labels, convo_labels_size, convs, label_str=None
-):
+def create_labels_pickles(args, stitch_index, labels, convs, label_str=None):
     labels_df = process_labels(args, stitch_index, labels, convs)
     labels_df = create_production_flag(labels_df)
     labels_df = add_word_freqs(labels_df)
     labels_df = add_lemmatize_stemming(labels_df)
     labels_df = add_vocab_columns(labels_df)
 
-    labels_dict = dict(
-        labels=labels_df.to_dict("records"), convo_label_size=convo_labels_size
-    )
+    labels_dict = dict(labels=labels_df.to_dict("records"))
     pkl_name = "_".join([args.subject, label_str, "labels"])
     pkl_name = os.path.join(args.PKL_DIR, pkl_name)
     save_pickle(labels_dict, pkl_name)
@@ -289,8 +286,8 @@ def main():
         bin_stitch_index,
         full_labels,
         trimmed_labels,
-        convo_full_examples_size,
-        convo_trimmed_examples_size,
+        _,
+        _,
         electrodes,
         electrode_names,
         conversations,
@@ -370,7 +367,6 @@ def main():
         args,
         trimmed_stitch_index,
         trimmed_labels,
-        convo_trimmed_examples_size,
         conversations,
         "trimmed",
     )
@@ -378,7 +374,6 @@ def main():
         args,
         full_stitch_index,
         full_labels,
-        convo_full_examples_size,
         conversations,
         "full",
     )
