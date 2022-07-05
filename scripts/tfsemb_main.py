@@ -2,6 +2,7 @@ import argparse
 import os
 import pickle
 import string
+import sys
 
 import gensim.downloader as api
 import numpy as np
@@ -11,11 +12,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
-from tfsemb_concat import save_pickle as svpkl
-from utils import main_timer
+from utils import load_pickle, main_timer
+from utils import save_pickle as svpkl
 
 
-def save_pickle(args, item, embeddings=None, base_df=False):
+def save_pickle(args, item, embeddings=None):
     """Write 'item' to 'file_name.pkl'"""
     file_name = args.output_file
     add_ext = "" if file_name.endswith(".pkl") else ".pkl"
@@ -30,8 +31,7 @@ def save_pickle(args, item, embeddings=None, base_df=False):
             with open(filename, "wb") as fh:
                 pickle.dump(item.to_dict("records"), fh)
     else:
-        if not base_df:
-            filename = file_name % args.layer_idx[0]
+        filename = file_name % args.layer_idx[0]
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         with open(filename, "wb") as fh:
             pickle.dump(item.to_dict("records"), fh)
@@ -42,23 +42,6 @@ def select_conversation(args, df):
     if args.conversation_id:
         print("Selecting conversation", args.conversation_id)
         df = df[df.conversation_id == args.conversation_id]
-    return df
-
-
-def load_pickle(args):
-    """Load the datum pickle and returns as a dataframe
-
-    Args:
-        file (string): labels pickle from 247-decoding/tfs_pickling.py
-
-    Returns:
-        DataFrame: pickle contents returned as dataframe
-    """
-    with open(args.pickle_name, "rb") as fh:
-        datum = pickle.load(fh)
-
-    df = pd.DataFrame.from_dict(datum["labels"])
-
     return df
 
 
@@ -78,7 +61,9 @@ def check_token_is_root(args, df):
     token_is_root_string = args.embedding_type.split("/")[-1] + "_token_is_root"
     df[token_is_root_string] = (
         df["word"]
-        == df["token"].apply(args.tokenizer.convert_tokens_to_string).str.strip()
+        == df["token"]
+        .apply(args.tokenizer.convert_tokens_to_string)
+        .str.strip()
     )
 
     return df
@@ -187,7 +172,9 @@ def process_extracted_embeddings_all_layers(args, layer_embeddings_dict):
         concat_output = []
         for item_dict in layer_embeddings_dict:
             concat_output.append(item_dict[layer_idx])
-        layer_embeddings[layer_idx] = process_extracted_embeddings(args, concat_output)
+        layer_embeddings[layer_idx] = process_extracted_embeddings(
+            args, concat_output
+        )
 
     return layer_embeddings
 
@@ -212,14 +199,21 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
     prediction_probabilities = F.softmax(prediction_scores, dim=1)
 
     logp = np.log2(prediction_probabilities)
-    entropy = [None] + torch.sum(-prediction_probabilities * logp, dim=1).tolist()
+    entropy = [None] + torch.sum(
+        -prediction_probabilities * logp, dim=1
+    ).tolist()
 
-    top1_probabilities, top1_probabilities_idx = prediction_probabilities.max(dim=1)
-    predicted_tokens = args.tokenizer.convert_ids_to_tokens(top1_probabilities_idx)
+    top1_probabilities, top1_probabilities_idx = prediction_probabilities.max(
+        dim=1
+    )
+    predicted_tokens = args.tokenizer.convert_ids_to_tokens(
+        top1_probabilities_idx
+    )
     predicted_words = predicted_tokens
     if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
         predicted_words = [
-            args.tokenizer.convert_tokens_to_string(token) for token in predicted_tokens
+            args.tokenizer.convert_tokens_to_string(token)
+            for token in predicted_tokens
         ]
 
     # top-1 probabilities
@@ -227,9 +221,9 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
     # top-1 word
     top1_words = [None] + predicted_words
     # probability of correct word
-    true_y_probability = [None] + prediction_probabilities.gather(1, true_y).squeeze(
-        -1
-    ).tolist()
+    true_y_probability = [None] + prediction_probabilities.gather(
+        1, true_y
+    ).squeeze(-1).tolist()
     # TODO: probabilities of all words
 
     return top1_words, top1_probabilities, true_y_probability, entropy
@@ -324,7 +318,8 @@ def transformer_forward_pass(args, data_dl):
             )
             # After: get all relevant layers
             embeddings = {
-                i: outputs[decoderkey][i - 8].cpu()[0, :-1, :] for i in decoderlayers
+                i: outputs[decoderkey][i - 8].cpu()[0, :-1, :]
+                for i in decoderlayers
             }
             logits = outputs.logits.cpu()[0, :-1, :]
 
@@ -351,7 +346,9 @@ def transformer_forward_pass(args, data_dl):
                             slice(512),
                         )  # second to last token embedding
                         for i in encoderlayers:
-                            encoder_embs[i][-token_idx - 1] = outputs[encoderkey][i][
+                            encoder_embs[i][-token_idx - 1] = outputs[
+                                encoderkey
+                            ][i][
                                 portion
                             ].cpu()  # update embeddings
                 all_embeddings[-1].update(encoder_embs)
@@ -444,7 +441,9 @@ def make_conversational_input(args, df):
             continue
         context = create_context(convo, j - 1)
         if len(context) > 0:
-            examples.append({"encoder_ids": context, "decoder_ids": response[:-1]})
+            examples.append(
+                {"encoder_ids": context, "decoder_ids": response[:-1]}
+            )
 
     # Ensure we maintained correct number of tokens per utterance
     first = np.array([len(e["decoder_ids"]) - 1 for e in examples])
@@ -527,7 +526,8 @@ def make_input_from_tokens(args, token_list):
         windows = [tuple(token_list)]
     else:
         windows = [
-            tuple(token_list[x : x + size]) for x in range(len(token_list) - size + 1)
+            tuple(token_list[x : x + size])
+            for x in range(len(token_list) - size + 1)
         ]
 
     return windows
@@ -703,12 +703,19 @@ def select_tokenizer_and_model(args):
         return
 
     try:
-        (args.model, args.tokenizer,) = tfsemb_dwnld.download_tokenizers_and_models(
+        (
+            args.model,
+            args.tokenizer,
+        ) = tfsemb_dwnld.download_tokenizers_and_models(
             model_name, local_files_only=True, debug=False
-        )[model_name]
+        )[
+            model_name
+        ]
     except OSError:
         # NOTE: Please refer to make-target: cache-models for more information.
-        print("Model and tokenizer not found. Please download into cache first.")
+        print(
+            "Model and tokenizer not found. Please download into cache first."
+        )
         exit(1)
 
     args = get_model_layer_count(args)
@@ -727,14 +734,39 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--embedding-type", type=str, default="glove")
     parser.add_argument("--context-length", type=int, default=0)
-    parser.add_argument("--save-predictions", action="store_true", default=False)
-    parser.add_argument("--save-hidden-states", action="store_true", default=False)
+    parser.add_argument(
+        "--save-predictions", action="store_true", default=False
+    )
+    parser.add_argument(
+        "--save-hidden-states", action="store_true", default=False
+    )
     parser.add_argument("--subject", type=str, default="625")
-    parser.add_argument("--history", action="store_true", default=False)
     parser.add_argument("--conversation-id", type=int, default=0)
     parser.add_argument("--pkl-identifier", type=str, default=None)
     parser.add_argument("--project-id", type=str, default=None)
     parser.add_argument("--layer-idx", nargs="*", default=["all"])
+
+    # If running the code in debug mode
+    gettrace = getattr(sys, "gettrace", None)
+
+    if gettrace():
+        sys.argv = [
+            "scripts/tfsemb_main.py",
+            "--project-id",
+            "podcast",
+            "--pkl-identifier",
+            "full",
+            "--subject",
+            "661",
+            "--conversation-id",
+            "1",
+            "--embedding-type",
+            "facebook/opt-125m",
+            "--layer-idx",
+            "last",
+            "--context-length",
+            "1024",
+        ]
 
     args = parser.parse_args()
 
@@ -759,7 +791,7 @@ def main():
     setup_environ(args)
     select_tokenizer_and_model(args)
 
-    utterance_df = load_pickle(args)
+    utterance_df = load_pickle(args, "labels")
     utterance_df = select_conversation(args, utterance_df)
 
     if len(utterance_df) == 0:
@@ -769,7 +801,9 @@ def main():
     base_df = tokenize_and_explode(args, utterance_df)
 
     # saving the base dataframe
-    model_dir = os.path.join(args.EMB_DIR, args.pkl_identifier, args.trimmed_model_name)
+    model_dir = os.path.join(
+        args.EMB_DIR, args.pkl_identifier, args.trimmed_model_name
+    )
     os.makedirs(model_dir, exist_ok=True)
 
     base_df_file = os.path.join(model_dir, "base_df.pkl")

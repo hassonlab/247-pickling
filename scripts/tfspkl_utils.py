@@ -17,20 +17,25 @@ def get_electrode_ids(CONFIG, conversation):
     Returns:
         [type]: [description]
     """
-    if CONFIG['project_id'] == 'podcast':
+    if CONFIG["project_id"] == "podcast":
         elec_files = glob.glob(
-            os.path.join(conversation, 'preprocessed_all', '*.mat'))
-    elif CONFIG['project_id'] == 'tfs':
+            os.path.join(conversation, "preprocessed_all", "*.mat")
+        )
+    elif CONFIG["project_id"] == "tfs":
         elec_files = glob.glob(
-            os.path.join(conversation, 'preprocessed', '*.mat'))
+            os.path.join(conversation, "preprocessed", "*.mat")
+        )
     else:
-        print('Incorrect Project ID')
+        print("Incorrect Project ID")
         sys.exit()
 
     elec_ids_list = sorted(
         list(
-            map(lambda x: int(os.path.splitext(x)[0].split('_')[-1]),
-                elec_files)))
+            map(
+                lambda x: int(os.path.splitext(x)[0].split("_")[-1]), elec_files
+            )
+        )
+    )
 
     return elec_ids_list
 
@@ -52,9 +57,10 @@ def get_common_electrodes(CONFIG, convs):
     ]
 
     common_electrodes = list(set.intersection(*map(set, all_elec_ids_list)))
-    common_labels = sorted(list(
-        set.intersection(*map(set, all_elec_labels_list))),
-                           key=lambda x: all_elec_labels_list[0].index(x))
+    common_labels = sorted(
+        list(set.intersection(*map(set, all_elec_labels_list))),
+        key=lambda x: all_elec_labels_list[0].index(x),
+    )
 
     common_labels = [common_labels[elec - 1] for elec in common_electrodes]
 
@@ -71,17 +77,19 @@ def get_conversation_list(CONFIG, subject=None):
     Returns:
         list -- List of tuples (directory, file, idx, common_electrode_list)
     """
-    if CONFIG['subject'] != '777':
+    if CONFIG["subject"] != "777":
         conversations = sorted(
-            glob.glob(os.path.join(CONFIG["CONV_DIRS"], '*conversation*')))
+            glob.glob(os.path.join(CONFIG["CONV_DIRS"], "*conversation*"))
+        )
 
         return conversations
     else:
         if subject is None:
-            subject = CONFIG['subject']
-        CONV_DIRS = CONFIG["DATA_DIR"] + '/%s/' % str(subject)
+            subject = CONFIG["subject"]
+        CONV_DIRS = CONFIG["DATA_DIR"] + "/%s/" % str(subject)
         conversations = sorted(
-            glob.glob(os.path.join(CONV_DIRS, '*conversation*')))
+            glob.glob(os.path.join(CONV_DIRS, "*conversation*"))
+        )
 
     return conversations
 
@@ -97,17 +105,19 @@ def extract_conversation_contents(CONFIG, conversation):
         list: list of lists with the following contents in that order
                 ['word', 'onset', 'offset', 'accuracy', 'speaker']
     """
-    df = pd.read_csv(conversation,
-                     sep=' ',
-                     header=None,
-                     names=['word', 'onset', 'offset', 'accuracy', 'speaker'])
-    df['word'] = df['word'].str.strip()
+    df = pd.read_csv(
+        conversation,
+        sep=" ",
+        header=None,
+        names=["word", "onset", "offset", "accuracy", "speaker"],
+    )
+    df["word"] = df["word"].str.strip()
 
     # create a boolean column if the word is in exclude_words
-    df = df[~df['word'].isin(CONFIG["exclude_words"])]
+    df = df[~df["word"].isin(CONFIG["exclude_words"])]
 
     # create a booleam column if the word is a nonword or not
-    df['is_nonword'] = df['word'].isin(CONFIG['non_words'])
+    df["is_nonword"] = df["word"].isin(CONFIG["non_words"])
 
     df = df.reset_index(drop=True)
     df = df.reset_index()
@@ -118,16 +128,17 @@ def extract_conversation_contents(CONFIG, conversation):
 def first_level_alignment(args, df):
 
     # Remove punctuations from conversation datum (because cloze datum doesn't have it)
-    datum_without_punctuation = df['word'].apply(
-        lambda x: x.translate(str.maketrans('', '', string.punctuation)))
+    datum_without_punctuation = df["word"].apply(
+        lambda x: x.translate(str.maketrans("", "", string.punctuation))
+    )
 
     # Load the cloze datum
-    cloze_file = os.path.join(args['DATA_DIR'], 'podcast-datum-cloze.csv')
-    cloze_df = pd.read_csv(cloze_file, sep=',')
+    cloze_file = os.path.join(args["DATA_DIR"], "podcast-datum-cloze.csv")
+    cloze_df = pd.read_csv(cloze_file, sep=",")
 
     # Align conversation datum and cloze datum
     mask1, mask2 = lcs(list(datum_without_punctuation), list(cloze_df.word))
-    df.loc[mask1, 'cloze'] = list(cloze_df.loc[mask2, 'cloze'])
+    df.loc[mask1, "cloze"] = list(cloze_df.loc[mask2, "cloze"])
 
     return df
 
@@ -135,19 +146,21 @@ def first_level_alignment(args, df):
 def second_level_alignment(CONFIG, df):
     transcript_df = tokenize_podcast_transcript(CONFIG)
 
-    transcript_df['word_without_punctuation'] = transcript_df['word'].apply(
-        lambda x: x.translate(str.maketrans('', '', ",.")))
+    transcript_df["word_without_punctuation"] = transcript_df["word"].apply(
+        lambda x: x.translate(str.maketrans("", "", ",."))
+    )
 
-    mask1, mask2 = lcs(list(transcript_df.word_without_punctuation),
-                       list(df.word))
+    mask1, mask2 = lcs(
+        list(transcript_df.word_without_punctuation), list(df.word)
+    )
 
-    df = df.rename(columns={'word': 'datum_word'})
+    df = df.rename(columns={"word": "datum_word"})
     for column in df.columns:
         transcript_df[column] = None  # np.nan == np.nan --> False
         transcript_df.loc[mask1, column] = list(df.loc[mask2, column])
 
     # Pre-fill with 'Speaker2' to avoid issues downstream (find_switch_points)
-    transcript_df['speaker'] = 'Speaker2'
+    transcript_df["speaker"] = "Speaker2"
 
     return transcript_df
 
@@ -186,25 +199,29 @@ def get_electrode_labels(conversation_dir):
     """
     try:
         header_file = glob.glob(
-            os.path.join(conversation_dir, 'misc', '*_header.mat'))[0]
+            os.path.join(conversation_dir, "misc", "*_header.mat")
+        )[0]
     except IndexError:
-        raise ValueError('Header File Missing')
+        raise ValueError("Header File Missing")
 
     if not os.path.exists(header_file):
         return
 
     header = mat73.loadmat(header_file)
-    labels = header.header.label
+    try:
+        labels = header.header.label
+    except:
+        labels = header["header"]["label"]
 
     return labels
 
 
 def tokenize_transcript(file_name):
     # Read all words and tokenize them
-    with open(file_name, 'r') as fp:
+    with open(file_name, "r") as fp:
         data = fp.readlines()
 
-    data = [item.strip().split(' ') for item in data]
+    data = [item.strip().split(" ") for item in data]
     data = [item for sublist in data for item in sublist]
     return data
 
@@ -217,10 +234,10 @@ def tokenize_podcast_transcript(CONFIG):
     Returns:
         DataFrame: containing tokenized transcript
     """
-    story_file = os.path.join(CONFIG['DATA_DIR'], 'podcast-transcription.txt')
+    story_file = os.path.join(CONFIG["DATA_DIR"], "podcast-transcription.txt")
 
     data = tokenize_transcript(story_file)
 
-    df = pd.DataFrame(data, columns=['word'])
+    df = pd.DataFrame(data, columns=["word"])
 
     return df

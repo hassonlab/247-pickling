@@ -1,4 +1,4 @@
-'''
+"""
 Filename: /scratch/gpfs/hgazula/247-project/tfs_pickling.py
 Path: /scratch/gpfs/hgazula/247-project
 Created Date: Tuesday, December 1st 2020, 8:19:27 pm
@@ -6,43 +6,31 @@ Author: Harshvardhan Gazula
 Description: Contains code to pickle 247 data
 
 Copyright (c) 2020 Your Company
-'''
+"""
 import os
-import pickle
 
 import gensim.downloader as api
+import nltk
 import numpy as np
 import pandas as pd
+import tfsemb_download as tfsemb_dwnld
 from nltk.stem import PorterStemmer as ps
 from nltk.stem import WordNetLemmatizer as lt
 from tfspkl_build_matrices import build_design_matrices
 from tfspkl_config import build_config
 from tfspkl_parser import arg_parser
-from transformers import AutoTokenizer
-from utils import main_timer
+from utils import main_timer, save_pickle
 
-
-def save_pickle(args, item, file_name):
-    """Write 'item' to 'file_name.pkl'
-    """
-    add_ext = '' if file_name.endswith('.pkl') else '.pkl'
-
-    file_name = os.path.join(args.PKL_DIR, file_name) + add_ext
-
-    with open(file_name, 'wb') as fh:
-        pickle.dump(item, fh, protocol=4)
-    return
+nltk.download("omw-1.4")
 
 
 def find_switch_points(array):
-    """Find indices where speaker switches and split the dataframe
-    """
+    """Find indices where speaker switches and split the dataframe"""
     return np.where(array[:-1] != array[1:])[0] + 1
 
 
 def get_sentence_length(section):
-    """Sentence length = offset of the last word - onset of first word
-    """
+    """Sentence length = offset of the last word - onset of first word"""
     last_word_offset = section.offset.loc[section.offset.last_valid_index()]
     first_word_onset = section.onset.loc[section.onset.first_valid_index()]
     return last_word_offset - first_word_onset
@@ -54,33 +42,34 @@ def append_sentence(args, section):
     Args:
         section (DataFrame): [description]
     """
-    if args.project_id == 'tfs':
-        sentence = ' '.join(section['word'])
-        section['sentence'] = sentence
+    if args.project_id == "tfs":
+        sentence = " ".join(section["word"])
+        section["sentence"] = sentence
     else:
-        section['sentence'] = None
+        section["sentence"] = None
     return section
 
 
 def append_sentence_length(section):
     sentence_length = get_sentence_length(section)
-    section['sentence_signal_length'] = sentence_length
+    section["sentence_signal_length"] = sentence_length
     return section
 
 
 def append_num_words(section):
-    section['num_words'] = len(section)
+    section["num_words"] = len(section)
     return section
 
 
 def append_sentence_idx(section, idx):
-    section['sentence_idx'] = idx + 1
+    section["sentence_idx"] = idx + 1
     return section
 
 
 def convert_labels_to_df(labels):
     convo_df = pd.DataFrame(
-        labels, columns=['word', 'onset', 'offset', 'accuracy', 'speaker'])
+        labels, columns=["word", "onset", "offset", "accuracy", "speaker"]
+    )
     return convo_df
 
 
@@ -119,32 +108,32 @@ def create_sentence(args, conversation):
 
 
 def word_stemming(conversation, ps):
-    conversation['stemmed_word'] = conversation['word'].apply(ps.stem)
+    conversation["stemmed_word"] = conversation["word"].apply(ps.stem)
     return conversation
 
 
 def shift_onsets(conversation, shift):
-    conversation['adjusted_onset'] = conversation['onset'] + shift
-    conversation['adjusted_offset'] = conversation['offset'] + shift
+    conversation["adjusted_onset"] = conversation["onset"] + shift
+    conversation["adjusted_offset"] = conversation["offset"] + shift
     return conversation
 
 
 def add_sentence_index(conversation, length):
-    conversation['sentence_idx'] += length
-    length = conversation['sentence_idx'].nunique()
+    conversation["sentence_idx"] += length
+    length = conversation["sentence_idx"].nunique()
     return conversation, length
 
 
 def add_conversation_id(conversation, conv_id):
-    conversation['conversation_id'] = conv_id
+    conversation["conversation_id"] = conv_id
     return conversation
 
 
 def add_conversation_name(args, conversation, name):
-    if args.project_id == 'tfs':
-        conversation['conversation_name'] = os.path.basename(name)
+    if args.project_id == "tfs":
+        conversation["conversation_name"] = os.path.basename(name)
     else:
-        conversation['conversation_name'] = None
+        conversation["conversation_name"] = None
     return conversation
 
 
@@ -166,7 +155,8 @@ def process_labels(args, stitch_index, labels, conversations):
 
     len_to_add = 0
     for conv_id, (conversation_name, start, sub_list) in enumerate(
-            zip(conversations, stitch_index, labels), 1):
+        zip(conversations, stitch_index, labels), 1
+    ):
 
         sub_list = create_sentence(args, sub_list)
         sub_list = shift_onsets(sub_list, start)
@@ -180,13 +170,14 @@ def process_labels(args, stitch_index, labels, conversations):
 
 
 def add_word_freqs(df):
-    grouped = df.word.str.lower().to_frame().groupby('word')
-    df['word_freq_overall'] = grouped.word.transform('count')
+    grouped = df.word.str.lower().to_frame().groupby("word")
+    df["word_freq_overall"] = grouped.word.transform("count")
 
-    first = df[['word', 'production'
-                ]].applymap(lambda x: x.lower() if type(x) == str else x)
-    grouped = first.groupby(['word', 'production'])
-    df['word_freq_phase'] = grouped.word.transform('count')
+    first = df[["word", "production"]].applymap(
+        lambda x: x.lower() if type(x) == str else x
+    )
+    grouped = first.groupby(["word", "production"])
+    df["word_freq_phase"] = grouped.word.transform("count")
     return df
 
 
@@ -199,48 +190,46 @@ def create_production_flag(df):
     Returns:
         [dataframe]: same dataframe with a new column
     """
-    df['production'] = (df['speaker'] == 'Speaker1').astype(int)
+    df["production"] = (df["speaker"] == "Speaker1").astype(int)
     return df
 
 
 def filter_on_freq(args, df):
-    df = df.groupby('word').filter(
-        lambda x: len(x) >= args.vocab_min_freq).reset_index(drop=True)
+    df = (
+        df.groupby("word")
+        .filter(lambda x: len(x) >= args.vocab_min_freq)
+        .reset_index(drop=True)
+    )
     return df
 
 
 def add_vocab_columns(df):
-    '''Add columns to the dataframe indicating whether each word is in the
+    """Add columns to the dataframe indicating whether each word is in the
     vocabulary of the language models we're using.
-    '''
+    """
 
     # Add glove
-    glove = api.load('glove-wiki-gigaword-50')
-    df['in_glove'] = df.word.str.lower().apply(lambda x: x in glove.vocab)
+    glove = api.load("glove-wiki-gigaword-50")
+    df["in_glove"] = df.word.str.lower().apply(
+        lambda x: x in glove.index_to_key
+    )
 
     # Add language models
-    names = [
-        'gpt2', 'bert-base-cased', 'facebook/blenderbot_small-90M',
-        'facebook/blenderbot-3B'
-    ]
-    CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
-    for model in names:
+    for model in [*tfsemb_dwnld.CAUSAL_MODELS, *tfsemb_dwnld.SEQ2SEQ_MODELS]:
         try:
-            tokenizer = AutoTokenizer.from_pretrained(model,
-                                                  add_prefix_space=True,
-                                                  cache_dir=CACHE_DIR,
-                                                  local_files_only=False)
-        except FileNotFoundError as e:
-            tokenizer = AutoTokenizer.from_pretrained(model,
-                                                  add_prefix_space=True,
-                                                  cache_dir=CACHE_DIR,
-                                                  local_files_only=True)
+            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
+                model, local_files_only=True
+            )
         except:
-            raise Exception('Need manual intervention')
+            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
+                model, local_files_only=False
+            )
 
-        key = model.split('/')[-1].replace('-', '_')
-        df[f'in_{key}'] = df.word.apply(
-            lambda x: calc_tokenizer_length(tokenizer, x))
+        key = model.split("/")[-1]
+        print(f"Adding column: (token) in_{key}")
+        df[f"in_{key}"] = df.word.apply(
+            lambda x: calc_tokenizer_length(tokenizer, x)
+        )
 
     return df
 
@@ -258,29 +247,25 @@ def apply_stemming(word):
 
 
 def add_lemmatize_stemming(df):
-    df['lemmatized_word'] = df.word.str.strip().apply(
-        lambda x: apply_lemmatize(x))
-    df['stemmed_word'] = df.word.str.strip().apply(lambda x: apply_stemming(x))
+    df["lemmatized_word"] = df.word.str.strip().apply(
+        lambda x: apply_lemmatize(x)
+    )
+    df["stemmed_word"] = df.word.str.strip().apply(lambda x: apply_stemming(x))
 
     return df
 
 
-def create_labels_pickles(args,
-                          stitch_index,
-                          labels,
-                          convo_labels_size,
-                          convs,
-                          label_str=None):
+def create_labels_pickles(args, stitch_index, labels, convs, label_str=None):
     labels_df = process_labels(args, stitch_index, labels, convs)
     labels_df = create_production_flag(labels_df)
     labels_df = add_word_freqs(labels_df)
     labels_df = add_lemmatize_stemming(labels_df)
     labels_df = add_vocab_columns(labels_df)
 
-    labels_dict = dict(labels=labels_df.to_dict('records'),
-                       convo_label_size=convo_labels_size)
-    pkl_name = '_'.join([args.subject, label_str, 'labels'])
-    save_pickle(args, labels_dict, pkl_name)
+    labels_dict = dict(labels=labels_df.to_dict("records"))
+    pkl_name = "_".join([args.subject, label_str, "labels"])
+    pkl_name = os.path.join(args.PKL_DIR, pkl_name)
+    save_pickle(labels_dict, pkl_name)
 
 
 @main_timer
@@ -292,58 +277,106 @@ def main():
     args = build_config(args)
 
     # Return signals and labels from *.mat and conversation.txt files
-    (full_signal, full_stitch_index, trimmed_signal, trimmed_stitch_index,
-     binned_signal, bin_stitch_index, full_labels, trimmed_labels,
-     convo_full_examples_size, convo_trimmed_examples_size, electrodes,
-     electrode_names, conversations,
-     subject_id) = build_design_matrices(vars(args), delimiter=" ")
+    (
+        full_signal,
+        full_stitch_index,
+        trimmed_signal,
+        trimmed_stitch_index,
+        binned_signal,
+        bin_stitch_index,
+        full_labels,
+        trimmed_labels,
+        _,
+        _,
+        electrodes,
+        electrode_names,
+        conversations,
+        subject_id,
+    ) = build_design_matrices(vars(args), delimiter=" ")
 
     # Create pickle with full signal
-    full_signal_dict = dict(full_signal=full_signal,
-                            full_stitch_index=full_stitch_index,
-                            electrode_ids=electrodes,
-                            electrode_names=electrode_names,
-                            subject=subject_id)
-    save_pickle(args, full_signal_dict, args.subject + '_full_signal')
+    full_signal_dict = dict(
+        full_signal=full_signal,
+        full_stitch_index=full_stitch_index,
+        electrode_ids=electrodes,
+        electrode_names=electrode_names,
+        subject=subject_id,
+    )
+    save_pickle(
+        full_signal_dict,
+        os.path.join(args.PKL_DIR, args.subject + "_full_signal"),
+    )
 
     # Create pickle with full stitch index
-    save_pickle(args, full_stitch_index, args.subject + '_full_stitch_index')
+    save_pickle(
+        full_stitch_index,
+        os.path.join(args.PKL_DIR, args.subject + "_full_stitch_index"),
+    )
 
     # Create pickle with electrode maps
-    electrode_map = dict(subject=subject_id,
-                         electrode_id=electrodes,
-                         electrode_name=electrode_names)
-    save_pickle(args, electrode_map, args.subject + '_electrode_names')
+    electrode_map = dict(
+        subject=subject_id,
+        electrode_id=electrodes,
+        electrode_name=electrode_names,
+    )
+    save_pickle(
+        electrode_map,
+        os.path.join(args.PKL_DIR, args.subject + "_electrode_names"),
+    )
 
     # Create pickle with trimmed signal
-    trimmed_signal_dict = dict(trimmed_signal=trimmed_signal,
-                               trimmed_stitch_index=trimmed_stitch_index,
-                               electrode_ids=electrodes,
-                               electrode_names=electrode_names,
-                               subject=subject_id)
-    save_pickle(args, trimmed_signal_dict, args.subject + '_trimmed_signal')
+    trimmed_signal_dict = dict(
+        trimmed_signal=trimmed_signal,
+        trimmed_stitch_index=trimmed_stitch_index,
+        electrode_ids=electrodes,
+        electrode_names=electrode_names,
+        subject=subject_id,
+    )
+    save_pickle(
+        trimmed_signal_dict,
+        os.path.join(args.PKL_DIR, args.subject + "_trimmed_signal"),
+    )
 
     # Create pickle with full stitch index
-    save_pickle(args, trimmed_stitch_index,
-                args.subject + '_trimmed_stitch_index')
+    save_pickle(
+        trimmed_stitch_index,
+        os.path.join(args.PKL_DIR, args.subject + "_trimmed_stitch_index"),
+    )
 
     # Create pickle with binned signal
-    binned_signal_dict = dict(binned_signal=binned_signal,
-                              bin_stitch_index=bin_stitch_index,
-                              electrode_ids=electrodes,
-                              electrode_names=electrode_names,
-                              subject=subject_id)
-    save_pickle(args, binned_signal_dict, args.subject + '_binned_signal')
+    binned_signal_dict = dict(
+        binned_signal=binned_signal,
+        bin_stitch_index=bin_stitch_index,
+        electrode_ids=electrodes,
+        electrode_names=electrode_names,
+        subject=subject_id,
+    )
+    save_pickle(
+        binned_signal_dict,
+        os.path.join(args.PKL_DIR, args.subject + "_binned_signal"),
+    )
 
     # Create pickle with full stitch index
-    save_pickle(args, bin_stitch_index, args.subject + '_bin_stitch_index')
+    save_pickle(
+        bin_stitch_index,
+        os.path.join(args.PKL_DIR, args.subject + "_bin_stitch_index"),
+    )
 
     # Create pickle with trimmed labels
-    create_labels_pickles(args, trimmed_stitch_index, trimmed_labels,
-                          convo_trimmed_examples_size, conversations,
-                          'trimmed')
-    create_labels_pickles(args, full_stitch_index, full_labels,
-                          convo_full_examples_size, conversations, 'full')
+    create_labels_pickles(
+        args,
+        trimmed_stitch_index,
+        trimmed_labels,
+        conversations,
+        "trimmed",
+    )
+    create_labels_pickles(
+        args,
+        full_stitch_index,
+        full_labels,
+        conversations,
+        "full",
+    )
 
     return
 
