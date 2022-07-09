@@ -16,16 +16,9 @@ def setup_environ(args):
 
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # labels_file = "_".join([args.subject, args.pkl_identifier, "labels.pkl"])
-    # FIXME: This is a hack to get the labels file to work
-    args.pickle_name = os.path.join(
+    args.labels_pickle = os.path.join(
         args.PKL_DIR,
-        f"{args.subject}_full_labels.pkl",
-    )
-
-    args.trimmed_labels = os.path.join(
-        args.PKL_DIR,
-        f"{args.subject}_trimmed_labels.pkl",
+        f"{args.subject}_{args.pkl_identifier}_labels.pkl",
     )
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)

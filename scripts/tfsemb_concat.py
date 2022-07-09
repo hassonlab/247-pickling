@@ -102,6 +102,8 @@ def main():
                 "layer_16",
                 "layer_8",
             ]:
+                # NOTE: args.trimmed_labels does not exist
+                # check with ZZ about the utility of this code snippet
                 trimmed_df = load_pickle(args.trimmed_labels, key="labels")
                 all_df.set_index(["conversation_id", "index"], inplace=True)
                 trimmed_df.set_index(["conversation_id", "index"], inplace=True)
