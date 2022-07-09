@@ -72,6 +72,18 @@ def convert_token_to_idx(args, df):
     return df
 
 
+def convert_token_to_word(args, df):
+    assert "token" in df.columns, "token column is missing"
+
+    df["token2word"] = (
+        df["token"]
+        .apply(args.tokenizer.convert_tokens_to_string)
+        .str.strip()
+        .str.lower()
+    )
+    return df
+
+
 def tokenize_and_explode(args, df):
     """Tokenizes the words/labels and creates a row for each token
 
@@ -84,12 +96,7 @@ def tokenize_and_explode(args, df):
     """
     df["token"] = df.word.apply(args.tokenizer.tokenize)
     df = df.explode("token", ignore_index=True)
-    df["token2word"] = (
-        df["token"]
-        .apply(args.tokenizer.convert_tokens_to_string)
-        .str.strip()
-        .str.lower()
-    )
+    df = convert_token_to_word(args, df)
     df = convert_token_to_idx(args, df)
     df = check_token_is_root(args, df)
 
@@ -695,9 +702,7 @@ def main():
     utterance_df = load_pickle(args.pickle_name, "labels")
     utterance_df = select_conversation(args, utterance_df)
 
-    if len(utterance_df) == 0:
-        print("Conversation data does not exist")
-        return
+    assert len(utterance_df) != 0, "Empty dataframe"
 
     base_df = tokenize_and_explode(args, utterance_df)
     base_df = base_df.head(512 + 16)
