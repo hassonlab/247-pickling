@@ -43,18 +43,6 @@ def select_conversation(args, df):
     return df
 
 
-def add_glove_embeddings(df, dim=None):
-    if dim == 50:
-        glove = api.load("glove-wiki-gigaword-50")
-        df["glove50_embeddings"] = df["token2word"].apply(
-            lambda x: get_vector(x, glove)
-        )
-    else:
-        raise Exception("Incorrect glove dimension")
-
-    return df
-
-
 def check_token_is_root(args, df):
     token_is_root_string = args.embedding_type.split("/")[-1] + "_token_is_root"
     df[token_is_root_string] = (
@@ -107,45 +95,6 @@ def tokenize_and_explode(args, df):
             df.loc[flag, "token_idx"] = np.arange(sum(flag))
 
     return df
-
-
-def get_token_indices(args, num_tokens):
-    if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
-        start, stop = 0, num_tokens
-    # elif args.embedding_type == "bert":
-    #     start, stop = 1, num_tokens + 1
-    else:
-        raise Exception("wrong model")
-
-    return (start, stop)
-
-
-def map_embeddings_to_tokens(args, df, embed):
-
-    multi = df.set_index(["conversation_id", "sentence_idx", "sentence"])
-    unique_sentence_idx = multi.index.unique().values
-
-    uniq_sentence_count = len(get_unique_sentences(df))
-    assert uniq_sentence_count == len(embed)
-
-    c = []
-    for unique_idx, sentence_embedding in zip(unique_sentence_idx, embed):
-        a = df["conversation_id"] == unique_idx[0]
-        b = df["sentence_idx"] == unique_idx[1]
-        num_tokens = sum(a & b)
-        start, stop = get_token_indices(args, num_tokens)
-        c.append(pd.Series(sentence_embedding[start:stop, :].tolist()))
-
-    df["embeddings"] = pd.concat(c, ignore_index=True)
-    return df
-
-
-def get_unique_sentences(df):
-    return (
-        df[["conversation_id", "sentence_idx", "sentence"]]
-        .drop_duplicates()["sentence"]
-        .tolist()
-    )
 
 
 def process_extracted_embeddings(args, concat_output):
@@ -582,41 +531,6 @@ def generate_causal_embeddings(args, df):
     return df, final_embeddings
 
 
-def generate_embeddings(args, df):
-    tokenizer = args.tokenizer
-    model = args.model
-    device = args.device
-
-    model = model.to(device)
-    model.eval()
-
-    unique_sentence_list = get_unique_sentences(df)
-
-    if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    tokens = tokenizer(unique_sentence_list, padding=True, return_tensors="pt")
-    input_ids_val = tokens["input_ids"]
-    attention_masks_val = tokens["attention_mask"]
-    dataset = data.TensorDataset(input_ids_val, attention_masks_val)
-    data_dl = data.DataLoader(dataset, batch_size=8, shuffle=False)
-
-    with torch.no_grad():
-        concat_output = []
-        for batch in data_dl:
-            batch = tuple(b.to(device) for b in batch)
-            inputs = {
-                "input_ids": batch[0],
-                "attention_mask": batch[1],
-            }
-            model_output = model(**inputs)
-            concat_output.append(model_output[-1][-1].detach().cpu().numpy())
-    embeddings = np.concatenate(concat_output, axis=0)
-    emb_df = map_embeddings_to_tokens(args, df, embeddings)
-
-    return emb_df
-
-
 def get_vector(x, glove):
     try:
         return glove.get_vector(x)
@@ -723,7 +637,8 @@ def main():
     elif args.embedding_type in tfsemb_dwnld.SEQ2SEQ_MODELS:
         generate_func = generate_conversational_embeddings
     else:
-        generate_func = generate_embeddings
+        print('Invalid embedding type: "{}"'.format(args.embedding_type))
+        return
 
     # Generate Embeddings
     output = generate_func(args, base_df)
