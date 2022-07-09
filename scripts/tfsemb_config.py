@@ -1,35 +1,42 @@
 import os
+
 import torch
-import torch.nn as nn
 
 
 def setup_environ(args):
 
     DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)
     RESULTS_DIR = os.path.join(os.getcwd(), "results", args.project_id)
-    PKL_DIR = os.path.join(RESULTS_DIR, args.subject, "pickles")
+
+    args.PKL_DIR = os.path.join(RESULTS_DIR, args.subject, "pickles")
     args.EMB_DIR = os.path.join(RESULTS_DIR, args.subject, "embeddings")
 
     args.full_model_name = args.embedding_type
     args.trimmed_model_name = args.embedding_type.split("/")[-1]
 
-    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    labels_file = "_".join([args.subject, args.pkl_identifier, "labels.pkl"])
-    args.pickle_name = os.path.join(PKL_DIR, labels_file)
+    # labels_file = "_".join([args.subject, args.pkl_identifier, "labels.pkl"])
+    # FIXME: This is a hack to get the labels file to work
+    args.pickle_name = os.path.join(
+        args.PKL_DIR,
+        f"{args.subject}_full_labels.pkl",
+    )
+
+    args.trimmed_labels = os.path.join(
+        args.PKL_DIR,
+        f"{args.subject}_trimmed_labels.pkl",
+    )
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)
     args.conversation_list = sorted(os.listdir(args.input_dir))
 
-    args.gpus = torch.cuda.device_count()
-
-    stra = f"{args.trimmed_model_name}/cnxt_{args.context_length}"
+    stra = f"{args.trimmed_model_name}/{args.pkl_identifier}/cnxt_{args.context_length}"
 
     # TODO: if multiple conversations are specified in input
     if args.conversation_id:
         args.output_dir = os.path.join(
             args.EMB_DIR,
-            args.pkl_identifier,
             stra,
             "layer_%02d",
         )

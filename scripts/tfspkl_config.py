@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+
 from utils import get_git_revision_short_hash
 
 print(f"Git Commit Hash: {get_git_revision_short_hash()}")
@@ -10,9 +11,7 @@ def create_directory_paths(args):
     # Format directory logistics
     DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)
     CONV_DIRS = os.path.join(DATA_DIR, args.subject)
-    SAVE_DIR = os.path.join(
-        os.getcwd(), "results", args.project_id, args.subject
-    )
+    SAVE_DIR = os.path.join(os.getcwd(), "results", args.project_id, args.subject)
     PKL_DIR = os.path.join(SAVE_DIR, "pickles")
 
     os.makedirs(PKL_DIR, exist_ok=True)

@@ -11,11 +11,7 @@ from sklearn.model_selection import KFold, StratifiedKFold
 
 # https://stackoverflow.com/questions/14989858/get-the-current-git-hash-in-a-python-script
 def get_git_revision_hash() -> str:
-    return (
-        subprocess.check_output(["git", "rev-parse", "HEAD"])
-        .decode("ascii")
-        .strip()
-    )
+    return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
 
 
 def get_git_revision_short_hash() -> str:
@@ -51,9 +47,6 @@ def save_pickle(item, file_name):
     add_ext = "" if file_name.endswith(".pkl") else ".pkl"
 
     file_name = file_name + add_ext
-
-    if os.path.exists(file_name):
-        print(f"Overwriting {file_name}")
 
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
 

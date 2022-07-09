@@ -59,9 +59,7 @@ def check_token_is_root(args, df):
     token_is_root_string = args.embedding_type.split("/")[-1] + "_token_is_root"
     df[token_is_root_string] = (
         df["word"]
-        == df["token"]
-        .apply(args.tokenizer.convert_tokens_to_string)
-        .str.strip()
+        == df["token"].apply(args.tokenizer.convert_tokens_to_string).str.strip()
     )
 
     return df
@@ -173,9 +171,7 @@ def process_extracted_embeddings_all_layers(args, layer_embeddings_dict):
         concat_output = []
         for item_dict in layer_embeddings_dict:
             concat_output.append(item_dict[layer_idx])
-        layer_embeddings[layer_idx] = process_extracted_embeddings(
-            args, concat_output
-        )
+        layer_embeddings[layer_idx] = process_extracted_embeddings(args, concat_output)
 
     return layer_embeddings
 
@@ -200,21 +196,14 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
     prediction_probabilities = F.softmax(prediction_scores, dim=1)
 
     logp = np.log2(prediction_probabilities)
-    entropy = [None] + torch.sum(
-        -prediction_probabilities * logp, dim=1
-    ).tolist()
+    entropy = [None] + torch.sum(-prediction_probabilities * logp, dim=1).tolist()
 
-    top1_probabilities, top1_probabilities_idx = prediction_probabilities.max(
-        dim=1
-    )
-    predicted_tokens = args.tokenizer.convert_ids_to_tokens(
-        top1_probabilities_idx
-    )
+    top1_probabilities, top1_probabilities_idx = prediction_probabilities.max(dim=1)
+    predicted_tokens = args.tokenizer.convert_ids_to_tokens(top1_probabilities_idx)
     predicted_words = predicted_tokens
     if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
         predicted_words = [
-            args.tokenizer.convert_tokens_to_string(token)
-            for token in predicted_tokens
+            args.tokenizer.convert_tokens_to_string(token) for token in predicted_tokens
         ]
 
     # top-1 probabilities
@@ -222,9 +211,9 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
     # top-1 word
     top1_words = [None] + predicted_words
     # probability of correct word
-    true_y_probability = [None] + prediction_probabilities.gather(
-        1, true_y
-    ).squeeze(-1).tolist()
+    true_y_probability = [None] + prediction_probabilities.gather(1, true_y).squeeze(
+        -1
+    ).tolist()
     # TODO: probabilities of all words
 
     return top1_words, top1_probabilities, true_y_probability, entropy
@@ -319,8 +308,7 @@ def transformer_forward_pass(args, data_dl):
             )
             # After: get all relevant layers
             embeddings = {
-                i: outputs[decoderkey][i - 8].cpu()[0, :-1, :]
-                for i in decoderlayers
+                i: outputs[decoderkey][i - 8].cpu()[0, :-1, :] for i in decoderlayers
             }
             logits = outputs.logits.cpu()[0, :-1, :]
 
@@ -347,9 +335,7 @@ def transformer_forward_pass(args, data_dl):
                             slice(512),
                         )  # second to last token embedding
                         for i in encoderlayers:
-                            encoder_embs[i][-token_idx - 1] = outputs[
-                                encoderkey
-                            ][i][
+                            encoder_embs[i][-token_idx - 1] = outputs[encoderkey][i][
                                 portion
                             ].cpu()  # update embeddings
                 all_embeddings[-1].update(encoder_embs)
@@ -442,9 +428,7 @@ def make_conversational_input(args, df):
             continue
         context = create_context(convo, j - 1)
         if len(context) > 0:
-            examples.append(
-                {"encoder_ids": context, "decoder_ids": response[:-1]}
-            )
+            examples.append({"encoder_ids": context, "decoder_ids": response[:-1]})
 
     # Ensure we maintained correct number of tokens per utterance
     first = np.array([len(e["decoder_ids"]) - 1 for e in examples])
@@ -527,8 +511,7 @@ def make_input_from_tokens(args, token_list):
         windows = [tuple(token_list)]
     else:
         windows = [
-            tuple(token_list[x : x + size])
-            for x in range(len(token_list) - size + 1)
+            tuple(token_list[x : x + size]) for x in range(len(token_list) - size + 1)
         ]
 
     return windows
@@ -666,19 +649,12 @@ def select_tokenizer_and_model(args):
         return
 
     try:
-        (
-            args.model,
-            args.tokenizer,
-        ) = tfsemb_dwnld.download_tokenizers_and_models(
+        (args.model, args.tokenizer,) = tfsemb_dwnld.download_tokenizers_and_models(
             model_name, local_files_only=True, debug=False
-        )[
-            model_name
-        ]
+        )[model_name]
     except OSError:
         # NOTE: Please refer to make-target: cache-models for more information.
-        print(
-            "Model and tokenizer not found. Please download into cache first."
-        )
+        print("Model and tokenizer not found. Please download into cache first.")
         exit(1)
 
     args = get_model_layer_count(args)
@@ -710,8 +686,8 @@ def main():
     # saving the base dataframe
     base_df_file = os.path.join(
         args.EMB_DIR,
-        args.pkl_identifier,
         args.trimmed_model_name,
+        args.pkl_identifier,
         "base_df",
     )
     svpkl(base_df, base_df_file)

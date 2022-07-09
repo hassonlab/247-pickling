@@ -90,9 +90,7 @@ def download_tokenizer_and_model(
         tuple: (tokenizer, model)
     """
     print("Downloading model")
-    model = download_hf_model(
-        model_name, model_class, CACHE_DIR, local_files_only
-    )
+    model = download_hf_model(model_name, model_class, CACHE_DIR, local_files_only)
 
     print("Downloading tokenizer")
     tokenizer = download_hf_tokenizer(
@@ -145,9 +143,7 @@ def clone_model_repo(
                 os.system("module load git")
 
             os.system(f"git lfs install")
-            os.system(
-                f"git clone https://huggingface.co/{model_name} {model_dir}"
-            )
+            os.system(f"git clone https://huggingface.co/{model_name} {model_dir}")
         except:
             # FIXME: Raise appropriate exception
             print("Possible git lfs version issues")
@@ -160,9 +156,7 @@ def set_cache_dir():
     return CACHE_DIR
 
 
-def download_tokenizers_and_models(
-    model_name=None, local_files_only=False, debug=True
-):
+def download_tokenizers_and_models(model_name=None, local_files_only=False, debug=True):
     """This function downloads the tokenizer and model for the specified model name.
 
     Args:
