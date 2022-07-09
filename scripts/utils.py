@@ -51,6 +51,10 @@ def save_pickle(item, file_name):
     add_ext = "" if file_name.endswith(".pkl") else ".pkl"
 
     file_name = file_name + add_ext
+
+    if os.path.exists(file_name):
+        print(f"Overwriting {file_name}")
+
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
 
     with open(file_name, "wb") as fh:

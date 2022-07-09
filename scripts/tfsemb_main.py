@@ -69,12 +69,8 @@ def check_token_is_root(args, df):
     return df
 
 
-def remove_punctuation(df):
-    return df[~df.token.isin(list(string.punctuation))]
-
-
-def convert_token_to_idx(df, tokenizer):
-    df["token_id"] = df["token"].apply(tokenizer.convert_tokens_to_ids)
+def convert_token_to_idx(args, df):
+    df["token_id"] = df["token"].apply(args.tokenizer.convert_tokens_to_ids)
     return df
 
 
@@ -96,7 +92,7 @@ def tokenize_and_explode(args, df):
         .str.strip()
         .str.lower()
     )
-    df = convert_token_to_idx(df, args.tokenizer)
+    df = convert_token_to_idx(args, df)
     df = check_token_is_root(args, df)
 
     # Add a token index for each word's token
@@ -801,14 +797,13 @@ def main():
     base_df = tokenize_and_explode(args, utterance_df)
 
     # saving the base dataframe
-    model_dir = os.path.join(
-        args.EMB_DIR, args.pkl_identifier, args.trimmed_model_name
+    base_df_file = os.path.join(
+        args.EMB_DIR,
+        args.pkl_identifier,
+        args.trimmed_model_name,
+        "base_df",
     )
-    os.makedirs(model_dir, exist_ok=True)
-
-    base_df_file = os.path.join(model_dir, "base_df.pkl")
-    if not os.path.exists(base_df_file):
-        svpkl(base_df, base_df_file)
+    svpkl(base_df, base_df_file)
 
     # Select generation function based on model type
     if args.embedding_type == "glove50":
