@@ -1,32 +1,11 @@
 import argparse
 import glob
 import os
-import pickle
 import shutil
 
 import pandas as pd
 from utils import load_pickle, save_pickle
-
-
-def parse_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--model-name",
-        type=str,
-        default="bert-large-uncased-whole-word-masking",
-    )
-    parser.add_argument("--embedding-type", type=str, default="glove")
-    parser.add_argument("--context-length", type=int, default=0)
-    parser.add_argument("--save-predictions", action="store_true", default=False)
-    parser.add_argument("--save-hidden-states", action="store_true", default=False)
-    parser.add_argument("--suffix", type=str, default="")
-    parser.add_argument("--verbose", action="store_true", default=False)
-    parser.add_argument("--subject", type=str, default="625")
-    parser.add_argument("--conversation-id", type=int, default=0)
-    parser.add_argument("--pkl-identifier", type=str, default=None)
-    parser.add_argument("--project-id", type=str, default=None)
-
-    return parser.parse_args()
+from tfsemb_parser import arg_parser
 
 
 def removeEmptyfolders(path):
@@ -41,7 +20,7 @@ def removeEmptyfolders(path):
 
 
 def main():
-    args = parse_arguments()
+    args = arg_parser()
 
     if args.subject == "625":
         num_convs = 54
@@ -76,7 +55,9 @@ def main():
     )
 
     # copy base_df from source to target
-    src = os.path.join(EMB_DIR, args.pkl_identifier, trimmed_model_name, "base_df.pkl")
+    src = os.path.join(
+        EMB_DIR, args.pkl_identifier, trimmed_model_name, "base_df.pkl"
+    )
     dst = os.path.join(
         PKL_DIR,
         "embeddings",

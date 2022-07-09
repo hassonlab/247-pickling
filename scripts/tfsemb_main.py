@@ -1,17 +1,15 @@
-import argparse
 import os
 import pickle
-import string
-import sys
 
 import gensim.downloader as api
 import numpy as np
 import pandas as pd
 import tfsemb_download as tfsemb_dwnld
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
+from tfsemb_config import setup_environ
+from tfsemb_parser import arg_parser
 from utils import load_pickle, main_timer
 from utils import save_pickle as svpkl
 
@@ -626,44 +624,6 @@ def generate_glove_embeddings(args, df):
     return df
 
 
-def setup_environ(args):
-
-    DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)
-    RESULTS_DIR = os.path.join(os.getcwd(), "results", args.project_id)
-    PKL_DIR = os.path.join(RESULTS_DIR, args.subject, "pickles")
-    args.EMB_DIR = os.path.join(RESULTS_DIR, args.subject, "embeddings")
-
-    args.full_model_name = args.embedding_type
-    args.trimmed_model_name = args.embedding_type.split("/")[-1]
-
-    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    labels_file = "_".join([args.subject, args.pkl_identifier, "labels.pkl"])
-    args.pickle_name = os.path.join(PKL_DIR, labels_file)
-
-    args.input_dir = os.path.join(DATA_DIR, args.subject)
-    args.conversation_list = sorted(os.listdir(args.input_dir))
-
-    args.gpus = torch.cuda.device_count()
-    if args.gpus > 1:
-        args.model = nn.DataParallel(args.model)
-
-    stra = f"{args.trimmed_model_name}/cnxt_{args.context_length}"
-
-    # TODO: if multiple conversations are specified in input
-    if args.conversation_id:
-        args.output_dir = os.path.join(
-            args.EMB_DIR,
-            args.pkl_identifier,
-            stra,
-            "layer_%02d",
-        )
-        output_file_name = args.conversation_list[args.conversation_id - 1]
-        args.output_file = os.path.join(args.output_dir, output_file_name)
-
-    return
-
-
 def get_model_layer_count(args):
     model = args.model
     max_layers = getattr(
@@ -726,68 +686,13 @@ def select_tokenizer_and_model(args):
     return
 
 
-def parse_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--embedding-type", type=str, default="glove")
-    parser.add_argument("--context-length", type=int, default=0)
-    parser.add_argument(
-        "--save-predictions", action="store_true", default=False
-    )
-    parser.add_argument(
-        "--save-hidden-states", action="store_true", default=False
-    )
-    parser.add_argument("--subject", type=str, default="625")
-    parser.add_argument("--conversation-id", type=int, default=0)
-    parser.add_argument("--pkl-identifier", type=str, default=None)
-    parser.add_argument("--project-id", type=str, default=None)
-    parser.add_argument("--layer-idx", nargs="*", default=["all"])
-
-    # If running the code in debug mode
-    gettrace = getattr(sys, "gettrace", None)
-
-    if gettrace():
-        sys.argv = [
-            "scripts/tfsemb_main.py",
-            "--project-id",
-            "podcast",
-            "--pkl-identifier",
-            "full",
-            "--subject",
-            "661",
-            "--conversation-id",
-            "1",
-            "--embedding-type",
-            "facebook/opt-125m",
-            "--layer-idx",
-            "last",
-            "--context-length",
-            "1024",
-        ]
-
-    args = parser.parse_args()
-
-    if len(args.layer_idx) == 1:
-        if args.layer_idx[0].isdecimal():
-            args.layer_idx = int(args.layer_idx[0])
-        else:
-            args.layer_idx = args.layer_idx[0]
-    else:
-        try:
-            args.layer_idx = list(map(int, args.layer_idx))
-        except ValueError:
-            print("Invalid layer index")
-            exit(1)
-
-    return args
-
-
 @main_timer
 def main():
-    args = parse_arguments()
+    args = arg_parser()
     setup_environ(args)
     select_tokenizer_and_model(args)
 
-    utterance_df = load_pickle(args, "labels")
+    utterance_df = load_pickle(args.pickle_name, "labels")
     utterance_df = select_conversation(args, utterance_df)
 
     if len(utterance_df) == 0:
@@ -795,6 +700,7 @@ def main():
         return
 
     base_df = tokenize_and_explode(args, utterance_df)
+    base_df = base_df.head(512 + 16)
 
     # saving the base dataframe
     base_df_file = os.path.join(
