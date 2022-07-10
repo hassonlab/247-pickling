@@ -27,11 +27,12 @@ def extract_subject_and_electrode(input_str):
     return (subject, electrode)
 
 
-def build_design_matrices(CONFIG):
+def build_design_matrices(CONFIG, delimiter=","):
     """Build examples and labels for the model
 
     Args:
         CONFIG (dict): configuration information
+        delimiter (str, optional): conversation delimier. Defaults to ','.
 
     Returns:
         tuple: (signals, labels)

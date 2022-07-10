@@ -1,5 +1,6 @@
 import os
 import pickle
+import sys
 
 import gensim.downloader as api
 import numpy as np
@@ -606,9 +607,10 @@ def select_tokenizer_and_model(args):
     except OSError:
         # NOTE: Please refer to make-target: cache-models for more information.
         print(
-            "Model and tokenizer not found. Please download into cache first."
+            "Model and tokenizer not found. Please download into cache first.",
+            file=sys.stderr,
         )
-        exit(1)
+        return
 
     args = get_model_layer_count(args)
 
