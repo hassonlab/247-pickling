@@ -174,9 +174,17 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
     true_y_probability = [None] + prediction_probabilities.gather(
         1, true_y
     ).squeeze(-1).tolist()
+    # true y rank
+    true_y_rank = [None] + top1_probabilities_idx.tolist()
     # TODO: probabilities of all words
 
-    return top1_words, top1_probabilities, true_y_probability, entropy
+    return (
+        top1_words,
+        top1_probabilities,
+        true_y_probability,
+        true_y_rank,
+        entropy,
+    )
 
 
 def extract_select_vectors(batch_idx, array):
@@ -444,7 +452,7 @@ def generate_conversational_embeddings(args, df):
         final_embeddings.append(embeddings)
 
         y_true = np.concatenate([e["decoder_ids"][1:] for e in input_dl[:-1]])
-        top1_word, top1_prob, true_y_prob, entropy = process_extracted_logits(
+        top1_word, top1_prob, true_y_prob, _, _ = process_extracted_logits(
             args, logits, y_true
         )
 
@@ -496,6 +504,7 @@ def generate_causal_embeddings(args, df):
     final_top1_word = []
     final_top1_prob = []
     final_true_y_prob = []
+    final_true_y_rank = []
     for conversation in df.conversation_id.unique():
         token_list = get_conversation_tokens(df, conversation)
         model_input = make_input_from_tokens(args, token_list)
@@ -507,12 +516,17 @@ def generate_causal_embeddings(args, df):
             assert item.shape[0] == len(token_list)
         final_embeddings.append(embeddings)
 
-        top1_word, top1_prob, true_y_prob, entropy = process_extracted_logits(
-            args, logits, model_input
-        )
+        (
+            top1_word,
+            top1_prob,
+            true_y_prob,
+            true_y_rank,
+            entropy,
+        ) = process_extracted_logits(args, logits, model_input)
         final_top1_word.extend(top1_word)
         final_top1_prob.extend(top1_prob)
         final_true_y_prob.extend(true_y_prob)
+        final_true_y_rank.extend(true_y_rank)
 
     if len(final_embeddings) > 1:
         # TODO concat all embeddings and return a dictionary
@@ -525,6 +539,7 @@ def generate_causal_embeddings(args, df):
     df["top1_pred"] = final_top1_word
     df["top1_pred_prob"] = final_top1_prob
     df["true_pred_prob"] = final_true_y_prob
+    df["true_pred_rank"] = final_true_y_rank
     df["surprise"] = -df["true_pred_prob"] * np.log2(df["true_pred_prob"])
     df["entropy"] = entropy
 
@@ -619,6 +634,7 @@ def main():
     assert len(utterance_df) != 0, "Empty dataframe"
 
     base_df = tokenize_and_explode(args, utterance_df)
+    base_df = base_df.head(512 + 32)
 
     # saving the base dataframe
     base_df_file = os.path.join(
