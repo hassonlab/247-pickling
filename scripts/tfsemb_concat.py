@@ -6,6 +6,7 @@ import pandas as pd
 from tfsemb_config import setup_environ
 from tfsemb_parser import arg_parser
 from utils import load_pickle, save_pickle
+from tqdm import tqdm
 
 
 def removeEmptyfolders(path):
@@ -62,8 +63,9 @@ def main():
     else:
         layer_folders = sorted(os.listdir(args.output_dir))
 
-    for layer_folder in layer_folders:
-        print(f"Merging {layer_folder}")
+    for layer_folder in tqdm(
+        layer_folders, bar_format="Merging Layer..{n_fmt}"
+    ):
         conversation_pickles = sorted(
             glob.glob(os.path.join(args.output_dir, layer_folder, "*"))
         )
