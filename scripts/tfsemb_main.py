@@ -494,7 +494,7 @@ def make_input_from_tokens(args, token_list):
 
 def make_dataloader_from_input(windows):
     input_ids = torch.tensor(windows)
-    data_dl = data.DataLoader(input_ids, batch_size=16, shuffle=False)
+    data_dl = data.DataLoader(input_ids, batch_size=8, shuffle=False)
     return data_dl
 
 
@@ -636,7 +636,6 @@ def main():
     assert len(utterance_df) != 0, "Empty dataframe"
 
     base_df = tokenize_and_explode(args, utterance_df)
-    base_df = base_df.head(512 + 32)
 
     # saving the base dataframe
     base_df_file = os.path.join(

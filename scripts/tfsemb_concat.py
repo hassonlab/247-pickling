@@ -38,7 +38,7 @@ def main():
         args.EMB_DIR,
         args.trimmed_model_name,
         args.pkl_identifier,
-        f"cnxt_{args.context_length}",
+        f"cnxt_{args.context_length:04d}",
     )
 
     # copy base_df from source to target
@@ -90,7 +90,7 @@ def main():
             "embeddings",
             args.trimmed_model_name,
             args.pkl_identifier,
-            f"cnxt_{args.context_length}",
+            f"cnxt_{args.context_length:04d}",
             layer_folder,
         )
 

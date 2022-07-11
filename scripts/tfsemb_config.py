@@ -24,7 +24,7 @@ def setup_environ(args):
     args.input_dir = os.path.join(DATA_DIR, args.subject)
     args.conversation_list = sorted(os.listdir(args.input_dir))
 
-    stra = f"{args.trimmed_model_name}/{args.pkl_identifier}/cnxt_{args.context_length}"
+    stra = f"{args.trimmed_model_name}/{args.pkl_identifier}/cnxt_{args.context_length:04d}"
 
     # TODO: if multiple conversations are specified in input
     if args.conversation_id:
