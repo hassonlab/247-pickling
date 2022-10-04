@@ -1,6 +1,11 @@
 import os
 
-from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
+from transformers import (
+    AutoModel,
+    AutoModelForCausalLM,
+    AutoModelForSeq2SeqLM,
+    AutoTokenizer,
+)
 
 CAUSAL_MODELS = [
     "gpt2",
@@ -17,11 +22,55 @@ CAUSAL_MODELS = [
     "facebook/opt-6.7b",
     "facebook/opt-30b",
 ]
-SEQ2SEQ_MODELS = ["facebook/blenderbot_small-90M"]
+SEQ2SEQ_MODELS = ["facebook/blenderbot_small-90M", "facebook/blenderbot-3B"]
 
-CLONE_MODELS = ["EleutherAI/gpt-neox-20b", "facebook/opt-6.7b", "facebook/opt-30b"]
+CLONE_MODELS = [
+    "EleutherAI/gpt-neox-20b",
+    "facebook/opt-6.7b",
+    "facebook/opt-30b",
+]
 
 # TODO: Add MLM_MODELS (Masked Language Models)
+
+
+def download_hf_model(
+    model_name, model_class=None, cache_dir=None, local_files_only=False
+):
+    """Download a Huggingface model from the model repository (cache)."""
+    if model_class is None:
+        model_class = AutoModel
+
+    if cache_dir is None:
+        cache_dir = set_cache_dir()
+
+    model = model_class.from_pretrained(
+        model_name,
+        output_hidden_states=True,
+        cache_dir=cache_dir,
+        local_files_only=local_files_only,
+    )
+
+    return model
+
+
+def download_hf_tokenizer(
+    model_name, tokenizer_class=None, cache_dir=None, local_files_only=False
+):
+    """Download a Huggingface tokenizer from the model repository (cache)."""
+    if tokenizer_class is None:
+        tokenizer_class = AutoTokenizer
+
+    if cache_dir is None:
+        cache_dir = set_cache_dir()
+
+    tokenizer = tokenizer_class.from_pretrained(
+        model_name,
+        add_prefix_space=True,
+        cache_dir=cache_dir,
+        local_files_only=local_files_only,
+    )
+
+    return tokenizer
 
 
 def download_tokenizer_and_model(
@@ -34,26 +83,18 @@ def download_tokenizer_and_model(
         tokenizer_class (Tokenizer): Tokenizer class to be instantiated for the model.
         model_class (Huggingface Model): Model class corresponding to model_name.
         model_name (str):  Model name as seen on https://hugginface.co/models.
-        local_files_only (bool, optional): False (Default) if caching and True if loading from cache.
+        local_files_only (bool, optional): False (Default) if caching.
+                                           True if loading from cache.
 
     Returns:
         tuple: (tokenizer, model)
     """
     print("Downloading model")
-
-    model = model_class.from_pretrained(
-        model_name,
-        output_hidden_states=True,
-        cache_dir=CACHE_DIR,
-        local_files_only=local_files_only,
-    )
+    model = download_hf_model(model_name, model_class, CACHE_DIR, local_files_only)
 
     print("Downloading tokenizer")
-    tokenizer = tokenizer_class.from_pretrained(
-        model_name,
-        add_prefix_space=True,
-        cache_dir=CACHE_DIR,
-        local_files_only=local_files_only,
+    tokenizer = download_hf_tokenizer(
+        model_name, tokenizer_class, CACHE_DIR, local_files_only
     )
 
     return (model, tokenizer)
@@ -73,7 +114,8 @@ def clone_model_repo(
         tokenizer_class (Tokenizer): Tokenizer class to be instantiated for the model.
         model_class (Huggingface Model): Model class corresponding to model_name.
         model_name (str):  Model name as seen on https://hugginface.co/models.
-        local_files_only (bool, optional): False (Default) if caching and True if loading from cache.
+        local_files_only (bool, optional): False (Default) if caching.
+                                            True if loading from cache.
 
     Returns:
         tuple or None: (tokenizer, model) if local_files_only is True
@@ -84,7 +126,11 @@ def clone_model_repo(
     if local_files_only:
         if os.path.exists(model_dir):
             model, tokenizer = download_tokenizer_and_model(
-                CACHE_DIR, tokenizer_class, model_class, model_dir, local_files_only
+                CACHE_DIR,
+                tokenizer_class,
+                model_class,
+                model_dir,
+                local_files_only,
             )
             return model, tokenizer
         else:
@@ -114,8 +160,10 @@ def download_tokenizers_and_models(model_name=None, local_files_only=False, debu
     """This function downloads the tokenizer and model for the specified model name.
 
     Args:
-        model_name (str, optional): Model name as seen on https://hugginface.co/models. Defaults to None.
-        local_files_only (bool, optional): False (Default) if caching and True if loading from cache.
+        model_name (str, optional): Model name as seen on https://hugginface.co/models.
+                                    Defaults to None.
+        local_files_only (bool, optional): False (Default) if caching.
+                                            True if loading from cache.
         debug (bool, optional): Check if caching was successful. Defaults to True.
 
     Returns:

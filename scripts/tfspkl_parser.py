@@ -1,54 +1,45 @@
 import argparse
-from typing import List, Optional
+import sys
 
 
-def arg_parser(default_args: Optional[List] = None):
+def arg_parser():
     """Read arguments from the command line
 
-    Args:
-        default_args: None/List of arguments (see examples)
-
-    Examples::
-        >>> output = arg_parser()
-        >>> output = arg_parser(['--model', 'PITOM',
-                                '--subjects', '625', '676'])
-
-    Miscellaneous:
-        subjects: (list of strings): subject id's as a list
-        bin-size (int): bin size in milliseconds
-        max-electrodes (int):
-        vocab-min-freq (int):
+    subjects: (list of strings): subject id's as a list
+    bin-size (int): bin size in milliseconds
+    max-electrodes (int): Specify a large number so all electrodes are read
+    vocab-min-freq (int): minimum number of words to keep
 
     """
     parser = argparse.ArgumentParser()
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--electrode-list',
-                       nargs='*',
-                       type=int,
-                       action='append')
-    group.add_argument('--max-electrodes', type=int, default=1e4)
+    group.add_argument("--electrode-list", nargs="*", type=int, action="append")
+    group.add_argument("--max-electrodes", type=int, default=1e4)
 
     group1 = parser.add_mutually_exclusive_group()
-    group1.add_argument('--subject', type=int, default=0)
-    group1.add_argument('--sig-elec-file', type=str, default='')
+    group1.add_argument("--subject", type=str, default=661)
+    group1.add_argument("--sig-elec-file", type=str, default="")
 
-    parser.add_argument('--bin-size', type=int, default=32)
-    parser.add_argument('--vocab-min-freq', type=int, default=0)
-    parser.add_argument('--num-folds', type=int, default=5)
-    parser.add_argument('--project-id', type=str, default=None)
+    parser.add_argument("--bin-size", type=int, default=32)
+    parser.add_argument("--vocab-min-freq", type=int, default=0)
+    parser.add_argument("--num-folds", type=int, default=5)
+    parser.add_argument("--project-id", type=str, default="podcast")
 
-    # custom_args = [
-    #     '--project-id', 'podcast', '--subject', '661', '--max-electrodes',
-    #     '500', '--vocab-min-freq', '0'
-    # ]
+    # If running the code in debug mode
+    gettrace = getattr(sys, "gettrace", None)
 
-    if not default_args:
-        args = parser.parse_args()
-    else:
-        args = parser.parse_args(default_args)
+    if gettrace():
+        sys.argv = [
+            "scripts/tfspkl_parser.py",
+            "--project-id",
+            "podcast",
+            "--subject",
+            "661",
+            "--max-electrodes",
+            "500",
+        ]
 
-    if not args.subject:
-        args.subject = 777
+    args = parser.parse_args()
 
     return args

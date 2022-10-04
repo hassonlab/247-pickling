@@ -1,22 +1,26 @@
 #!/bin/bash
 #SBATCH --time=02:10:00
-#SBATCH --mem=64GB
+#SBATCH --mem=128GB
 #SBATCH --gres=gpu:1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=4
-#SBATCH -o './logs/%A.out'
+##SBATCH --cpus-per-task=4
+#SBATCH --open-mode=truncate
+#SBATCH -o './logs/%x.out'
+#SBATCH -e './logs/%x.err'
  
 if [[ "$HOSTNAME" == *"tiger"* ]]
 then
     echo "It's tiger"
     module load anaconda
-    source activate 247-main
+    conda activate 247-main
 elif [[ "$HOSTNAME" == *"della"* ]]
 then
     echo "It's della-gpu"
-    module load anaconda3/2021.5
-    source activate 247-main
+    module purge
+    module load anaconda3/2021.11
+    conda activate 247-main
 else
+    module purge
     module load anacondapy
     source activate srm
 fi

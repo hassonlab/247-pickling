@@ -18,19 +18,19 @@ def get_electrode(CONFIG, elec_id):
     """
     conversation, electrode = elec_id
 
-    if CONFIG['project_id'] == 'podcast':
-        search_str = conversation + f'/preprocessed_all/*_{electrode}.mat'
-    elif CONFIG['project_id'] == 'tfs':
-        search_str = conversation + f'/preprocessed/*_{electrode}.mat'
+    if CONFIG["project_id"] == "podcast":
+        search_str = conversation + f"/preprocessed_all/*_{electrode}.mat"
+    elif CONFIG["project_id"] == "tfs":
+        search_str = conversation + f"/preprocessed/*_{electrode}.mat"
     else:
-        print('Incorrect Project ID')
+        print("Incorrect Project ID")
         sys.exit()
 
     mat_fn = glob.glob(search_str)
     if len(mat_fn) == 0:
-        print(f'[WARNING] electrode {electrode} DNE in {search_str}')
+        print(f"[WARNING] electrode {electrode} DNE in {search_str}")
         return None
-    return loadmat(mat_fn[0])['p1st'].squeeze().astype(np.float32)
+    return loadmat(mat_fn[0])["p1st"].squeeze().astype(np.float32)
 
 
 def get_electrode_mp(elec_id, CONFIG):
@@ -52,10 +52,12 @@ def return_electrode_array(CONFIG, conv, elect):
         ecogs = list(
             filter(
                 lambda x: x is not None,
-                pool.map(partial(get_electrode_mp, CONFIG=CONFIG), elec_ids)))
+                pool.map(partial(get_electrode_mp, CONFIG=CONFIG), elec_ids),
+            )
+        )
 
     ecogs = standardize_matrix(ecogs)
-    assert (ecogs.ndim == 2 and ecogs.shape[1] == len(elect))
+    assert ecogs.ndim == 2 and ecogs.shape[1] == len(elect)
 
     return ecogs
 

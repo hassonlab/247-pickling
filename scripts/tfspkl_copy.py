@@ -2,8 +2,7 @@ import glob
 import os
 from shutil import copy2
 
-
-PRJCT_DIR = '/scratch/gpfs/hgazula/247-pickling/results/podcast/'
+PRJCT_DIR = "/scratch/gpfs/hgazula/247-pickling/results/podcast/"
 
 
 def create_dest_filename(src_file, subject):
@@ -12,23 +11,22 @@ def create_dest_filename(src_file, subject):
 
     # split at first underscore to replace subject ID
     # TODO: regex
-    temp = file_name.split('_')
-    temp = '_'.join(temp[1:])
+    temp = file_name.split("_")
+    temp = "_".join(temp[1:])
 
-    dest_file_name = str(subject) + '_' + temp
+    dest_file_name = str(subject) + "_" + temp
 
-    full_dest = os.path.join(PRJCT_DIR, str(subject), 'pickles',
-                            dest_file_name)
+    full_dest = os.path.join(PRJCT_DIR, str(subject), "pickles", dest_file_name)
     return full_dest
 
 
-if __name__ == '__main__':
-    src_subj_id = '661'
-    full_emb = '_full_*_embeddings.pkl'
-    trim_emb = '_trimmed_*_embeddings.pkl'
+if __name__ == "__main__":
+    src_subj_id = "661"
+    full_emb = "_full_*_embeddings.pkl"
+    trim_emb = "_trimmed_*_embeddings.pkl"
 
-    src_file_path = os.path.join(PRJCT_DIR, src_subj_id, 'pickles')
-    
+    src_file_path = os.path.join(PRJCT_DIR, src_subj_id, "pickles")
+
     full_src1 = sorted(glob.glob(os.path.join(src_file_path, src_subj_id + full_emb)))
     trim_src1 = sorted(glob.glob(os.path.join(src_file_path, src_subj_id + trim_emb)))
 
