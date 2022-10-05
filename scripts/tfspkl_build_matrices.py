@@ -44,22 +44,16 @@ def build_design_matrices(CONFIG, delimiter=","):
     if CONFIG["sig_elec_file"]:
         try:
             # If the electrode file is in Bobbi's original format
-            sigelec_list = pd.read_csv(CONFIG["sig_elec_file"], header=None)[
-                0
-            ].tolist()
+            sigelec_list = pd.read_csv(CONFIG["sig_elec_file"], header=None)[0].tolist()
             sigelec_list = [
                 extract_subject_and_electrode(item) for item in sigelec_list
             ]
             df = pd.DataFrame(sigelec_list, columns=["subject", "electrode"])
         except:
             # If the electrode file is in the new format
-            df = pd.read_csv(
-                CONFIG["sig_elec_file"], columns=["subject", "electrode"]
-            )
+            df = pd.read_csv(CONFIG["sig_elec_file"], columns=["subject", "electrode"])
         else:
-            electrodes_dict = (
-                df.groupby("subject")["electrode"].apply(list).to_dict()
-            )
+            electrodes_dict = df.groupby("subject")["electrode"].apply(list).to_dict()
 
         full_signal = []
         trimmed_signal = []
@@ -99,8 +93,7 @@ def build_design_matrices(CONFIG, delimiter=","):
         trimmed_signal = np.concatenate(trimmed_signal, axis=1)
         binned_signal = np.concatenate(binned_signal, axis=1)
 
-    else:
-        (
+        return (
             full_signal,
             full_stitch_index,
             trimmed_signal,
@@ -115,24 +108,10 @@ def build_design_matrices(CONFIG, delimiter=","):
             electrode_names,
             conversations,
             subject_id,
-        ) = process_data_for_pickles(CONFIG)
+        )
 
-    return (
-        full_signal,
-        full_stitch_index,
-        trimmed_signal,
-        trimmed_stitch_index,
-        binned_signal,
-        bin_stitch_index,
-        all_examples,
-        all_trimmed_examples,
-        convo_all_examples_size,
-        convo_trimmed_examples_size,
-        electrodes,
-        electrode_names,
-        conversations,
-        subject_id,
-    )
+    else:
+        return process_data_for_pickles(CONFIG)
 
 
 def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
@@ -142,9 +121,7 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
     electrodes, electrode_names = get_common_electrodes(CONFIG, conversations)
 
     if electrode_labels:
-        idx = [
-            i for i, e in enumerate(electrode_names) if e in electrode_labels
-        ]
+        idx = [i for i, e in enumerate(electrode_names) if e in electrode_labels]
 
         electrodes, electrode_names = zip(
             *[(electrodes[i], electrode_names[i]) for i in idx]
@@ -219,9 +196,7 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
         trimmed_signal.append(ecogs)
         trimmed_stitch_index.append(signal_length)
 
-        mean_binned_signal = [
-            np.mean(split, axis=0) for split in convo_binned_signal
-        ]
+        mean_binned_signal = [np.mean(split, axis=0) for split in convo_binned_signal]
 
         mean_binned_signal = np.vstack(mean_binned_signal)
         bin_stitch_index.append(mean_binned_signal.shape[0])

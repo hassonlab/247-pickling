@@ -1,3 +1,4 @@
+import glob
 import json
 import os
 from datetime import datetime
@@ -29,6 +30,9 @@ def create_directory_paths(args):
         if not sig_file_path:
             args.sig_elec_file = os.path.join(DATA_DIR, sig_file_name)
 
+    crude_flag_file = glob.glob(os.path.join(CONV_DIRS, "*alignment.txt"))
+    args.crude_flag_file = crude_flag_file[0] if crude_flag_file else None
+
     args.COMMIT_HASH = get_git_revision_short_hash()
     args.CREATED_ON = f'{datetime.now().strftime("%A %m/%d/%Y %H:%M:%S")}'
 
@@ -45,6 +49,7 @@ def build_config(args):
     Returns:
         dict: combined configuration information
     """
+    args.subject = str(args.subject)
     args.exclude_words = ["sp", "{lg}", "{ns}", "{LG}", "{NS}", "SP"]
     args.non_words = ["hm", "huh", "mhm", "mm", "oh", "uh", "uhuh", "um"]
 

@@ -1,3 +1,4 @@
+import glob
 import os
 
 import torch
@@ -22,7 +23,7 @@ def setup_environ(args):
     )
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)
-    args.conversation_list = sorted(os.listdir(args.input_dir))
+    args.conversation_list = sorted(glob.glob1(args.input_dir, "NY*Part*conversation*"))
 
     stra = f"{args.trimmed_model_name}/{args.pkl_identifier}/cnxt_{args.context_length:04d}"
 

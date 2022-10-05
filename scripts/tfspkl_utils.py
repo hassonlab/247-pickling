@@ -4,7 +4,9 @@ import string
 import sys
 
 import mat73
+import numpy as np
 import pandas as pd
+import scipy.io as sio
 from utils import lcs
 
 
@@ -59,6 +61,25 @@ def get_common_electrodes(CONFIG, convs):
     return common_electrodes, common_labels
 
 
+def get_all_electrodes(CONFIG, convs):
+    """[summary]
+    Args:
+        convs ([type]): [description]
+    Returns:
+        [type]: [description]
+    """
+    all_elec_labels_list = [
+        get_electrode_labels(conversation) for conversation in convs
+    ]
+
+    # This line works on the assumption that the headers of all files have
+    # the same electrode names and thus we are taking the last
+    common_labels = all_elec_labels_list[-1]
+    common_electrodes = list(range(1, len(common_labels) + 1))
+
+    return common_electrodes, common_labels
+
+
 def get_conversation_list(CONFIG, subject=None):
     """Returns list of conversations
 
@@ -78,7 +99,7 @@ def get_conversation_list(CONFIG, subject=None):
     else:
         if subject is None:
             subject = CONFIG["subject"]
-        CONV_DIRS = CONFIG["DATA_DIR"] + "/%s/" % str(subject)
+        CONV_DIRS = os.path.join(CONFIG["DATA_DIR"], str(subject))
         conversations = sorted(glob.glob(os.path.join(CONV_DIRS, "*conversation*")))
 
     return conversations
@@ -195,11 +216,13 @@ def get_electrode_labels(conversation_dir):
     if not os.path.exists(header_file):
         return
 
-    header = mat73.loadmat(header_file)
     try:
+        header = mat73.loadmat(header_file)
         labels = header.header.label
-    except:
-        labels = header["header"]["label"]
+    except TypeError as e:
+        header = sio.loadmat(header_file)
+        labels = list(np.concatenate(header["header"][0][0][9][0]))
+        labels = [item for item in labels if not item.startswith(("DC", "E", "T"))]
 
     return labels
 

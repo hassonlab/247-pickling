@@ -247,12 +247,31 @@ def add_lemmatize_stemming(df):
     return df
 
 
+def add_fine_flag(args, df):
+    """Add flag specifying whether the conversation is crude (0) or fine (1)
+    Args:
+        args (ArgParse): configuration object for the project
+        df (DataFrame): labels/datum (with other columns added)
+    Returns:
+        DataFrame: df with a fine_flag column added
+    """
+    if args.crude_flag_file:
+        flag_df = pd.read_csv(
+            args.crude_flag_file,
+            header=0,
+            names=["conversation_name", "fine_flag"],
+        )
+        df = df.merge(flag_df, on="conversation_name")
+    return df
+
+
 def create_labels_pickles(args, stitch_index, labels, convs, label_str=None):
     labels_df = process_labels(args, stitch_index, labels, convs)
     labels_df = create_production_flag(labels_df)
     labels_df = add_word_freqs(labels_df)
     labels_df = add_lemmatize_stemming(labels_df)
     labels_df = add_vocab_columns(labels_df)
+    labels_df = add_fine_flag(args, labels_df)
 
     labels_dict = dict(labels=labels_df.to_dict("records"))
     pkl_name = "_".join([args.subject, label_str, "labels"])
