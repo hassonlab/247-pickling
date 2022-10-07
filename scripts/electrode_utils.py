@@ -23,7 +23,8 @@ def get_electrode(CONFIG, elec_id):
         search_str = conversation + f"/preprocessed_all/*_{electrode}.mat"
     elif CONFIG["project_id"] == "tfs":
         if CONFIG["subject"] == "7170":
-            search_str = conversation + f"/preprocessed_allElec/*_{electrode}.mat"
+            search_str = conversation + f"/preprocessed_v2/*_{electrode}.mat"
+            # TODO: check if it is preprocessed or preprocessed_v2
         else:
             search_str = conversation + f"/preprocessed/*_{electrode}.mat"
     else:
@@ -70,9 +71,22 @@ def standardize_matrix(ecogs):
     return (ecogs - np.mean(ecogs, axis=0)) / np.std(ecogs, axis=0)
 
 
+def pad_bad_electrodes(item):
+    # TODO: finish this function
+    # load the subject_electrodes.pkl"
+    # get the index of the bad electrode
+    # print the electrode name and the amount of signal missing
+    # print the conversation as well
+    pass
+
+
 def put_signals_into_array(ecogs):
-    signal_length = max([item.size for item in ecogs if item is not None])
+
+    max_signal_length = max([item.size for item in ecogs if item is not None])
     ecogs = [
-        np.repeat(np.nan, signal_length) if item is None else item for item in ecogs
+        np.repeat(np.nan, max_signal_length)
+        if item is None
+        else np.pad(item, (0, max_signal_length - len(item)))
+        for item in ecogs
     ]
     return ecogs

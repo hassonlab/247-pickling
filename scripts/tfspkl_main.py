@@ -210,12 +210,16 @@ def add_vocab_columns(df):
 
     # Add glove
     glove = api.load("glove-wiki-gigaword-50")
-    df["in_glove"] = df.word.str.lower().apply(lambda x: x in glove.index_to_key)
+    df["in_glove"] = df.word.str.lower().apply(
+        lambda x: isinstance(glove.key_to_index.get(x), int)
+    )
 
     # Add language models
     for model in [*tfsemb_dwnld.CAUSAL_MODELS, *tfsemb_dwnld.SEQ2SEQ_MODELS]:
         try:
-            tokenizer = tfsemb_dwnld.download_hf_tokenizer(model, local_files_only=True)
+            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
+                model, local_files_only=True
+            )
         except:
             tokenizer = tfsemb_dwnld.download_hf_tokenizer(
                 model, local_files_only=False
@@ -223,7 +227,9 @@ def add_vocab_columns(df):
 
         key = model.split("/")[-1]
         print(f"Adding column: (token) in_{key}")
-        df[f"in_{key}"] = df.word.apply(lambda x: calc_tokenizer_length(tokenizer, x))
+        df[f"in_{key}"] = df.word.apply(
+            lambda x: calc_tokenizer_length(tokenizer, x)
+        )
 
     return df
 
@@ -241,7 +247,9 @@ def apply_stemming(word):
 
 
 def add_lemmatize_stemming(df):
-    df["lemmatized_word"] = df.word.str.strip().apply(lambda x: apply_lemmatize(x))
+    df["lemmatized_word"] = df.word.str.strip().apply(
+        lambda x: apply_lemmatize(x)
+    )
     df["stemmed_word"] = df.word.str.strip().apply(lambda x: apply_stemming(x))
 
     return df
@@ -381,6 +389,8 @@ def main():
         conversations,
         "trimmed",
     )
+    print("SUCCESS: Trimmed Labels Pickle")
+
     create_labels_pickles(
         args,
         full_stitch_index,
@@ -388,6 +398,7 @@ def main():
         conversations,
         "full",
     )
+    print("SUCCESS: Full Labels Pickle")
 
     return
 

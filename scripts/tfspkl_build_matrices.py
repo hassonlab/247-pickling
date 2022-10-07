@@ -7,7 +7,7 @@ from electrode_utils import return_electrode_array
 from tfspkl_utils import (
     combine_podcast_datums,
     extract_conversation_contents,
-    get_common_electrodes,
+    get_all_electrodes,
     get_conversation_list,
 )
 
@@ -44,16 +44,22 @@ def build_design_matrices(CONFIG, delimiter=","):
     if CONFIG["sig_elec_file"]:
         try:
             # If the electrode file is in Bobbi's original format
-            sigelec_list = pd.read_csv(CONFIG["sig_elec_file"], header=None)[0].tolist()
+            sigelec_list = pd.read_csv(CONFIG["sig_elec_file"], header=None)[
+                0
+            ].tolist()
             sigelec_list = [
                 extract_subject_and_electrode(item) for item in sigelec_list
             ]
             df = pd.DataFrame(sigelec_list, columns=["subject", "electrode"])
         except:
             # If the electrode file is in the new format
-            df = pd.read_csv(CONFIG["sig_elec_file"], columns=["subject", "electrode"])
+            df = pd.read_csv(
+                CONFIG["sig_elec_file"], columns=["subject", "electrode"]
+            )
         else:
-            electrodes_dict = df.groupby("subject")["electrode"].apply(list).to_dict()
+            electrodes_dict = (
+                df.groupby("subject")["electrode"].apply(list).to_dict()
+            )
 
         full_signal = []
         trimmed_signal = []
@@ -118,10 +124,12 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
     suffix = "/misc/*trimmed.txt"
 
     conversations = get_conversation_list(CONFIG, subject)
-    electrodes, electrode_names = get_common_electrodes(CONFIG, conversations)
+    electrodes, electrode_names = get_all_electrodes(CONFIG, conversations)
 
     if electrode_labels:
-        idx = [i for i, e in enumerate(electrode_names) if e in electrode_labels]
+        idx = [
+            i for i, e in enumerate(electrode_names) if e in electrode_labels
+        ]
 
         electrodes, electrode_names = zip(
             *[(electrodes[i], electrode_names[i]) for i in idx]
@@ -196,7 +204,9 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
         trimmed_signal.append(ecogs)
         trimmed_stitch_index.append(signal_length)
 
-        mean_binned_signal = [np.mean(split, axis=0) for split in convo_binned_signal]
+        mean_binned_signal = [
+            np.mean(split, axis=0) for split in convo_binned_signal
+        ]
 
         mean_binned_signal = np.vstack(mean_binned_signal)
         bin_stitch_index.append(mean_binned_signal.shape[0])
