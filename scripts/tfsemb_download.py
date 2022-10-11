@@ -4,11 +4,13 @@ from transformers import (
     AutoModel,
     AutoModelForCausalLM,
     AutoModelForSeq2SeqLM,
+    AutoModelForMaskedLM,
     AutoTokenizer,
 )
 
 CAUSAL_MODELS = [
     "gpt2",
+    "gpt2-medium",
     "gpt2-large",
     "gpt2-xl",
     "EleutherAI/gpt-neo-125M",
@@ -31,6 +33,16 @@ CLONE_MODELS = [
 ]
 
 # TODO: Add MLM_MODELS (Masked Language Models)
+MLM_MODELS = [
+    # "gpt2-xl", # uncomment to run this model with MLM input
+    # "gpt2-medium", # uncomment to run this model with MLM input
+    "bert-base-uncased",
+    "bert-large-uncased",
+    "bert-base-cased",
+    "bert-large-cased",
+    "roberta-base",
+    "roberta-large",
+]
 
 
 def download_hf_model(
@@ -181,6 +193,9 @@ def download_tokenizers_and_models(model_name=None, local_files_only=False, debu
     elif model_name == "seq2seq":
         model_class = AutoModelForSeq2SeqLM
         MODELS = SEQ2SEQ_MODELS if model_name == "seq2seq" else [model_name]
+    elif model_name == "mlm" or model_name in MLM_MODELS:
+        model_class = AutoModelForMaskedLM
+        MODELS = MLM_MODELS if model_name == "mlm" else [model_name]
     else:
         print("Invalid Model Name")
         exit(1)
