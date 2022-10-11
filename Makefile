@@ -18,7 +18,7 @@
 #   4. upload pickle
 
 # Miscellaneous: \
-247 Subjects IDs: 625, 676, and 7170 \
+247 Subjects IDs: 625, 676, 7170, and 798 \
 Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 777: Is the collection of significant electrodes
 
@@ -54,7 +54,7 @@ endif
 %-pickle: PRJCT_ID := tfs
 # {tfs | podcast}
 %-pickle: SID_LIST = 676
-# {625 676 7170 | 661 662 717 723 741 742 743 763 798 | 777}
+# {625 676 7170 798 | 661 662 717 723 741 742 743 763 798 | 777}
 
 create-pickle:
 	mkdir -p logs
@@ -95,9 +95,9 @@ download-247-pickles:
 %-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
 %-embeddings: SID := 661
-# {625 | 676 | 7170 | 661} 
+# {625 | 676 | 7170 | 798 | 661} 
 %-embeddings: CONV_IDS = $(shell seq 1 1) 
-# {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170}
+# {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
 %-embeddings: EMB_TYPE := gpt2-xl

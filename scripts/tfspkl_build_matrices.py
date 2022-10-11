@@ -121,7 +121,10 @@ def build_design_matrices(CONFIG, delimiter=","):
 
 
 def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
-    suffix = "/misc/*trimmed.txt"
+    if CONFIG["subject"] == "798":
+        suffix = "/misc/*_datum_trimmed.txt"
+    else:
+        suffix = "/misc/*trimmed.txt"
 
     conversations = get_conversation_list(CONFIG, subject)
     electrodes, electrode_names = get_all_electrodes(CONFIG, conversations)

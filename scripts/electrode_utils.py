@@ -25,6 +25,10 @@ def get_electrode(CONFIG, elec_id):
         if CONFIG["subject"] == "7170":
             search_str = conversation + f"/preprocessed_v2/*_{electrode}.mat"
             # TODO: check if it is preprocessed or preprocessed_v2
+        elif CONFIG["subject"] == "798":
+            search_str = (
+                conversation + f"/preprocessed_allElec/*_{electrode}.mat"
+            )
         else:
             search_str = conversation + f"/preprocessed/*_{electrode}.mat"
     else:
