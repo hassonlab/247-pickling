@@ -613,7 +613,10 @@ def main():
 
     assert len(utterance_df) != 0, "Empty dataframe"
 
-    base_df = tokenize_and_explode(args, utterance_df)
+    if args.embedding_type != "glove50":
+        base_df = tokenize_and_explode(args, utterance_df)
+    else:
+        base_df = utterance_df
 
     # saving the base dataframe
     base_df_file = os.path.join(
@@ -636,6 +639,7 @@ def main():
         return
 
     # Generate Embeddings
+    embeddings = None
     output = generate_func(args, base_df)
     if len(output) == 2:
         df, embeddings = output

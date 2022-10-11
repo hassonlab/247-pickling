@@ -94,26 +94,26 @@ download-247-pickles:
 ## settings for targets: generate-embeddings, concatenate-embeddings
 %-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 625
+%-embeddings: SID := 7170
 # {625 | 676 | 7170 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 1) 
+%-embeddings: CONV_IDS = $(shell seq 1 24) 
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
-%-embeddings: EMB_TYPE := gpt2-xl
+%-embeddings: EMB_TYPE := glove50
 # {"gpt2", "gpt2-large", "gpt2-xl", \
 "EleutherAI/gpt-neo-125M", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-neo-2.7B", \
 "EleutherAI/gpt-neox-20b", \
 "facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", \
 "facebook/opt-2.7b", "facebook/opt-6.7b", "facebook/opt-30b", \
 "facebook/blenderbot_small-90M"}
-%-embeddings: CNXT_LEN := 1024
+%-embeddings: CNXT_LEN := 1
 %-embeddings: LAYER := all
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 %-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
-%-embeddings: CMD = python
+%-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
 # {echo | python | sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh}
 
 # 38 and 39 failed
@@ -157,7 +157,7 @@ copy-embeddings:
 
 # Download huggingface models to cache (before generating embeddings)
 # This target needs to be run on the head node
-cache-models: MODEL := roberta-base
+cache-models: MODEL := seq2seq
 # {causal | seq2seq | or any model name specified in EMB_TYPE comments}
 cache-models:
 	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"
