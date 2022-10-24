@@ -118,6 +118,14 @@ and hence only generate once using subject: 661
 
 # 38 and 39 failed
 
+# generate-base-for-embeddings: Generates the base dataframe for embedding generation
+generate-base-for-embeddings:
+	$(CMD) scripts/tfsemb_LMBase.py \
+			--project-id $(PRJCT_ID) \
+			--pkl-identifier $(PKL_IDENTIFIER) \
+			--subject $(SID) \
+			--embedding-type $(EMB_TYPE);
+
 # generates embeddings (for each conversation separately)
 generate-embeddings:
 	mkdir -p logs
