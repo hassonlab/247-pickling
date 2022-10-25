@@ -118,8 +118,16 @@ and hence only generate once using subject: 661
 
 # 38 and 39 failed
 
+# generate-base-for-embeddings: Generates the base dataframe for embedding generation
+generate-base-for-embeddings:
+	python scripts/tfsemb_LMBase.py \
+			--project-id $(PRJCT_ID) \
+			--pkl-identifier $(PKL_IDENTIFIER) \
+			--subject $(SID) \
+			--embedding-type $(EMB_TYPE);
+
 # generates embeddings (for each conversation separately)
-generate-embeddings:
+generate-embeddings: generate-base-for-embeddings
 	mkdir -p logs
 	for cnxt_len in $(CNXT_LEN); do \
 		for conv_id in $(CONV_IDS); do \
@@ -158,6 +166,6 @@ copy-embeddings:
 # Download huggingface models to cache (before generating embeddings)
 # This target needs to be run on the head node
 cache-models: MODEL := causal
-# {causal | seq2seq | or any model name specified in EMB_TYPE comments}
+# {causal | seq2seq | mlm | or any model name specified in EMB_TYPE comments}
 cache-models:
 	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"
