@@ -490,7 +490,7 @@ def make_input_from_tokens(args, token_list):
             for x in range(len(token_list) - size + 1)
         ]
 
-    return windows[:10]
+    return windows
 
 
 def make_dataloader_from_input(windows):
