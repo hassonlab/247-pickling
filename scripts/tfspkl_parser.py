@@ -33,9 +33,9 @@ def arg_parser():
         sys.argv = [
             "scripts/tfspkl_parser.py",
             "--project-id",
-            "podcast",
+            "tfs",
             "--subject",
-            "661",
+            "625",
             "--max-electrodes",
             "500",
         ]

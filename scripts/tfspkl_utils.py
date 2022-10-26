@@ -4,7 +4,9 @@ import string
 import sys
 
 import mat73
+import numpy as np
 import pandas as pd
+import scipy.io as sio
 from utils import lcs
 
 
@@ -18,15 +20,23 @@ def get_electrode_ids(CONFIG, conversation):
         [type]: [description]
     """
     if CONFIG["project_id"] == "podcast":
-        elec_files = glob.glob(os.path.join(conversation, "preprocessed_all", "*.mat"))
+        elec_files = glob.glob(
+            os.path.join(conversation, "preprocessed_all", "*.mat")
+        )
     elif CONFIG["project_id"] == "tfs":
-        elec_files = glob.glob(os.path.join(conversation, "preprocessed", "*.mat"))
+        elec_files = glob.glob(
+            os.path.join(conversation, "preprocessed", "*.mat")
+        )
     else:
         print("Incorrect Project ID")
         sys.exit()
 
     elec_ids_list = sorted(
-        list(map(lambda x: int(os.path.splitext(x)[0].split("_")[-1]), elec_files))
+        list(
+            map(
+                lambda x: int(os.path.splitext(x)[0].split("_")[-1]), elec_files
+            )
+        )
     )
 
     return elec_ids_list
@@ -59,6 +69,25 @@ def get_common_electrodes(CONFIG, convs):
     return common_electrodes, common_labels
 
 
+def get_all_electrodes(CONFIG, convs):
+    """[summary]
+    Args:
+        convs ([type]): [description]
+    Returns:
+        [type]: [description]
+    """
+    all_elec_labels_list = [
+        get_electrode_labels(conversation) for conversation in convs
+    ]
+
+    # This line works on the assumption that the headers of all files have
+    # the same electrode names and thus we are taking the last
+    common_labels = all_elec_labels_list[-1]
+    common_electrodes = list(range(1, len(common_labels) + 1))
+
+    return common_electrodes, common_labels
+
+
 def get_conversation_list(CONFIG, subject=None):
     """Returns list of conversations
 
@@ -78,8 +107,10 @@ def get_conversation_list(CONFIG, subject=None):
     else:
         if subject is None:
             subject = CONFIG["subject"]
-        CONV_DIRS = CONFIG["DATA_DIR"] + "/%s/" % str(subject)
-        conversations = sorted(glob.glob(os.path.join(CONV_DIRS, "*conversation*")))
+        CONV_DIRS = os.path.join(CONFIG["DATA_DIR"], str(subject))
+        conversations = sorted(
+            glob.glob(os.path.join(CONV_DIRS, "*conversation*"))
+        )
 
     return conversations
 
@@ -108,6 +139,13 @@ def extract_conversation_contents(CONFIG, conversation):
 
     # create a booleam column if the word is a nonword or not
     df["is_nonword"] = df["word"].isin(CONFIG["non_words"])
+
+    # drop duplicate rows
+    df = df.drop_duplicates()
+    df = df.drop_duplicates(subset=["word", "onset"])
+
+    # drop empty words in datum
+    df = df[~df.word.isnull()]
 
     df = df.reset_index(drop=True)
     df = df.reset_index()
@@ -140,7 +178,9 @@ def second_level_alignment(CONFIG, df):
         lambda x: x.translate(str.maketrans("", "", ",."))
     )
 
-    mask1, mask2 = lcs(list(transcript_df.word_without_punctuation), list(df.word))
+    mask1, mask2 = lcs(
+        list(transcript_df.word_without_punctuation), list(df.word)
+    )
 
     df = df.rename(columns={"word": "datum_word"})
     for column in df.columns:
@@ -186,20 +226,24 @@ def get_electrode_labels(conversation_dir):
         list: electrode labels
     """
     try:
-        header_file = glob.glob(os.path.join(conversation_dir, "misc", "*_header.mat"))[
-            0
-        ]
+        header_file = glob.glob(
+            os.path.join(conversation_dir, "misc", "*_header.mat")
+        )[0]
     except IndexError:
         raise ValueError("Header File Missing")
 
     if not os.path.exists(header_file):
         return
 
-    header = mat73.loadmat(header_file)
     try:
-        labels = header.header.label
-    except:
+        header = mat73.loadmat(header_file)
         labels = header["header"]["label"]
+    except TypeError as e:
+        header = sio.loadmat(header_file)
+        labels = list(np.concatenate(header["header"][0][0][9][0]))
+        labels = [
+            item for item in labels if not item.startswith(("DC", "E", "T"))
+        ]
 
     return labels
 

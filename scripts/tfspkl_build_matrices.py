@@ -7,7 +7,7 @@ from electrode_utils import return_electrode_array
 from tfspkl_utils import (
     combine_podcast_datums,
     extract_conversation_contents,
-    get_common_electrodes,
+    get_all_electrodes,
     get_conversation_list,
 )
 
@@ -99,8 +99,7 @@ def build_design_matrices(CONFIG, delimiter=","):
         trimmed_signal = np.concatenate(trimmed_signal, axis=1)
         binned_signal = np.concatenate(binned_signal, axis=1)
 
-    else:
-        (
+        return (
             full_signal,
             full_stitch_index,
             trimmed_signal,
@@ -115,31 +114,20 @@ def build_design_matrices(CONFIG, delimiter=","):
             electrode_names,
             conversations,
             subject_id,
-        ) = process_data_for_pickles(CONFIG)
+        )
 
-    return (
-        full_signal,
-        full_stitch_index,
-        trimmed_signal,
-        trimmed_stitch_index,
-        binned_signal,
-        bin_stitch_index,
-        all_examples,
-        all_trimmed_examples,
-        convo_all_examples_size,
-        convo_trimmed_examples_size,
-        electrodes,
-        electrode_names,
-        conversations,
-        subject_id,
-    )
+    else:
+        return process_data_for_pickles(CONFIG)
 
 
 def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
-    suffix = "/misc/*trimmed.txt"
+    if CONFIG["subject"] == "798":
+        suffix = "/misc/*_datum_trimmed.txt"
+    else:
+        suffix = "/misc/*trimmed.txt"
 
     conversations = get_conversation_list(CONFIG, subject)
-    electrodes, electrode_names = get_common_electrodes(CONFIG, conversations)
+    electrodes, electrode_names = get_all_electrodes(CONFIG, conversations)
 
     if electrode_labels:
         idx = [
@@ -166,7 +154,7 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
     convo_all_examples_size = []
     convo_trimmed_examples_size = []
 
-    for conversation in conversations:
+    for conv_idx, conversation in enumerate(conversations, 1):
         try:  # Check if files exists
             datum_fn = glob.glob(conversation + suffix)[0]
         except IndexError:
@@ -232,6 +220,7 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
         all_trimmed_examples.append(trimmed_examples)
 
         print(
+            f"{conv_idx:02d}",
             os.path.basename(conversation),
             a,
             len(examples_df),

@@ -11,7 +11,11 @@ from sklearn.model_selection import KFold, StratifiedKFold
 
 # https://stackoverflow.com/questions/14989858/get-the-current-git-hash-in-a-python-script
 def get_git_revision_hash() -> str:
-    return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
+    return (
+        subprocess.check_output(["git", "rev-parse", "HEAD"])
+        .decode("ascii")
+        .strip()
+    )
 
 
 def get_git_revision_short_hash() -> str:
@@ -55,17 +59,17 @@ def save_pickle(item, file_name):
     return
 
 
-def get_current_time():
+def get_current_time(timer_string=""):
     time_now = datetime.now()
-    print(f'Start Time: {time_now.strftime("%A %m/%d/%Y %H:%M:%S")}')
+    print(f'{timer_string} Time: {time_now.strftime("%A %m/%d/%Y %H:%M:%S")}')
     return time_now
 
 
 def main_timer(func):
     def function_wrapper():
-        start_time = get_current_time()
+        start_time = get_current_time("Start")
         func()
-        end_time = get_current_time()
+        end_time = get_current_time("End")
         print(f"Total runtime: {end_time - start_time} (HH:MM:SS)")
 
     return function_wrapper

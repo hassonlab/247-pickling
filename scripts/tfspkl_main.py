@@ -9,11 +9,9 @@ Copyright (c) 2020 Your Company
 """
 import os
 
-import gensim.downloader as api
 import nltk
 import numpy as np
 import pandas as pd
-import tfsemb_download as tfsemb_dwnld
 from nltk.stem import PorterStemmer as ps
 from nltk.stem import WordNetLemmatizer as lt
 from tfspkl_build_matrices import build_design_matrices
@@ -203,31 +201,6 @@ def filter_on_freq(args, df):
     return df
 
 
-def add_vocab_columns(df):
-    """Add columns to the dataframe indicating whether each word is in the
-    vocabulary of the language models we're using.
-    """
-
-    # Add glove
-    glove = api.load("glove-wiki-gigaword-50")
-    df["in_glove"] = df.word.str.lower().apply(lambda x: x in glove.index_to_key)
-
-    # Add language models
-    for model in [*tfsemb_dwnld.CAUSAL_MODELS, *tfsemb_dwnld.SEQ2SEQ_MODELS]:
-        try:
-            tokenizer = tfsemb_dwnld.download_hf_tokenizer(model, local_files_only=True)
-        except:
-            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
-                model, local_files_only=False
-            )
-
-        key = model.split("/")[-1]
-        print(f"Adding column: (token) in_{key}")
-        df[f"in_{key}"] = df.word.apply(lambda x: calc_tokenizer_length(tokenizer, x))
-
-    return df
-
-
 def calc_tokenizer_length(tokenizer, word):
     return False if pd.isnull(word) else len(tokenizer.tokenize(word)) == 1
 
@@ -241,9 +214,29 @@ def apply_stemming(word):
 
 
 def add_lemmatize_stemming(df):
-    df["lemmatized_word"] = df.word.str.strip().apply(lambda x: apply_lemmatize(x))
+    df["lemmatized_word"] = df.word.str.strip().apply(
+        lambda x: apply_lemmatize(x)
+    )
     df["stemmed_word"] = df.word.str.strip().apply(lambda x: apply_stemming(x))
 
+    return df
+
+
+def add_fine_flag(args, df):
+    """Add flag specifying whether the conversation is crude (0) or fine (1)
+    Args:
+        args (ArgParse): configuration object for the project
+        df (DataFrame): labels/datum (with other columns added)
+    Returns:
+        DataFrame: df with a fine_flag column added
+    """
+    if args.crude_flag_file:
+        flag_df = pd.read_csv(
+            args.crude_flag_file,
+            header=0,
+            names=["conversation_name", "fine_flag"],
+        )
+        df = df.merge(flag_df, on="conversation_name")
     return df
 
 
@@ -252,7 +245,7 @@ def create_labels_pickles(args, stitch_index, labels, convs, label_str=None):
     labels_df = create_production_flag(labels_df)
     labels_df = add_word_freqs(labels_df)
     labels_df = add_lemmatize_stemming(labels_df)
-    labels_df = add_vocab_columns(labels_df)
+    labels_df = add_fine_flag(args, labels_df)
 
     labels_dict = dict(labels=labels_df.to_dict("records"))
     pkl_name = "_".join([args.subject, label_str, "labels"])
@@ -362,6 +355,8 @@ def main():
         conversations,
         "trimmed",
     )
+    print("SUCCESS: Trimmed Labels Pickle")
+
     create_labels_pickles(
         args,
         full_stitch_index,
@@ -369,6 +364,7 @@ def main():
         conversations,
         "full",
     )
+    print("SUCCESS: Full Labels Pickle")
 
     return
 

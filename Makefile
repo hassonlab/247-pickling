@@ -18,7 +18,7 @@
 #   4. upload pickle
 
 # Miscellaneous: \
-247 Subjects IDs: 625 and 676 \
+247 Subjects IDs: 625, 676, 7170, and 798 \
 Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 777: Is the collection of significant electrodes
 
@@ -54,7 +54,7 @@ endif
 %-pickle: PRJCT_ID := tfs
 # {tfs | podcast}
 %-pickle: SID_LIST = 676
-# {625 676 | 661 662 717 723 741 742 743 763 798 | 777}
+# {625 676 7170 798 | 661 662 717 723 741 742 743 763 798 | 777}
 
 create-pickle:
 	mkdir -p logs
@@ -95,9 +95,9 @@ download-247-pickles:
 %-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
 %-embeddings: SID := 661
-# {625 | 676 | 661} 
+# {625 | 676 | 7170 | 798 | 661} 
 %-embeddings: CONV_IDS = $(shell seq 1 1) 
-# {54 for 625 | 78 for 676 | 1 for 661}
+# {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
 %-embeddings: EMB_TYPE := gpt2-xl
@@ -118,8 +118,16 @@ and hence only generate once using subject: 661
 
 # 38 and 39 failed
 
+# generate-base-for-embeddings: Generates the base dataframe for embedding generation
+generate-base-for-embeddings:
+	python scripts/tfsemb_LMBase.py \
+			--project-id $(PRJCT_ID) \
+			--pkl-identifier $(PKL_IDENTIFIER) \
+			--subject $(SID) \
+			--embedding-type $(EMB_TYPE);
+
 # generates embeddings (for each conversation separately)
-generate-embeddings:
+generate-embeddings: generate-base-for-embeddings
 	mkdir -p logs
 	for cnxt_len in $(CNXT_LEN); do \
 		for conv_id in $(CONV_IDS); do \
@@ -158,6 +166,6 @@ copy-embeddings:
 # Download huggingface models to cache (before generating embeddings)
 # This target needs to be run on the head node
 cache-models: MODEL := causal
-# {causal | seq2seq | or any model name specified in EMB_TYPE comments}
+# {causal | seq2seq | mlm | or any model name specified in EMB_TYPE comments}
 cache-models:
 	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"

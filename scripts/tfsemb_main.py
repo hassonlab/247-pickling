@@ -230,6 +230,7 @@ def model_forward_pass(args, data_dl):
         all_embeddings = []
         all_logits = []
         for batch_idx, batch in enumerate(data_dl):
+            print(batch_idx)
             batch = batch.to(args.device)
             model_output = model(batch)
 
@@ -555,96 +556,25 @@ def get_vector(x, glove):
 
 
 def generate_glove_embeddings(args, df):
+    df1 = pd.DataFrame()
     glove = api.load("glove-wiki-gigaword-50")
-    df["embeddings"] = df["word"].apply(lambda x: get_vector(x.lower(), glove))
+    df1["embeddings"] = df["word"].apply(lambda x: get_vector(x.lower(), glove))
 
-    return df
-
-
-def get_model_layer_count(args):
-    model = args.model
-    max_layers = getattr(
-        model.config,
-        "n_layer",
-        getattr(
-            model.config,
-            "num_layers",
-            getattr(model.config, "num_hidden_layers", None),
-        ),
-    )
-
-    # NOTE: layer_idx is shifted by 1 because the first item in hidden_states
-    # corresponds to the output of the embeddings_layer
-    if args.layer_idx == "all":
-        args.layer_idx = np.arange(1, max_layers + 1)
-    elif args.layer_idx == "last":
-        args.layer_idx = [max_layers]
-    else:
-        layers = np.array(args.layer_idx)
-        good = np.all((layers >= 0) & (layers <= max_layers))
-        assert good, "Invalid layer number"
-
-    return args
+    return df1
 
 
-def select_tokenizer_and_model(args):
-
-    model_name = args.full_model_name
-
-    if model_name == "glove50":
-        args.layer_idx = [1]
-        return
-
-    try:
-        (
-            args.model,
-            args.tokenizer,
-        ) = tfsemb_dwnld.download_tokenizers_and_models(
-            model_name, local_files_only=True, debug=False
-        )[
-            model_name
-        ]
-    except OSError:
-        # NOTE: Please refer to make-target: cache-models for more information.
-        print(
-            "Model and tokenizer not found. Please download into cache first.",
-            file=sys.stderr,
-        )
-        return
-
-    args = get_model_layer_count(args)
-
-    if args.context_length <= 0:
-        args.context_length = args.tokenizer.max_len_single_sentence
-
-    assert (
-        args.context_length <= args.tokenizer.max_len_single_sentence
-    ), "given length is greater than max length"
-
-    return
-
-
-@main_timer
+# @main_timer
 def main():
     args = arg_parser()
     setup_environ(args)
-    select_tokenizer_and_model(args)
 
-    utterance_df = load_pickle(args.labels_pickle, "labels")
-    utterance_df = select_conversation(args, utterance_df)
+    if os.path.exists(args.base_df_file):
+        base_df = load_pickle(args.base_df_file)
+    else:
+        raise Exception("Base dataframe does not exist")
 
+    utterance_df = select_conversation(args, base_df)
     assert len(utterance_df) != 0, "Empty dataframe"
-
-    base_df = tokenize_and_explode(args, utterance_df)
-
-    # saving the base dataframe
-    base_df_file = os.path.join(
-        args.EMB_DIR,
-        args.trimmed_model_name,
-        args.pkl_identifier,
-        "base_df",
-    )
-    svpkl(base_df, base_df_file)
 
     # Select generation function based on model type
     if args.embedding_type == "glove50":
@@ -658,7 +588,8 @@ def main():
         return
 
     # Generate Embeddings
-    output = generate_func(args, base_df)
+    embeddings = None
+    output = generate_func(args, utterance_df)
     if len(output) == 2:
         df, embeddings = output
     else:
