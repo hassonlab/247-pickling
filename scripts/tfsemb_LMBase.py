@@ -18,27 +18,26 @@ def add_vocab_columns(args, df, column=None):
         *tfsemb_dwnld.SEQ2SEQ_MODELS,
         *tfsemb_dwnld.MLM_MODELS,
     ]:
-        if model != args.embedding_type:
-            try:
-                tokenizer = tfsemb_dwnld.download_hf_tokenizer(
-                    model, local_files_only=True
-                )
-            except:
-                tokenizer = tfsemb_dwnld.download_hf_tokenizer(
-                    model, local_files_only=False
-                )
-
-            key = model.split("/")[-1]
-            print(f"Adding column: (token) in_{key}")
-
-            try:
-                curr_vocab = tokenizer.vocab
-            except AttributeError:
-                curr_vocab = tokenizer.get_vocab()
-
-            df[f"in_{key}"] = df[column].apply(
-                lambda x: isinstance(curr_vocab.get(x), int)
+        try:
+            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
+                model, local_files_only=True
             )
+        except:
+            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
+                model, local_files_only=False
+            )
+
+        key = model.split("/")[-1]
+        print(f"Adding column: (token) in_{key}")
+
+        try:
+            curr_vocab = tokenizer.vocab
+        except AttributeError:
+            curr_vocab = tokenizer.get_vocab()
+
+        df[f"in_{key}"] = df[column].apply(
+            lambda x: isinstance(curr_vocab.get(x), int)
+        )
 
     return df
 
