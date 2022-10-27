@@ -176,7 +176,13 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
         1, true_y
     ).squeeze(-1).tolist()
     # true y rank
-    true_y_rank = [None] + top1_probabilities_idx.tolist()
+    vocab_rank = torch.argsort(
+        prediction_probabilities, dim=-1, descending=True
+    )
+    true_y_rank = [None] + (
+        (vocab_rank == true_y).nonzero(as_tuple=True)[1] + 1
+    ).tolist()
+
     # TODO: probabilities of all words
 
     return (
