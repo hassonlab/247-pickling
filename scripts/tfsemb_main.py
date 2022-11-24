@@ -195,16 +195,16 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
 
 
 def extract_select_vectors(batch_idx, array):
-    if batch_idx == 0:
-        x = array[0, :-1, :].clone()
+    if batch_idx == 0:  # first batch
+        x = array[0, :-1, :].clone()  # first window, all but last embeddings
         if array.shape[0] > 1:
-            try:
+            try:  # (n-1)-th embedding
                 rem_sentences_preds = array[1:, -2, :].clone()
-            except:
+            except:  # n-th embedding
                 rem_sentences_preds = array[1:, -1, :].clone()
 
             x = torch.cat([x, rem_sentences_preds], axis=0)
-    else:
+    else:  # remaining batches
         try:
             x = array[:, -2, :].clone()
         except:

@@ -22,7 +22,7 @@ def get_model_layer_count(args):
     # NOTE: layer_idx is shifted by 1 because the first item in hidden_states
     # corresponds to the output of the embeddings_layer
     if args.layer_idx == "all":
-        args.layer_idx = np.arange(1, max_layers + 1)
+        args.layer_idx = np.arange(0, max_layers + 1)
     elif args.layer_idx == "last":
         args.layer_idx = [max_layers]
     else:
@@ -73,7 +73,7 @@ def select_tokenizer_and_model(args):
 def process_inputs(args):
     if len(args.layer_idx) == 1:
         if args.layer_idx[0].isdecimal():
-            args.layer_idx = int(args.layer_idx[0])
+            args.layer_idx = [int(args.layer_idx[0])]
         else:
             args.layer_idx = args.layer_idx[0]
     else:
