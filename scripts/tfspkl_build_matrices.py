@@ -53,10 +53,8 @@ def build_design_matrices(CONFIG, delimiter=","):
             df = pd.DataFrame(sigelec_list, columns=["subject", "electrode"])
         except:
             # If the electrode file is in the new format
-            df = pd.read_csv(
-                CONFIG["sig_elec_file"], columns=["subject", "electrode"]
-            )
-        else:
+            df = pd.read_csv(CONFIG["sig_elec_file"])
+        finally:
             electrodes_dict = (
                 df.groupby("subject")["electrode"].apply(list).to_dict()
             )
