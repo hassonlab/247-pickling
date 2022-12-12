@@ -42,4 +42,7 @@ def arg_parser():
 
     args = parser.parse_args()
 
+    if not args.subject:
+        args.subject = 777
+
     return args
