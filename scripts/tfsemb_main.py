@@ -154,9 +154,14 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
         -prediction_probabilities * logp, dim=1
     ).tolist()
 
-    top1_probabilities, top1_probabilities_idx = prediction_probabilities.max(
-        dim=1
+    top1_probabilities, top1_probabilities_idx = torch.topk(
+        prediction_probabilities, 1, dim=1
     )
+    top1_probabilities, top1_probabilities_idx = (
+        top1_probabilities.squeeze(),
+        top1_probabilities_idx.squeeze(),
+    )
+
     predicted_tokens = args.tokenizer.convert_ids_to_tokens(
         top1_probabilities_idx
     )
@@ -513,6 +518,7 @@ def generate_causal_embeddings(args, df):
     final_top1_prob = []
     final_true_y_prob = []
     final_true_y_rank = []
+    final_logits = []
     for conversation in df.conversation_id.unique():
         token_list = get_conversation_tokens(df, conversation)
         model_input = make_input_from_tokens(args, token_list)
@@ -535,6 +541,7 @@ def generate_causal_embeddings(args, df):
         final_top1_prob.extend(top1_prob)
         final_true_y_prob.extend(true_y_prob)
         final_true_y_rank.extend(true_y_rank)
+        final_logits.extend([None] + torch.cat(logits, axis=0).tolist())
 
     if len(final_embeddings) > 1:
         # TODO concat all embeddings and return a dictionary
@@ -551,7 +558,10 @@ def generate_causal_embeddings(args, df):
     df["surprise"] = -df["true_pred_prob"] * np.log2(df["true_pred_prob"])
     df["entropy"] = entropy
 
-    return df, final_embeddings
+    df_logits = pd.DataFrame()
+    df_logits["logits"] = final_logits
+
+    return df, df_logits, final_embeddings
 
 
 def get_vector(x, glove):
@@ -596,12 +606,13 @@ def main():
     # Generate Embeddings
     embeddings = None
     output = generate_func(args, utterance_df)
-    if len(output) == 2:
-        df, embeddings = output
+    if len(output) == 3:
+        df, df_logits, embeddings = output
     else:
         df = output
 
     save_pickle(args, df, embeddings)
+    svpkl(df_logits, args.logits_df_file)
 
     return
 
