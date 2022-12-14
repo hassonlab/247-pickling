@@ -13,6 +13,7 @@ from tfsemb_config import setup_environ
 from tfsemb_parser import arg_parser
 from utils import load_pickle, main_timer
 from utils import save_pickle as svpkl
+from accelerate import Accelerator, find_executable_batch_size
 
 
 def save_pickle(args, item, embeddings=None):
@@ -504,10 +505,28 @@ def make_input_from_tokens(args, token_list):
     return windows
 
 
-def make_dataloader_from_input(windows):
+def make_dataloader_from_input(windows, batch_size):
     input_ids = torch.tensor(windows)
-    data_dl = data.DataLoader(input_ids, batch_size=8, shuffle=False)
+    data_dl = data.DataLoader(input_ids, batch_size=batch_size, shuffle=False)
     return data_dl
+
+
+def inference_function(args, model_input):
+    accelerator = Accelerator()
+
+    @find_executable_batch_size(starting_batch_size=128)
+    def inner_training_loop(batch_size=128):
+        nonlocal accelerator  # Ensure they can be used in our context
+        accelerator.free_memory()  # Free all lingering references
+        accelerator.print(batch_size)
+        input_dl = make_dataloader_from_input(model_input, batch_size)
+        embeddings, logits = model_forward_pass(args, input_dl)
+
+        return embeddings, logits
+
+    embeddings, logits = inner_training_loop()
+
+    return embeddings, logits
 
 
 def generate_causal_embeddings(args, df):
@@ -522,8 +541,7 @@ def generate_causal_embeddings(args, df):
     for conversation in df.conversation_id.unique():
         token_list = get_conversation_tokens(df, conversation)
         model_input = make_input_from_tokens(args, token_list)
-        input_dl = make_dataloader_from_input(model_input)
-        embeddings, logits = model_forward_pass(args, input_dl)
+        embeddings, logits = inference_function(args, model_input)
 
         embeddings = process_extracted_embeddings_all_layers(args, embeddings)
         for _, item in embeddings.items():
