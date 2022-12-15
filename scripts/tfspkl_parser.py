@@ -18,7 +18,7 @@ def arg_parser():
     group.add_argument("--max-electrodes", type=int, default=1e4)
 
     group1 = parser.add_mutually_exclusive_group()
-    group1.add_argument("--subject", type=str, default=661)
+    group1.add_argument("--subject", type=str, default=None)
     group1.add_argument("--sig-elec-file", type=str, default="")
 
     parser.add_argument("--bin-size", type=int, default=32)
@@ -41,5 +41,8 @@ def arg_parser():
         ]
 
     args = parser.parse_args()
+
+    if not args.subject:
+        args.subject = "777"
 
     return args

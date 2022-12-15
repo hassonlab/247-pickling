@@ -22,7 +22,7 @@ def get_model_layer_count(args):
     # NOTE: layer_idx is shifted by 1 because the first item in hidden_states
     # corresponds to the output of the embeddings_layer
     if args.layer_idx == "all":
-        args.layer_idx = np.arange(1, max_layers + 1)
+        args.layer_idx = np.arange(0, max_layers + 1)
     elif args.layer_idx == "last":
         args.layer_idx = [max_layers]
     else:
@@ -42,14 +42,9 @@ def select_tokenizer_and_model(args):
         return
 
     try:
-        (
-            args.model,
-            args.tokenizer,
-        ) = tfsemb_dwnld.download_tokenizers_and_models(
+        (args.model, args.tokenizer,) = tfsemb_dwnld.download_tokenizers_and_models(
             model_name, local_files_only=True, debug=False
-        )[
-            model_name
-        ]
+        )[model_name]
     except OSError:
         # NOTE: Please refer to make-target: cache-models for more information.
         print(
@@ -73,7 +68,7 @@ def select_tokenizer_and_model(args):
 def process_inputs(args):
     if len(args.layer_idx) == 1:
         if args.layer_idx[0].isdecimal():
-            args.layer_idx = int(args.layer_idx[0])
+            args.layer_idx = [int(args.layer_idx[0])]
         else:
             args.layer_idx = args.layer_idx[0]
     else:
@@ -111,9 +106,7 @@ def setup_environ(args):
     )
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)
-    args.conversation_list = sorted(
-        glob.glob1(args.input_dir, "NY*Part*conversation*")
-    )
+    args.conversation_list = sorted(glob.glob1(args.input_dir, "NY*Part*conversation*"))
 
     select_tokenizer_and_model(args)
     stra = f"{args.trimmed_model_name}/{args.pkl_identifier}/cnxt_{args.context_length:04d}"
@@ -128,12 +121,19 @@ def setup_environ(args):
         output_file_name = args.conversation_list[args.conversation_id - 1]
         args.output_file = os.path.join(args.output_dir, output_file_name)
 
-        # saving the base dataframe
+    # saving the base dataframe
     args.base_df_file = os.path.join(
         args.EMB_DIR,
         args.trimmed_model_name,
         args.pkl_identifier,
         "base_df.pkl",
+    )
+
+    # saving logits as dataframe
+    args.logits_df_file = os.path.join(
+        args.EMB_DIR,
+        stra,
+        "logits.pkl",
     )
 
     return
