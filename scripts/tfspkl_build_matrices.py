@@ -44,9 +44,7 @@ def build_design_matrices(CONFIG, delimiter=","):
     if CONFIG["sig_elec_file"]:
         try:
             # If the electrode file is in Bobbi's original format
-            sigelec_list = pd.read_csv(CONFIG["sig_elec_file"], header=None)[
-                0
-            ].tolist()
+            sigelec_list = pd.read_csv(CONFIG["sig_elec_file"], header=None)[0].tolist()
             sigelec_list = [
                 extract_subject_and_electrode(item) for item in sigelec_list
             ]
@@ -55,9 +53,7 @@ def build_design_matrices(CONFIG, delimiter=","):
             # If the electrode file is in the new format
             df = pd.read_csv(CONFIG["sig_elec_file"])
         finally:
-            electrodes_dict = (
-                df.groupby("subject")["electrode"].apply(list).to_dict()
-            )
+            electrodes_dict = df.groupby("subject")["electrode"].apply(list).to_dict()
 
         full_signal = []
         trimmed_signal = []
@@ -119,7 +115,7 @@ def build_design_matrices(CONFIG, delimiter=","):
 
 
 def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
-    if CONFIG["subject"] == "798":
+    if CONFIG["project_id"] == "tfs" and CONFIG["subject"] == "798":
         suffix = "/misc/*_datum_trimmed.txt"
     else:
         suffix = "/misc/*trimmed.txt"
@@ -128,9 +124,7 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
     electrodes, electrode_names = get_all_electrodes(CONFIG, conversations)
 
     if electrode_labels:
-        idx = [
-            i for i, e in enumerate(electrode_names) if e in electrode_labels
-        ]
+        idx = [i for i, e in enumerate(electrode_names) if e in electrode_labels]
 
         electrodes, electrode_names = zip(
             *[(electrodes[i], electrode_names[i]) for i in idx]
@@ -205,9 +199,7 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
         trimmed_signal.append(ecogs)
         trimmed_stitch_index.append(signal_length)
 
-        mean_binned_signal = [
-            np.mean(split, axis=0) for split in convo_binned_signal
-        ]
+        mean_binned_signal = [np.mean(split, axis=0) for split in convo_binned_signal]
 
         mean_binned_signal = np.vstack(mean_binned_signal)
         bin_stitch_index.append(mean_binned_signal.shape[0])
