@@ -7,6 +7,27 @@ from utils import load_pickle, main_timer
 from utils import save_pickle as svpkl
 
 
+def clean_lm_model_name(item):
+    """Remove unnecessary parts from the language model name.
+
+    Args:
+        item (str/list): full model name from HF Hub
+
+    Returns:
+        (str/list): pretty model name
+
+    Example:
+        clean_lm_model_name(EleutherAI/gpt-neo-1.3B) == 'gpt-neo-1.3B'
+    """
+    if isinstance(item, str):
+        return item.split("/")[-1]
+
+    if isinstance(item, list):
+        return [clean_lm_model_name(i) for i in item]
+
+    print("Invalid input. Please check.")
+
+
 def add_vocab_columns(args, df, column=None):
     """Add columns to the dataframe indicating whether each word is in the
     vocabulary of the language models we're using.
@@ -27,7 +48,7 @@ def add_vocab_columns(args, df, column=None):
                 model, local_files_only=False
             )
 
-        key = model.split("/")[-1]
+        key = clean_lm_model_name(model)
         print(f"Adding column: (token) in_{key}")
 
         try:
