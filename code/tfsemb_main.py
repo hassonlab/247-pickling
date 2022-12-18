@@ -10,39 +10,45 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
-from transformers import (BartForConditionalGeneration, BartTokenizer,
-                          BertForMaskedLM, BertTokenizer, GPT2LMHeadModel,
-                          GPT2Tokenizer, RobertaForMaskedLM, RobertaTokenizer,
-                          BlenderbotSmallTokenizer,
-                          BlenderbotSmallForConditionalGeneration)
+from transformers import (
+    BartForConditionalGeneration,
+    BartTokenizer,
+    BertForMaskedLM,
+    BertTokenizer,
+    GPT2LMHeadModel,
+    GPT2Tokenizer,
+    RobertaForMaskedLM,
+    RobertaTokenizer,
+    BlenderbotSmallTokenizer,
+    BlenderbotSmallForConditionalGeneration,
+)
 from utils import main_timer
 
 
 def save_pickle(args, item, file_name, embeddings=None):
-    """Write 'item' to 'file_name.pkl'
-    """
-    add_ext = '' if file_name.endswith('.pkl') else '.pkl'
+    """Write 'item' to 'file_name.pkl'"""
+    add_ext = "" if file_name.endswith(".pkl") else ".pkl"
 
     file_name = file_name + add_ext
 
     if embeddings is not None:
         for layer_idx, embedding in embeddings.items():
-            item['embeddings'] = embedding.tolist()
+            item["embeddings"] = embedding.tolist()
             filename = file_name % layer_idx
             os.makedirs(os.path.dirname(filename), exist_ok=True)
-            with open(filename, 'wb') as fh:
-                pickle.dump(item.to_dict('records'), fh)
+            with open(filename, "wb") as fh:
+                pickle.dump(item.to_dict("records"), fh)
     else:
         filename = file_name % args.layer_idx[0]
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-        with open(filename, 'wb') as fh:
-            pickle.dump(item.to_dict('records'), fh)
+        with open(filename, "wb") as fh:
+            pickle.dump(item.to_dict("records"), fh)
     return
 
 
 def select_conversation(args, df):
     if args.conversation_id:
-        print('Selecting conversation', args.conversation_id)
+        print("Selecting conversation", args.conversation_id)
         df = df[df.conversation_id == args.conversation_id]
     return df
 
@@ -56,19 +62,34 @@ def load_pickle(args):
     Returns:
         DataFrame: pickle contents returned as dataframe
     """
-    with open(args.pickle_name, 'rb') as fh:
+    with open(args.pickle_name, "rb") as fh:
         datum = pickle.load(fh)
-
-    df = pd.DataFrame.from_dict(datum['labels'])
+    df = pd.DataFrame.from_dict(datum["labels"])
 
     return df
 
 
+def load_fold_pickle(args):
+    """Load the 0shot fold pickle and returns as a dataframe
+
+    Args:
+        file (string): labels fold pickle from 247-encoding
+
+    Returns:
+        DataFrame: pickle contents returned as dataframe
+    """
+    with open(args.fpickle_name, "rb") as fh:
+        datum = pickle.load(fh)
+
+    return datum
+
+
 def add_glove_embeddings(df, dim=None):
     if dim == 50:
-        glove = api.load('glove-wiki-gigaword-50')
-        df['glove50_embeddings'] = df['token2word'].apply(
-            lambda x: get_vector(x, glove))
+        glove = api.load("glove-wiki-gigaword-50")
+        df["glove50_embeddings"] = df["token2word"].apply(
+            lambda x: get_vector(x, glove)
+        )
     else:
         raise Exception("Incorrect glove dimension")
 
@@ -76,14 +97,22 @@ def add_glove_embeddings(df, dim=None):
 
 
 def check_token_is_root(args, df):
-    if 'gpt2' in args.embedding_type:
-        df['gpt2-xl_token_is_root'] = df['word'] == df['token'].apply(
-            args.tokenizer.convert_tokens_to_string).str.strip()
-    elif 'blenderbot' in args.embedding_type:
-        df['bbot_token_is_root'] = df['word'] == df['token'].apply(
-            args.tokenizer.convert_tokens_to_string).str.strip()
-    elif args.embedding_type == 'bert':
-        df['bert_token_is_root'] = df['word'] == df['token']
+    if "gpt2" in args.embedding_type:
+        df["gpt2-xl_token_is_root"] = (
+            df["word"]
+            == df["token"]
+            .apply(args.tokenizer.convert_tokens_to_string)
+            .str.strip()
+        )
+    elif "blenderbot" in args.embedding_type:
+        df["bbot_token_is_root"] = (
+            df["word"]
+            == df["token"]
+            .apply(args.tokenizer.convert_tokens_to_string)
+            .str.strip()
+        )
+    elif args.embedding_type == "bert":
+        df["bert_token_is_root"] = df["word"] == df["token"]
     else:
         raise Warning("embedding type doesn't exist")
 
@@ -95,7 +124,7 @@ def remove_punctuation(df):
 
 
 def convert_token_to_idx(df, tokenizer):
-    df['token_id'] = df['token'].apply(tokenizer.convert_tokens_to_ids)
+    df["token_id"] = df["token"].apply(tokenizer.convert_tokens_to_ids)
     return df
 
 
@@ -109,36 +138,40 @@ def tokenize_and_explode(args, df):
     Returns:
         DataFrame: a new dataframe object with the words tokenized
     """
-    df['token'] = df.word.apply(args.tokenizer.tokenize)
-    df = df.explode('token', ignore_index=True)
-    df['token2word'] = df['token'].apply(
-        args.tokenizer.convert_tokens_to_string).str.strip().str.lower()
+    df["token"] = df.word.apply(args.tokenizer.tokenize)
+    df = df.explode("token", ignore_index=True)
+    df["token2word"] = (
+        df["token"]
+        .apply(args.tokenizer.convert_tokens_to_string)
+        .str.strip()
+        .str.lower()
+    )
     df = convert_token_to_idx(df, args.tokenizer)
     df = check_token_is_root(args, df)
 
     # Add a token index for each word's token
-    for value in df['index'].unique():
+    for value in df["index"].unique():
         if value is not None:
-            flag = df['index'] == value
-            df.loc[flag, 'token_idx'] = np.arange(sum(flag))
+            flag = df["index"] == value
+            df.loc[flag, "token_idx"] = np.arange(sum(flag))
 
     return df
 
 
 def get_token_indices(args, num_tokens):
-    if 'gpt2' in args.embedding_type:
+    if "gpt2" in args.embedding_type:
         start, stop = 0, num_tokens
-    elif args.embedding_type == 'bert':
+    elif args.embedding_type == "bert":
         start, stop = 1, num_tokens + 1
     else:
-        raise Exception('wrong model')
+        raise Exception("wrong model")
 
     return (start, stop)
 
 
 def map_embeddings_to_tokens(args, df, embed):
 
-    multi = df.set_index(['conversation_id', 'sentence_idx', 'sentence'])
+    multi = df.set_index(["conversation_id", "sentence_idx", "sentence"])
     unique_sentence_idx = multi.index.unique().values
 
     uniq_sentence_count = len(get_unique_sentences(df))
@@ -146,35 +179,39 @@ def map_embeddings_to_tokens(args, df, embed):
 
     c = []
     for unique_idx, sentence_embedding in zip(unique_sentence_idx, embed):
-        a = df['conversation_id'] == unique_idx[0]
-        b = df['sentence_idx'] == unique_idx[1]
+        a = df["conversation_id"] == unique_idx[0]
+        b = df["sentence_idx"] == unique_idx[1]
         num_tokens = sum(a & b)
         start, stop = get_token_indices(args, num_tokens)
         c.append(pd.Series(sentence_embedding[start:stop, :].tolist()))
 
-    df['embeddings'] = pd.concat(c, ignore_index=True)
+    df["embeddings"] = pd.concat(c, ignore_index=True)
     return df
 
 
 def get_unique_sentences(df):
-    return df[['conversation_id', 'sentence_idx',
-               'sentence']].drop_duplicates()['sentence'].tolist()
+    return (
+        df[["conversation_id", "sentence_idx", "sentence"]]
+        .drop_duplicates()["sentence"]
+        .tolist()
+    )
 
 
 def process_extracted_embeddings(args, concat_output):
     """(batch_size, max_len, embedding_size)"""
     # concatenate all batches
     concatenated_embeddings = torch.cat(concat_output, dim=0).numpy()
-    extracted_embeddings = concatenated_embeddings 
+    extracted_embeddings = concatenated_embeddings
 
-    if 'gpt2' in args.embedding_type:
+    if "gpt2" in args.embedding_type:
         emb_dim = concatenated_embeddings.shape[-1]
 
         # the first token is always empty
         init_token_embedding = np.empty((1, emb_dim)) * np.nan
 
         extracted_embeddings = np.concatenate(
-            [init_token_embedding, concatenated_embeddings], axis=0)
+            [init_token_embedding, concatenated_embeddings], axis=0
+        )
 
     return extracted_embeddings
 
@@ -185,8 +222,9 @@ def process_extracted_embeddings_all_layers(args, layer_embeddings_dict):
         concat_output = []
         for item_dict in layer_embeddings_dict:
             concat_output.append(item_dict[layer_idx])
-        layer_embeddings[layer_idx] = process_extracted_embeddings(args,
-                                                                   concat_output)
+        layer_embeddings[layer_idx] = process_extracted_embeddings(
+            args, concat_output
+        )
 
     return layer_embeddings
 
@@ -197,7 +235,7 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
 
     # concatenate all batches
     prediction_scores = torch.cat(concat_logits, axis=0)
-    if 'blenderbot' in args.embedding_type:
+    if "blenderbot" in args.embedding_type:
         true_y = torch.tensor(sentence_token_ids).unsqueeze(-1)
     else:
         if prediction_scores.shape[0] == 0:
@@ -211,15 +249,18 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
     prediction_probabilities = F.softmax(prediction_scores, dim=1)
 
     logp = np.log2(prediction_probabilities)
-    entropy = [None] + torch.sum(-prediction_probabilities * logp,
-                                 dim=1).tolist()
+    entropy = [None] + torch.sum(
+        -prediction_probabilities * logp, dim=1
+    ).tolist()
 
     top1_probabilities, top1_probabilities_idx = prediction_probabilities.max(
-        dim=1)
+        dim=1
+    )
     predicted_tokens = args.tokenizer.convert_ids_to_tokens(
-        top1_probabilities_idx)
-    predicted_words = predicted_tokens 
-    if 'gpt2' in args.embedding_type:
+        top1_probabilities_idx
+    )
+    predicted_words = predicted_tokens
+    if "gpt2" in args.embedding_type:
         predicted_words = [
             args.tokenizer.convert_tokens_to_string(token)
             for token in predicted_tokens
@@ -231,7 +272,8 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
     top1_words = [None] + predicted_words
     # probability of correct word
     true_y_probability = [None] + prediction_probabilities.gather(
-        1, true_y).squeeze(-1).tolist()
+        1, true_y
+    ).squeeze(-1).tolist()
     # TODO: probabilities of all words
 
     return top1_words, top1_probabilities, true_y_probability, entropy
@@ -278,7 +320,8 @@ def model_forward_pass(args, data_dl):
             logits = model_output.logits.cpu()
 
             embeddings = extract_select_vectors_all_layers(
-                batch_idx, model_output.hidden_states, args.layer_idx)
+                batch_idx, model_output.hidden_states, args.layer_idx
+            )
             logits = extract_select_vectors(batch_idx, logits)
 
             all_embeddings.append(embeddings)
@@ -299,8 +342,8 @@ def transformer_forward_pass(args, data_dl):
 
     encoderlayers = np.arange(1, 9)
     decoderlayers = encoderlayers + 8
-    encoderkey = 'encoder_hidden_states'
-    decoderkey = 'decoder_hidden_states'
+    encoderkey = "encoder_hidden_states"
+    decoderkey = "decoder_hidden_states"
     accuracy, count = 0, 0
 
     with torch.no_grad():
@@ -310,29 +353,47 @@ def transformer_forward_pass(args, data_dl):
         all_embeddings = []
         all_logits = []
         for batch_idx, batch in enumerate(data_dl):
-            input_ids = torch.LongTensor(batch['encoder_ids']).to(device)
-            decoder_ids = torch.LongTensor(batch['decoder_ids']).to(device)
-            outputs = model(input_ids.unsqueeze(0),
-                            decoder_input_ids=decoder_ids.unsqueeze(0))
+            input_ids = torch.LongTensor(batch["encoder_ids"]).to(device)
+            decoder_ids = torch.LongTensor(batch["decoder_ids"]).to(device)
+            outputs = model(
+                input_ids.unsqueeze(0),
+                decoder_input_ids=decoder_ids.unsqueeze(0),
+            )
             # After: get all relevant layers
-            embeddings = {i: outputs[decoderkey][i-8].cpu()[0, :-1, :]
-                          for i in decoderlayers}
+            embeddings = {
+                i: outputs[decoderkey][i - 8].cpu()[0, :-1, :]
+                for i in decoderlayers
+            }
             logits = outputs.logits.cpu()[0, :-1, :]
 
             if batch_idx > 0:
-                prev_ntokens = len(all_embeddings[-1][9]) + 1 # previous tokens
-                for token_idx in range(prev_ntokens-1):
+                prev_ntokens = len(all_embeddings[-1][9]) + 1  # previous tokens
+                for token_idx in range(prev_ntokens - 1):
                     if token_idx == 0:
                         portion = (0, slice(-prev_ntokens, -1), slice(512))
-                        encoder_embs = {i: outputs[encoderkey][i][portion].cpu()
-                                        for i in encoderlayers} # take embeddings with original model (all word tokens)
+                        encoder_embs = {
+                            i: outputs[encoderkey][i][portion].cpu()
+                            for i in encoderlayers
+                        }  # take embeddings with original model (all word tokens)
                     else:
-                        input_ids = torch.cat([input_ids[0:-2],input_ids[-1:]]) # delete last word token
-                        outputs = model(input_ids.unsqueeze(0),
-                                            decoder_input_ids = decoder_ids.unsqueeze(0)) # rerun model
-                        portion = (0, slice(-2, -1), slice(512)) # second to last token embedding
+                        input_ids = torch.cat(
+                            [input_ids[0:-2], input_ids[-1:]]
+                        )  # delete last word token
+                        outputs = model(
+                            input_ids.unsqueeze(0),
+                            decoder_input_ids=decoder_ids.unsqueeze(0),
+                        )  # rerun model
+                        portion = (
+                            0,
+                            slice(-2, -1),
+                            slice(512),
+                        )  # second to last token embedding
                         for i in encoderlayers:
-                            encoder_embs[i][-token_idx-1] = outputs[encoderkey][i][portion].cpu() # update embeddings
+                            encoder_embs[i][-token_idx - 1] = outputs[
+                                encoderkey
+                            ][i][
+                                portion
+                            ].cpu()  # update embeddings
                 all_embeddings[-1].update(encoder_embs)
                 # [all_embeddings[-1][i].shape for i in range(1, 17)]
                 # tokenizer = args.tokenizer
@@ -361,17 +422,17 @@ def transformer_forward_pass(args, data_dl):
 
     # assert len(all_embeddings) == len(data_dl) - 1
     # assert sum([len(e[1]) for e in all_embeddings]) == sum([len(d['decoder_ids'])-1 for d in data_dl])
-    print('model_forward accuracy', accuracy / count)
+    print("model_forward accuracy", accuracy / count)
     return all_embeddings, all_logits
 
 
 def get_conversation_tokens(df, conversation):
-    token_list = df[df.conversation_id == conversation]['token_id'].tolist()
+    token_list = df[df.conversation_id == conversation]["token_id"].tolist()
     return token_list
 
 
 def make_conversational_input(args, df):
-    '''
+    """
     Create a conversational context/response pair to be fed into an encoder
     decoder transformer architecture. The context is a series of utterances
     that precede a new utterance response.
@@ -390,7 +451,7 @@ def make_conversational_input(args, df):
             'decoder_inputs': [<s> ...]
         },
     ]
-    '''
+    """
 
     bos = args.tokenizer.bos_token_id
     eos = args.tokenizer.eos_token_id
@@ -398,8 +459,10 @@ def make_conversational_input(args, df):
 
     sep_id = [sep] if sep is not None else [eos]
     bos_id = [bos] if bos is not None else [sep]
-    convo = [bos_id + row.token_id.values.tolist() + sep_id for _, row in
-             df.groupby('sentence_idx')]
+    convo = [
+        bos_id + row.token_id.values.tolist() + sep_id
+        for _, row in df.groupby("sentence_idx")
+    ]
 
     # add empty context at begnning to get states of first utterance
     # add empty context at the end to get encoder states of last utterance
@@ -419,19 +482,18 @@ def make_conversational_input(args, df):
     for j, response in enumerate(convo):
         if j == 0:
             continue
-        context = create_context(convo, j-1)
+        context = create_context(convo, j - 1)
         if len(context) > 0:
-            examples.append({
-                'encoder_ids': context,
-                'decoder_ids': response[:-1]
-                })
+            examples.append(
+                {"encoder_ids": context, "decoder_ids": response[:-1]}
+            )
 
     # Ensure we maintained correct number of tokens per utterance
-    first = np.array([len(e['decoder_ids']) - 1 for e in examples])
+    first = np.array([len(e["decoder_ids"]) - 1 for e in examples])
     second = df.sentence_idx.value_counts(sort=False).sort_index()
     # minus 1 because we add an extra utterance for encoder
-    assert len(examples) - 1 == len(second), 'number of utts doesn\'t match'
-    assert (first[:-1] == second).all(), 'number of tokens per utt is bad'
+    assert len(examples) - 1 == len(second), "number of utts doesn't match"
+    assert (first[:-1] == second).all(), "number of tokens per utt is bad"
     # (second.values != first).nonzero()[0][0]
     # len(input_dl[-4]['decoder_ids'])-1
     # print(args.tokenizer.decode(input_dl[578]['decoder_ids']))
@@ -442,8 +504,8 @@ def make_conversational_input(args, df):
 
 def printe(example, args):
     tokenizer = args.tokenizer
-    print(tokenizer.decode(example['encoder_ids']))
-    print(tokenizer.convert_ids_to_tokens(example['decoder_ids']))
+    print(tokenizer.decode(example["encoder_ids"]))
+    print(tokenizer.convert_ids_to_tokens(example["decoder_ids"]))
     print()
 
 
@@ -455,9 +517,9 @@ def generate_conversational_embeddings(args, df):
     utt_lens = df.sentence_idx.value_counts(sort=False)
     long_utts = utt_lens.index[utt_lens > 128 - 2].values
     long_utts = np.concatenate((long_utts, long_utts + 1))
-    df = df[~ df.sentence_idx.isin(long_utts)]
-    print('Removing long utterances', long_utts)
-    assert len(df), 'No utterances left after'
+    df = df[~df.sentence_idx.isin(long_utts)]
+    print("Removing long utterances", long_utts)
+    assert len(df), "No utterances left after"
 
     final_embeddings = []
     final_top1_word = []
@@ -475,20 +537,21 @@ def generate_conversational_embeddings(args, df):
             assert item.shape[0] == len(df_convo)
         final_embeddings.append(embeddings)
 
-        y_true = np.concatenate([e['decoder_ids'][1:] for e in input_dl[:-1]])
+        y_true = np.concatenate([e["decoder_ids"][1:] for e in input_dl[:-1]])
         top1_word, top1_prob, true_y_prob, entropy = process_extracted_logits(
-            args, logits, y_true)
+            args, logits, y_true
+        )
 
         # Remove first None that is added by the previous function
         final_top1_word.extend(top1_word[1:])
         final_top1_prob.extend(top1_prob[1:])
         final_true_y_prob.extend(true_y_prob[1:])
 
-    df['top1_pred'] = final_top1_word
-    df['top1_pred_prob'] = final_top1_prob
-    df['true_pred_prob'] = final_true_y_prob
-    df['surprise'] = -df['true_pred_prob'] * np.log2(df['true_pred_prob'])
-    print('Accuracy', (df.token == df.top1_pred).mean())
+    df["top1_pred"] = final_top1_word
+    df["top1_pred_prob"] = final_top1_prob
+    df["true_pred_prob"] = final_true_y_prob
+    df["surprise"] = -df["true_pred_prob"] * np.log2(df["true_pred_prob"])
+    print("Accuracy", (df.token == df.top1_pred).mean())
 
     if len(final_embeddings) > 1:
         # TODO concat all embeddings and return a dictionary
@@ -508,7 +571,7 @@ def make_input_from_tokens(args, token_list):
         windows = [tuple(token_list)]
     else:
         windows = [
-            tuple(token_list[x:x + size])
+            tuple(token_list[x : x + size])
             for x in range(len(token_list) - size + 1)
         ]
 
@@ -528,8 +591,7 @@ def make_dataloader_from_input(windows):
 
 
 def generate_embeddings_with_context(args, df):
-    df = tokenize_and_explode(args, df)
-    if 'gpt2' in args.embedding_type:
+    if "gpt2" in args.embedding_type:
         args.tokenizer.pad_token = args.tokenizer.eos_token
     final_embeddings = []
     final_top1_word = []
@@ -548,7 +610,8 @@ def generate_embeddings_with_context(args, df):
         final_embeddings.append(embeddings)
 
         top1_word, top1_prob, true_y_prob, entropy = process_extracted_logits(
-            args, logits, model_input)
+            args, logits, model_input
+        )
         final_top1_word.extend(top1_word)
         final_top1_prob.extend(top1_prob)
         final_true_y_prob.extend(true_y_prob)
@@ -560,11 +623,14 @@ def generate_embeddings_with_context(args, df):
     else:
         final_embeddings = final_embeddings[0]
 
-    df['top1_pred'] = final_top1_word
-    df['top1_pred_prob'] = final_top1_prob
-    df['true_pred_prob'] = final_true_y_prob
-    df['surprise'] = -df['true_pred_prob'] * np.log2(df['true_pred_prob'])
-    df['entropy'] = entropy
+    df = pd.DataFrame()
+    df.loc[:, "top1_pred"] = final_top1_word
+    df.loc[:, "top1_pred_prob"] = final_top1_prob
+    df.loc[:, "true_pred_prob"] = final_true_y_prob
+    df.loc[:, "surprise"] = -df.loc[:, "true_pred_prob"] * np.log2(
+        df.loc[:, "true_pred_prob"]
+    )
+    df.loc[:, "entropy"] = entropy
 
     return df, final_embeddings
 
@@ -579,12 +645,12 @@ def generate_embeddings(args, df):
     df = tokenize_and_explode(args, df)
     unique_sentence_list = get_unique_sentences(df)
 
-    if 'gpt2' in args.embedding_type:
+    if "gpt2" in args.embedding_type:
         tokenizer.pad_token = tokenizer.eos_token
 
-    tokens = tokenizer(unique_sentence_list, padding=True, return_tensors='pt')
-    input_ids_val = tokens['input_ids']
-    attention_masks_val = tokens['attention_mask']
+    tokens = tokenizer(unique_sentence_list, padding=True, return_tensors="pt")
+    input_ids_val = tokens["input_ids"]
+    attention_masks_val = tokens["attention_mask"]
     dataset = data.TensorDataset(input_ids_val, attention_masks_val)
     data_dl = data.DataLoader(dataset, batch_size=8, shuffle=False)
 
@@ -593,8 +659,8 @@ def generate_embeddings(args, df):
         for batch in data_dl:
             batch = tuple(b.to(device) for b in batch)
             inputs = {
-                'input_ids': batch[0],
-                'attention_mask': batch[1],
+                "input_ids": batch[0],
+                "attention_mask": batch[1],
             }
             model_output = model(**inputs)
             concat_output.append(model_output[-1][-1].detach().cpu().numpy())
@@ -612,23 +678,26 @@ def get_vector(x, glove):
 
 
 def generate_glove_embeddings(args, df):
-    glove = api.load('glove-wiki-gigaword-50')
-    df['embeddings'] = df['word'].apply(lambda x: get_vector(x.lower(), glove))
+    glove = api.load("glove-wiki-gigaword-50")
+    df["embeddings"] = df["word"].apply(lambda x: get_vector(x.lower(), glove))
 
     return df
 
 
 def setup_environ(args):
 
-    DATA_DIR = os.path.join(os.getcwd(), 'data', args.project_id)
-    RESULTS_DIR = os.path.join(os.getcwd(), 'results', args.project_id)
-    PKL_DIR = os.path.join(RESULTS_DIR, args.subject, 'pickles')
+    DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)
+    RESULTS_DIR = os.path.join(os.getcwd(), "results", args.project_id)
+    PKL_DIR = os.path.join(RESULTS_DIR, args.subject, "pickles")
 
-    args.device = torch.device(
-        "cuda:0" if torch.cuda.is_available() else "cpu")
+    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    labels_file = '_'.join([args.subject, args.pkl_identifier, 'labels.pkl'])
+    labels_file = "_".join([args.subject, args.pkl_identifier, "labels.pkl"])
+    labels_file_fold = "_".join(
+        [args.subject, args.pkl_identifier, "labels_fold.pkl"]
+    )
     args.pickle_name = os.path.join(PKL_DIR, labels_file)
+    args.fpickle_name = os.path.join(PKL_DIR, labels_file_fold)
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)
     args.conversation_list = sorted(os.listdir(args.input_dir))
@@ -638,13 +707,19 @@ def setup_environ(args):
         args.model = nn.DataParallel(args.model)
 
     stra = args.embedding_type
-    if any([item in args.embedding_type for item in ['gpt2', 'bert']]):
-        stra = f'{stra}_cnxt_{args.context_length}'
+    if any([item in args.embedding_type for item in ["gpt2", "bert"]]):
+        stra = f"{stra}_cnxt_{args.context_length}"
 
     # TODO: if multiple conversations are specified in input
     if args.conversation_id:
-        args.output_dir = os.path.join(RESULTS_DIR, args.subject, 'embeddings',
-                                       stra, args.pkl_identifier, 'layer_%02d')
+        args.output_dir = os.path.join(
+            RESULTS_DIR,
+            args.subject,
+            "embeddings",
+            stra,
+            args.pkl_identifier,
+            "layer_%02d",
+        )
         output_file_name = args.conversation_list[args.conversation_id - 1]
         args.output_file = os.path.join(args.output_dir, output_file_name)
 
@@ -653,43 +728,43 @@ def setup_environ(args):
 
 def select_tokenizer_and_model(args):
 
-    if 'gpt2' in args.embedding_type:
+    if "gpt2" in args.embedding_type:
         tokenizer_class = GPT2Tokenizer
         model_class = GPT2LMHeadModel
         model_name = args.embedding_type
-        assert model_name in ['gpt2', 'gpt2-large', 'gpt2-xl']
-    elif args.embedding_type == 'roberta':
+        assert model_name in ["gpt2", "gpt2-large", "gpt2-xl"]
+    elif args.embedding_type == "roberta":
         tokenizer_class = RobertaTokenizer
         model_class = RobertaForMaskedLM
-        model_name = 'roberta'
-    elif args.embedding_type == 'bert':
+        model_name = "roberta"
+    elif args.embedding_type == "bert":
         tokenizer_class = BertTokenizer
         model_class = BertForMaskedLM
-        model_name = 'bert-large-uncased-whole-word-masking'
-    elif args.embedding_type == 'bart':
+        model_name = "bert-large-uncased-whole-word-masking"
+    elif args.embedding_type == "bart":
         tokenizer_class = BartTokenizer
         model_class = BartForConditionalGeneration
-        model_name = 'bart'
-    elif args.embedding_type == 'blenderbot-small':
+        model_name = "bart"
+    elif args.embedding_type == "blenderbot-small":
         tokenizer_class = BlenderbotSmallTokenizer
         model_class = BlenderbotSmallForConditionalGeneration
-        model_name = 'facebook/blenderbot_small-90M'
+        model_name = "facebook/blenderbot_small-90M"
         args.layer_idx = []  # NOTE hardcoded. always generate all layers.
-    elif args.embedding_type == 'glove50':
+    elif args.embedding_type == "glove50":
         args.layer_idx = [1]
         return
     else:
-        print('No model found for', args.model_name)
+        print("No model found for", args.model_name)
         exit(1)
 
     # Make sure the right model name is passed as an input argument
     layer_dict = {
-        'gpt2-xl': 48,
-        'gpt2-large': 36,
-        'gpt2': 12,
-        'bert-large-uncased-whole-word-masking': 24,
-        'facebook/blenderbot_small-90M': 16,  # 8 encoder, 8 decoder
-        'blenderbot': 12
+        "gpt2-xl": 48,
+        "gpt2-large": 36,
+        "gpt2": 12,
+        "bert-large-uncased-whole-word-masking": 24,
+        "facebook/blenderbot_small-90M": 16,  # 8 encoder, 8 decoder
+        "blenderbot": 12,
     }
 
     if len(args.layer_idx) == 0:
@@ -697,59 +772,103 @@ def select_tokenizer_and_model(args):
     else:
         layers = np.array(args.layer_idx)
         good = np.all((layers >= 0) & (layers <= layer_dict[model_name]))
-        assert good, 'Invalid layer number'
+        assert good, "Invalid layer number"
 
-    CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), '.cache')
+    CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), ".cache")
     os.makedirs(CACHE_DIR, exist_ok=True)
 
     try:
-        args.model = model_class.from_pretrained(model_name,
-                                                output_hidden_states=True,
-                                                cache_dir=CACHE_DIR,
-                                                local_files_only=True)
-        args.tokenizer = tokenizer_class.from_pretrained(model_name,
-                                                        add_prefix_space=True,
-                                                        cache_dir=CACHE_DIR,
-                                                        local_files_only=True)
+        args.model = model_class.from_pretrained(
+            model_name,
+            output_hidden_states=True,
+            cache_dir=CACHE_DIR,
+            local_files_only=True,
+        )
+        args.tokenizer = tokenizer_class.from_pretrained(
+            model_name,
+            add_prefix_space=True,
+            cache_dir=CACHE_DIR,
+            local_files_only=True,
+        )
     except:
-        args.model = model_class.from_pretrained(model_name,
-                                             output_hidden_states=True,
-                                             cache_dir=CACHE_DIR,
-                                             local_files_only=False)
-        args.tokenizer = tokenizer_class.from_pretrained(model_name,
-                                                        add_prefix_space=True,
-                                                        cache_dir=CACHE_DIR,
-                                                        local_files_only=False)
+        args.model = model_class.from_pretrained(
+            model_name,
+            output_hidden_states=True,
+            cache_dir=CACHE_DIR,
+            local_files_only=False,
+        )
+        args.tokenizer = tokenizer_class.from_pretrained(
+            model_name,
+            add_prefix_space=True,
+            cache_dir=CACHE_DIR,
+            local_files_only=False,
+        )
 
     if args.history and args.context_length <= 0:
         args.context_length = args.tokenizer.max_len_single_sentence
-        assert args.context_length <= args.tokenizer.max_len_single_sentence, \
-            'given length is greater than max length'
+        assert (
+            args.context_length <= args.tokenizer.max_len_single_sentence
+        ), "given length is greater than max length"
 
     return
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model-name',
-                        type=str,
-                        default='bert-large-uncased-whole-word-masking')
-    parser.add_argument('--embedding-type', type=str, default='glove')
-    parser.add_argument('--context-length', type=int, default=0)
-    parser.add_argument('--save-predictions',
-                        action='store_true',
-                        default=False)
-    parser.add_argument('--save-hidden-states',
-                        action='store_true',
-                        default=False)
-    parser.add_argument('--subject', type=str, default='625')
-    parser.add_argument('--history', action='store_true', default=False)
-    parser.add_argument('--conversation-id', type=int, default=0)
-    parser.add_argument('--pkl-identifier', type=str, default=None)
-    parser.add_argument('--project-id', type=str, default=None)
-    parser.add_argument('--layer-idx', nargs='*', type=int, default=[])
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default="bert-large-uncased-whole-word-masking",
+    )
+    parser.add_argument("--embedding-type", type=str, default="glove")
+    parser.add_argument("--context-length", type=int, default=0)
+    parser.add_argument(
+        "--save-predictions", action="store_true", default=False
+    )
+    parser.add_argument(
+        "--save-hidden-states", action="store_true", default=False
+    )
+    parser.add_argument("--subject", type=str, default="625")
+    parser.add_argument("--history", action="store_true", default=False)
+    parser.add_argument("--conversation-id", type=int, default=0)
+    parser.add_argument("--pkl-identifier", type=str, default=None)
+    parser.add_argument("--project-id", type=str, default=None)
+    parser.add_argument("--layer-idx", nargs="*", type=int, default=[])
 
     return parser.parse_args()
+
+
+def generate_embeddings_with_context_by_fold(args, df):
+
+    all_df = []
+
+    for fold in df.fold.unique():
+        print(fold)
+        fold_df = df.loc[df.fold == fold, :]
+        fold_df, embeddings = generate_embeddings_with_context(args, fold_df)
+        assert embeddings[48].shape[0] == len(fold_df)
+        fold_df["embeddings"] = embeddings[48].tolist()
+        all_df.append(fold_df)
+
+    all_df = pd.concat(all_df)
+    assert len(df) == len(all_df)
+    all_df.set_index(df.index, inplace=True)
+    df = pd.concat([df, all_df], axis=1)
+
+    return df
+
+
+def get_folds(args, utterance_df):
+    utterance_df = tokenize_and_explode(args, utterance_df)
+    fold_df = load_fold_pickle(args)
+
+    utterance_df = utterance_df.merge(
+        fold_df.loc[:, "fold"], how="outer", left_index=True, right_index=True
+    )
+    utterance_df.loc[utterance_df.index[0], "fold"] = 0
+    utterance_df.loc[:, "fold"] = utterance_df.loc[:, "fold"].ffill()
+
+    return utterance_df
 
 
 @main_timer
@@ -761,19 +880,26 @@ def main():
     utterance_df = load_pickle(args)
     utterance_df = select_conversation(args, utterance_df)
 
+    utterance_df = get_folds(args, utterance_df)
+
     if len(utterance_df) == 0:
         print("Conversation data does not exist")
         return
 
     embeddings = None
-    if args.embedding_type == 'glove50':
+    if args.embedding_type == "glove50":
         df = generate_glove_embeddings(args, utterance_df)
-    elif any([item in args.embedding_type for item in ['gpt2', 'bert']]):
+    elif args.embedding_type == "gpt2-xl":
+        print("Generate by fold for 0shot")
+        df = generate_embeddings_with_context_by_fold(args, utterance_df)
+    elif any([item in args.embedding_type for item in ["gpt2", "bert"]]):
         if args.history:
-            df, embeddings = generate_embeddings_with_context(args, utterance_df)
+            df, embeddings = generate_embeddings_with_context(
+                args, utterance_df
+            )
         else:
-            print('TODO: Generate embeddings for this model with context')
-    elif 'blenderbot' in args.embedding_type:
+            print("TODO: Generate embeddings for this model with context")
+    elif "blenderbot" in args.embedding_type:
         df, embeddings = generate_conversational_embeddings(args, utterance_df)
     else:
         df = generate_embeddings(args, utterance_df)
@@ -783,5 +909,5 @@ def main():
     return
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

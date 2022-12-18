@@ -23,7 +23,7 @@ Podcast Subjects: 661 662 717 723 741 742 743 763 798 \
 777: Is the code the collection of significant electrodes
 
 # NOTE: link data from tigressdata before running any scripts
-PRJCT_ID := tfs
+PRJCT_ID := podcast
 # {tfs | podcast}
 
 link-data:
@@ -42,9 +42,9 @@ endif
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
 %-pickle: CMD := sbatch submit.sh
 # {echo | python}
-%-pickle: PRJCT_ID := tfs
+%-pickle: PRJCT_ID := podcast
 # {tfs | podcast}
-%-pickle: SID_LIST = 676
+%-pickle: SID_LIST = 777
 # {625 676 | 661 662 717 723 741 742 743 763 798 | 777}
 
 create-pickle:
@@ -86,11 +86,11 @@ download-247-pickles:
 ## settings for targets: generate-embeddings, concatenate-embeddings
 %-embeddings: CMD := sbatch submit.sh
 # {echo | python | sbatch submit.sh}
-%-embeddings: PRJCT_ID := tfs
+%-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
-%-embeddings: SID := 676
+%-embeddings: SID := 777
 # {625 | 676 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 78) 
+%-embeddings: CONV_IDS = $(shell seq 1 1) 
 # {54 for 625 | 78 for 676 | 1 for 661}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
@@ -109,7 +109,7 @@ and hence only generate once using subject: 661
 generate-embeddings:
 	mkdir -p logs
 	for conv_id in $(CONV_IDS); do \
-		$(CMD) code/tfsemb_main.py \
+		python code/tfsemb_main.py \
 			--project-id $(PRJCT_ID) \
 			--pkl-identifier $(PKL_IDENTIFIER) \
 			--subject $(SID) \
