@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 from electrode_utils import return_electrode_array
+from tfspkl_config import DATUM_FILE_MAP
 from tfspkl_utils import (
     combine_podcast_datums,
     extract_conversation_contents,
@@ -114,11 +115,22 @@ def build_design_matrices(CONFIG, delimiter=","):
         return process_data_for_pickles(CONFIG)
 
 
+def get_datum_suffix(CONFIG):
+    """Return subject's corresponding datum file suffix"""
+    datum_file_suffix = DATUM_FILE_MAP.get(CONFIG["project_id"], None).get(
+        CONFIG["subject"], None
+    )
+
+    if not datum_file_suffix:
+        print("Incorrect Project ID or Subject")
+        exit()
+
+    return datum_file_suffix
+
+
 def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
-    if CONFIG["project_id"] == "tfs" and CONFIG["subject"] == "798":
-        suffix = "/misc/*_datum_trimmed.txt"
-    else:
-        suffix = "/misc/*trimmed.txt"
+
+    datum_file_suffix = get_datum_suffix(CONFIG)
 
     conversations = get_conversation_list(CONFIG, subject)
     electrodes, electrode_names = get_all_electrodes(CONFIG, conversations)
@@ -148,9 +160,14 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
 
     for conv_idx, conversation in enumerate(conversations, 1):
         try:  # Check if files exists
-            datum_fn = glob.glob(conversation + suffix)[0]
+            datum_fn = glob.glob(os.path.join(conversation, "misc", datum_file_suffix))[
+                0
+            ]
         except IndexError:
-            print("File DNE: ", conversation + suffix)
+            print(
+                "File DNE: ",
+                os.path.join(conversation, "misc", datum_file_suffix),
+            )
             continue
 
         # Extract electrode data (signal_length, num_electrodes)

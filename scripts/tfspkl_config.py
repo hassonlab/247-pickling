@@ -29,6 +29,26 @@ ELECTRODE_FOLDER_MAP = {
     | dict.fromkeys(["798"], "preprocessed_allElec"),
 }
 
+DATUM_FILE_MAP = {
+    "podcast": dict.fromkeys(
+        [
+            "661",
+            "662",
+            "717",
+            "723",
+            "737",
+            "741",
+            "742",
+            "743",
+            "763",
+            "798",
+        ],
+        "*trimmed.txt",
+    ),
+    "tfs": dict.fromkeys(["625", "676", "7170"], "*trimmed.txt")
+    | dict.fromkeys(["798"], "*_datum_trimmed.txt"),
+}
+
 
 def create_directory_paths(args):
     # Format directory logistics
