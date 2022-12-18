@@ -8,6 +8,28 @@ from utils import get_git_revision_short_hash
 print(f"Git Commit Hash: {get_git_revision_short_hash()}")
 
 
+ELECTRODE_FOLDER_MAP = {
+    "podcast": dict.fromkeys(
+        [
+            "661",
+            "662",
+            "717",
+            "723",
+            "737",
+            "741",
+            "742",
+            "743",
+            "763",
+            "798",
+        ],
+        "preprocessed_all",
+    ),
+    "tfs": dict.fromkeys(["625", "676"], "preprocessed")
+    | dict.fromkeys(["7170"], "preprocessed_v2")
+    | dict.fromkeys(["798"], "preprocessed_allElec"),
+}
+
+
 def create_directory_paths(args):
     # Format directory logistics
     DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)

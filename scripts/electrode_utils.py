@@ -6,6 +6,7 @@ from multiprocessing import Pool
 
 import numpy as np
 from scipy.io import loadmat
+from tfspkl_config import ELECTRODE_FOLDER_MAP
 
 
 def get_electrode(CONFIG, elec_id):
@@ -19,28 +20,7 @@ def get_electrode(CONFIG, elec_id):
     """
     conversation, electrode = elec_id
 
-    electrode_folder_map = {
-        "podcast": dict.fromkeys(
-            [
-                "661",
-                "662",
-                "717",
-                "723",
-                "737",
-                "741",
-                "742",
-                "743",
-                "763",
-                "798",
-            ],
-            "preprocessed_all",
-        ),
-        "tfs": dict.fromkeys(["625", "676"], "preprocessed")
-        | dict.fromkeys(["7170"], "preprocessed_v2")
-        | dict.fromkeys(["798"], "preprocessed_allElec"),
-    }
-
-    electrode_folder = electrode_folder_map.get(CONFIG["project_id"], None).get(
+    electrode_folder = ELECTRODE_FOLDER_MAP.get(CONFIG["project_id"], None).get(
         CONFIG["subject"], None
     )
 
