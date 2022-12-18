@@ -101,7 +101,9 @@ def download_tokenizer_and_model(
         tuple: (tokenizer, model)
     """
     print("Downloading model")
-    model = download_hf_model(model_name, model_class, CACHE_DIR, local_files_only)
+    model = download_hf_model(
+        model_name, model_class, CACHE_DIR, local_files_only
+    )
 
     print("Downloading tokenizer")
     tokenizer = download_hf_tokenizer(
@@ -131,8 +133,10 @@ def get_models_and_class(model_name):
     for model_key, (model_list, model_class) in MODEL_CLASS_MAP.items():
         if model_name == model_key:
             models, mod_class = model_list, model_class
+            break
         elif model_name in model_list:
             models, mod_class = [model_name], model_class
+            break
         else:
             continue
 
@@ -142,7 +146,9 @@ def get_models_and_class(model_name):
     return models, mod_class
 
 
-def download_tokenizers_and_models(model_name=None, local_files_only=False, debug=True):
+def download_tokenizers_and_models(
+    model_name=None, local_files_only=False, debug=True
+):
     """This function downloads the tokenizer and model for the specified model name.
 
     Args:
