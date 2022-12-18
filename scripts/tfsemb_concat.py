@@ -26,7 +26,7 @@ def main():
     setup_environ(args)
 
     if args.subject == "625":
-        num_convs = 2
+        num_convs = 54
     elif args.subject == "676" and "blenderbot" in args.embedding_type:
         num_convs = 76
     elif args.subject == "676":
