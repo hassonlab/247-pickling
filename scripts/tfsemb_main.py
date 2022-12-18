@@ -486,7 +486,7 @@ def make_input_from_tokens(args, token_list):
             tuple(token_list[x : x + size]) for x in range(len(token_list) - size + 1)
         ]
 
-    return windows
+    return windows[:16]
 
 
 def make_dataloader_from_input(windows, batch_size):
@@ -614,7 +614,7 @@ def main():
         df = output
 
     save_pickle(args, df, embeddings)
-    svpkl(df_logits, args.logits_df_file)
+    svpkl(df_logits, os.path.join(args.logits_folder, args.output_file_name))
 
     return
 
