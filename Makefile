@@ -107,7 +107,7 @@ download-247-pickles:
 "facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", \
 "facebook/opt-2.7b", "facebook/opt-6.7b", "facebook/opt-30b", \
 "facebook/blenderbot_small-90M"}
-%-embeddings: CNXT_LEN := 1024 512 256 128 64 32 16 8 4 2 1
+%-embeddings: CNXT_LEN := 1024
 %-embeddings: LAYER := all
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
 # Note: embeddings file is the same for all podcast subjects \
@@ -154,13 +154,11 @@ concatenate-embeddings:
 	done;
 
 # Podcast: copy embeddings to other subjects as well
-# for sid in 662 717 723 741 742 763 798 777; do 
 copy-embeddings:
-	@for fn in results/podcast/661/pickles/*embeddings.pkl; do \
-		for sid in 777; do \
-			cp -pf $$fn $$(echo $$fn | sed "s/661/$$sid/g"); \
-		done; \
-	done
+	fn=results/podcast/661/pickles/embeddings
+	for sid in 662 717 723 741 742 763 798 777; do \
+		cp -rpf $$fn $$(echo $$fn | sed "s/661/$$sid/g"); \
+	done; \
 
 
 # Download huggingface models to cache (before generating embeddings)
