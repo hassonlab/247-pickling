@@ -96,7 +96,7 @@ download-247-pickles:
 # {full | trimmed | binned}
 %-embeddings: EMB_TYPE := gpt2-xl
 # {glove50 | bert | gpt2-xl | gpt2 | gpt2-large | blenderbot-small }
-%-embeddings: CNXT_LEN := 1024
+%-embeddings: CNXT_LEN := 1023
 %-embeddings: HIST := --history
 %-embeddings: LAYER := --layer-idx 48
 # {48 | 12 for gpt2 | 36 for gpt2-large | 48 for gpt2-xl }

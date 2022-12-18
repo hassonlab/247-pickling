@@ -904,6 +904,7 @@ def main():
     else:
         df = generate_embeddings(args, utterance_df)
 
+    breakpoint()
     save_pickle(args, df, args.output_file, embeddings)
 
     return
