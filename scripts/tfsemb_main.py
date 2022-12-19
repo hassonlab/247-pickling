@@ -644,14 +644,15 @@ def main():
     output = generate_func(args, utterance_df)
     if len(output) == 3:
         df, df_logits, embeddings = output
+        if not df_logits.empty:
+            svpkl(
+                df_logits,
+                os.path.join(args.logits_folder, args.output_file_name),
+            )
     else:
         df = output
 
     save_pickle(args, df, embeddings)
-    if not df_logits.empty:
-        svpkl(
-            df_logits, os.path.join(args.logits_folder, args.output_file_name)
-        )
 
     return
 
