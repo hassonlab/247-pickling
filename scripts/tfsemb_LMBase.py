@@ -56,9 +56,12 @@ def add_vocab_columns(args, df, column=None):
         except AttributeError:
             curr_vocab = tokenizer.get_vocab()
 
-        df[f"in_{key}"] = df[column].apply(
-            lambda x: isinstance(curr_vocab.get(x), int)
-        )
+        def helper(x):
+            if len(tokenizer.tokenize(x)) == 1:
+                return isinstance(curr_vocab.get(tokenizer.tokenize(x)[0]), int)
+            return False
+
+        df[f"in_{key}"] = df[column].apply(helper)
 
     return df
 
@@ -70,16 +73,17 @@ def main():
 
     base_df = load_pickle(args.labels_pickle, "labels")
 
+    glove = api.load("glove-wiki-gigaword-50")
+    base_df["in_glove50"] = base_df.word.str.lower().apply(
+        lambda x: isinstance(glove.key_to_index.get(x), int)
+    )
+
     if args.embedding_type == "glove50":
-        base_df = add_vocab_columns(args, base_df, column="word")
+        base_df = base_df[base_df["in_glove50"]]
+        base_df = add_vocab_columns(args, base_df, column="word", flag=True)
     else:
-        # Add glove
-        glove = api.load("glove-wiki-gigaword-50")
-        base_df["in_glove"] = base_df.word.str.lower().apply(
-            lambda x: isinstance(glove.key_to_index.get(x), int)
-        )
         base_df = tokenize_and_explode(args, base_df)
-        base_df = add_vocab_columns(args, base_df, column="token")
+        base_df = add_vocab_columns(args, base_df, column="token2word")
 
     svpkl(base_df, args.base_df_file)
 
