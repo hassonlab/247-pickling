@@ -77,7 +77,7 @@ create-sig-pickle:
 upload-pickle: pid=podcast
 upload-pickle:
 	for sid in $(SID_LIST); do \
-		gsutil -m rsync results/$(PRJCT_ID)/$$sid/pickles/ gs://247-podcast-data/$(pid)-pickles/$$sid; \
+		gsutil -m rsync -rd results/$(PRJCT_ID)/$$sid/pickles/ gs://247-podcast-data/$(pid)-pickles/$$sid; \
 	done
 
 # upload raw data to google cloud bucket
