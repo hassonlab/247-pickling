@@ -38,7 +38,7 @@ def select_tokenizer_and_model(args):
     model_name = args.full_model_name
 
     if model_name == "glove50":
-        args.layer_idx = [1]
+        args.layer_idx = [0]
         return
 
     try:
