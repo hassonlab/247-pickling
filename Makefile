@@ -69,7 +69,7 @@ create-sig-pickle:
 	mkdir -p logs
 	$(CMD) scripts/tfspkl_main.py \
 			--project-id $(PRJCT_ID) \
-			--sig-elec-file data/$(PRJCT_ID)/all-electrodes.csv
+			--sig-elec-file all-electrodes2.csv
 
 # upload pickles to google cloud bucket
 # on bucket we use 247 not tfs, so manually adjust as needed
