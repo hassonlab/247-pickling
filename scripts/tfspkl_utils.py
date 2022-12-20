@@ -101,7 +101,7 @@ def get_conversation_list(CONFIG, subject=None):
     return conversations
 
 
-def extract_conversation_contents(CONFIG, conversation):
+def process_conversation(CONFIG, conversation):
     """Return labels (lines) from conversation text
 
     Args:
@@ -177,7 +177,7 @@ def second_level_alignment(CONFIG, df):
     return transcript_df
 
 
-def combine_podcast_datums(CONFIG, conversation):
+def get_conversation_contents(CONFIG, conversation):
     """[summary]
 
     Note: This function was exclusively written to handle podcast label creation
@@ -193,9 +193,11 @@ def combine_podcast_datums(CONFIG, conversation):
     Returns:
         [type]: [description]
     """
-    datum_df = extract_conversation_contents(CONFIG, conversation)
-    datum_df = first_level_alignment(CONFIG, datum_df)
-    datum_df = second_level_alignment(CONFIG, datum_df)
+    datum_df = process_conversation(CONFIG, conversation)
+
+    if CONFIG["project_id"] == "podcast":
+        datum_df = first_level_alignment(CONFIG, datum_df)
+        datum_df = second_level_alignment(CONFIG, datum_df)
 
     return datum_df
 

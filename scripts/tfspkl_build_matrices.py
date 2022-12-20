@@ -6,8 +6,7 @@ import pandas as pd
 from electrode_utils import return_electrode_array
 from tfspkl_config import DATUM_FILE_MAP
 from tfspkl_utils import (
-    combine_podcast_datums,
-    extract_conversation_contents,
+    get_conversation_contents,
     get_all_electrodes,
     get_conversation_list,
 )
@@ -200,12 +199,7 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
         full_stitch_index.append(signal_length)
         a = ecogs.shape[0]
 
-        if CONFIG["project_id"] == "tfs":
-            examples_df = extract_conversation_contents(CONFIG, datum_fn)
-        elif CONFIG["project_id"] == "podcast":
-            examples_df = combine_podcast_datums(CONFIG, datum_fn)
-        else:
-            raise Exception("Invalid Project Id")
+        examples_df = get_conversation_contents(CONFIG, datum_fn)
 
         # examples = examples_df.values.tolist()
 
