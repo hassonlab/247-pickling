@@ -94,17 +94,9 @@ def get_conversation_list(CONFIG, subject=None):
     Returns:
         list -- List of tuples (directory, file, idx, common_electrode_list)
     """
-    if CONFIG["subject"] != "777":
-        conversations = sorted(
-            glob.glob(os.path.join(CONFIG["CONV_DIRS"], "*conversation*"))
-        )
-
-        return conversations
-    else:
-        if subject is None:
-            subject = CONFIG["subject"]
-        CONV_DIRS = os.path.join(CONFIG["DATA_DIR"], str(subject))
-        conversations = sorted(glob.glob(os.path.join(CONV_DIRS, "*conversation*")))
+    conversations = sorted(
+        glob.glob(os.path.join(CONFIG["CONV_DIRS"], "*conversation*"))
+    )
 
     return conversations
 

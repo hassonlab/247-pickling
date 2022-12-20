@@ -298,7 +298,7 @@ def main():
         electrode_names,
         conversations,
         subject_id,
-    ) = build_design_matrices(vars(args), delimiter=" ")
+    ) = build_design_matrices(dict(vars(args)), delimiter=" ")
 
     # Create pickle with full signal
     full_signal_dict = dict(
