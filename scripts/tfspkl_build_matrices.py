@@ -16,7 +16,7 @@ def extract_subject_and_electrode(input_str):
     """Extract Subject and Electrode from the input string
 
     Args:
-        input_str (str): conversation delimier. Defaults to ','.
+        input_str (str): {conversation_name}_{electrode_name}
 
     Returns:
         tuple: (subject, electrode)
@@ -33,12 +33,11 @@ def update_config(CONFIG, subject):
     return CONFIG
 
 
-def build_design_matrices(CONFIG, delimiter=","):
+def build_design_matrices(CONFIG):
     """Build examples and labels for the model
 
     Args:
         CONFIG (dict): configuration information
-        delimiter (str, optional): conversation delimier. Defaults to ','.
 
     Returns:
         tuple: (signals, labels)
