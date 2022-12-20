@@ -85,8 +85,6 @@ def build_design_matrices(CONFIG, delimiter=","):
                 bin_stitch_index,
                 all_examples,
                 all_trimmed_examples,
-                convo_all_examples_size,
-                convo_trimmed_examples_size,
                 electrodes_part,
                 electrode_names_part,
                 conversations,
@@ -116,8 +114,6 @@ def build_design_matrices(CONFIG, delimiter=","):
             bin_stitch_index,
             all_examples,
             all_trimmed_examples,
-            convo_all_examples_size,
-            convo_trimmed_examples_size,
             electrodes,
             electrode_names,
             conversations,
@@ -167,9 +163,6 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
     all_examples = []
     all_trimmed_examples = []
 
-    convo_all_examples_size = []
-    convo_trimmed_examples_size = []
-
     for conv_idx, conversation in enumerate(conversations, 1):
         try:  # Check if files exists
             datum_fn = glob.glob(
@@ -217,8 +210,6 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
         trimmed_examples = examples_df[
             examples_df.offset.isnull() | examples_df.offset < signal_length
         ]
-        convo_all_examples_size.append(len(examples_df))
-        convo_trimmed_examples_size.append(len(trimmed_examples))
 
         trimmed_signal.append(ecogs)
         trimmed_stitch_index.append(signal_length)
@@ -263,8 +254,6 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
         bin_stitch_index,
         all_examples,
         all_trimmed_examples,
-        convo_all_examples_size,
-        convo_trimmed_examples_size,
         electrodes,
         electrode_names,
         conversations,

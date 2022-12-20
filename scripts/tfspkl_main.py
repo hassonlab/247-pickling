@@ -292,8 +292,6 @@ def main():
         bin_stitch_index,
         full_labels,
         trimmed_labels,
-        _,
-        _,
         electrodes,
         electrode_names,
         conversations,
