@@ -6,6 +6,7 @@ from multiprocessing import Pool
 
 import numpy as np
 from scipy.io import loadmat
+from tfspkl_config import ELECTRODE_FOLDER_MAP
 
 
 def get_electrode(CONFIG, elec_id):
@@ -19,21 +20,15 @@ def get_electrode(CONFIG, elec_id):
     """
     conversation, electrode = elec_id
 
-    if CONFIG["project_id"] == "podcast":
-        search_str = conversation + f"/preprocessed_all/*_{electrode}.mat"
-    elif CONFIG["project_id"] == "tfs":
-        if CONFIG["subject"] == "7170":
-            search_str = conversation + f"/preprocessed_v2/*_{electrode}.mat"
-            # TODO: check if it is preprocessed or preprocessed_v2
-        elif CONFIG["subject"] == "798":
-            search_str = (
-                conversation + f"/preprocessed_allElec/*_{electrode}.mat"
-            )
-        else:
-            search_str = conversation + f"/preprocessed/*_{electrode}.mat"
-    else:
-        print("Incorrect Project ID")
-        sys.exit()
+    electrode_folder = ELECTRODE_FOLDER_MAP.get(CONFIG["project_id"], None).get(
+        CONFIG["subject"], None
+    )
+
+    if not electrode_folder:
+        print("Incorrect Project ID or Subject")
+        exit()
+
+    search_str = conversation + f"/{electrode_folder}/*_{electrode}.mat"
 
     mat_fn = glob.glob(search_str)
     if mat_fn:

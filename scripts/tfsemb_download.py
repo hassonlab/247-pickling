@@ -37,6 +37,12 @@ MLM_MODELS = [
     "roberta-large",
 ]
 
+MODEL_CLASS_MAP = {
+    "causal": (CAUSAL_MODELS, AutoModelForCausalLM),
+    "seq2seq": (SEQ2SEQ_MODELS, AutoModelForSeq2SeqLM),
+    "mlm": (MLM_MODELS, AutoModelForMaskedLM),
+}
+
 
 def download_hf_model(
     model_name, model_class=None, cache_dir=None, local_files_only=False
@@ -113,6 +119,33 @@ def set_cache_dir():
     return CACHE_DIR
 
 
+def get_models_and_class(model_name):
+    """Return the appropriate model class and model to download
+    Args:
+        model_name (str): Model name as seen on https://hugginface.co/models.
+
+    Returns:
+        models (list): model name or models in the same class
+        mod_class (Huggingface Model): Model class corresponding to model_name.
+
+    """
+    models, mod_class = None, None
+    for model_key, (model_list, model_class) in MODEL_CLASS_MAP.items():
+        if model_name == model_key:
+            models, mod_class = model_list, model_class
+            break
+        elif model_name in model_list:
+            models, mod_class = [model_name], model_class
+            break
+        else:
+            continue
+
+    if not models or not model_class:
+        print("Invalid Model List or Model Class")
+
+    return models, mod_class
+
+
 def download_tokenizers_and_models(
     model_name=None, local_files_only=False, debug=True
 ):
@@ -134,21 +167,10 @@ def download_tokenizers_and_models(
         print("Input argument cannot be empty")
         return
 
-    if model_name == "causal" or model_name in CAUSAL_MODELS:
-        model_class = AutoModelForCausalLM
-        MODELS = CAUSAL_MODELS if model_name == "causal" else [model_name]
-    elif model_name == "seq2seq":
-        model_class = AutoModelForSeq2SeqLM
-        MODELS = SEQ2SEQ_MODELS if model_name == "seq2seq" else [model_name]
-    elif model_name == "mlm" or model_name in MLM_MODELS:
-        model_class = AutoModelForMaskedLM
-        MODELS = MLM_MODELS if model_name == "mlm" else [model_name]
-    else:
-        print("Invalid Model Name")
-        exit(1)
+    models, model_class = get_models_and_class(model_name)
 
     model_dict = {}
-    for model_name in MODELS:
+    for model_name in models:
         print(f"Model Name: {model_name}")
 
         model_dict[model_name] = download_tokenizer_and_model(

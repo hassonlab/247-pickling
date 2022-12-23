@@ -1,5 +1,6 @@
 import glob
 import os
+import pathlib
 import shutil
 
 import pandas as pd
@@ -63,25 +64,24 @@ def main():
         print(f"DNE: {args.output_dir}")
         return
     else:
-        layer_folders = sorted(os.listdir(args.output_dir))
+        layer_folders = sorted(
+            [x for x in pathlib.Path(args.output_dir).glob("*") if x.is_dir()]
+        )
 
     for layer_folder in tqdm(layer_folders, bar_format="Merging Layer..{n_fmt}"):
         conversation_pickles = sorted(
-            glob.glob(os.path.join(args.output_dir, layer_folder, "*"))
+            [x for x in layer_folder.glob("*") if x.is_file()]
         )
 
         n = len(conversation_pickles)
         if n != num_convs:
             print(
-                f"Bad conversation size: found {n} out of {num_convs}",
+                f"\nBad conversation size: found {n} out of {num_convs}",
                 f"in {args.output_dir}",
             )
             continue
 
-        all_df = [
-            load_pickle(os.path.join(args.output_dir, conversation))
-            for conversation in conversation_pickles
-        ]
+        all_df = [load_pickle(conversation) for conversation in conversation_pickles]
 
         all_df = pd.concat(all_df, ignore_index=True)
         all_exs = all_df.to_dict("records")
@@ -91,7 +91,7 @@ def main():
             args.trimmed_model_name,
             args.pkl_identifier,
             f"cnxt_{args.context_length:04d}",
-            layer_folder,
+            layer_folder.name,
         )
 
         full_emb_out_file = os.path.join(args.PKL_DIR, args.emb_out_file)

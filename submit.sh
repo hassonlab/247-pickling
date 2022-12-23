@@ -25,14 +25,18 @@ else
     source activate srm
 fi
 
-echo 'Requester:' $USER
-echo 'Node:' $HOSTNAME
-echo 'Start time:' `date`
+echo 'Requester:' $USER 'Node:' $HOSTNAME
 echo "$@"
+echo 'Start time:' `date`
+start=$(date +%s)
+
 if [[ -v SLURM_ARRAY_TASK_ID ]]
 then
     python "$@" --conversation-id $SLURM_ARRAY_TASK_ID
 else
     python "$@"
 fi
+
+end=$(date +%s)
 echo 'End time:' `date`
+echo "Elapsed Time: $(($end-$start)) seconds"

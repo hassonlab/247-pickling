@@ -7,6 +7,7 @@ import mat73
 import numpy as np
 import pandas as pd
 import scipy.io as sio
+from tfspkl_config import ELECTRODE_FOLDER_MAP
 from utils import lcs
 
 
@@ -19,24 +20,19 @@ def get_electrode_ids(CONFIG, conversation):
     Returns:
         [type]: [description]
     """
-    if CONFIG["project_id"] == "podcast":
-        elec_files = glob.glob(
-            os.path.join(conversation, "preprocessed_all", "*.mat")
-        )
-    elif CONFIG["project_id"] == "tfs":
-        elec_files = glob.glob(
-            os.path.join(conversation, "preprocessed", "*.mat")
-        )
-    else:
-        print("Incorrect Project ID")
-        sys.exit()
+
+    electrode_folder = ELECTRODE_FOLDER_MAP.get(CONFIG["project_id"], None).get(
+        CONFIG["subject"], None
+    )
+
+    if not electrode_folder:
+        print("Incorrect Project ID or Subject")
+        exit()
+
+    elec_files = glob.glob(os.path.join(conversation, electrode_folder, "*.mat"))
 
     elec_ids_list = sorted(
-        list(
-            map(
-                lambda x: int(os.path.splitext(x)[0].split("_")[-1]), elec_files
-            )
-        )
+        list(map(lambda x: int(os.path.splitext(x)[0].split("_")[-1]), elec_files))
     )
 
     return elec_ids_list
@@ -98,24 +94,14 @@ def get_conversation_list(CONFIG, subject=None):
     Returns:
         list -- List of tuples (directory, file, idx, common_electrode_list)
     """
-    if CONFIG["subject"] != "777":
-        conversations = sorted(
-            glob.glob(os.path.join(CONFIG["CONV_DIRS"], "*conversation*"))
-        )
-
-        return conversations
-    else:
-        if subject is None:
-            subject = CONFIG["subject"]
-        CONV_DIRS = os.path.join(CONFIG["DATA_DIR"], str(subject))
-        conversations = sorted(
-            glob.glob(os.path.join(CONV_DIRS, "*conversation*"))
-        )
+    conversations = sorted(
+        glob.glob(os.path.join(CONFIG["CONV_DIRS"], "*conversation*"))
+    )
 
     return conversations
 
 
-def extract_conversation_contents(CONFIG, conversation):
+def process_conversation(CONFIG, conversation):
     """Return labels (lines) from conversation text
 
     Args:
@@ -178,9 +164,7 @@ def second_level_alignment(CONFIG, df):
         lambda x: x.translate(str.maketrans("", "", ",."))
     )
 
-    mask1, mask2 = lcs(
-        list(transcript_df.word_without_punctuation), list(df.word)
-    )
+    mask1, mask2 = lcs(list(transcript_df.word_without_punctuation), list(df.word))
 
     df = df.rename(columns={"word": "datum_word"})
     for column in df.columns:
@@ -193,7 +177,7 @@ def second_level_alignment(CONFIG, df):
     return transcript_df
 
 
-def combine_podcast_datums(CONFIG, conversation):
+def get_conversation_contents(CONFIG, conversation):
     """[summary]
 
     Note: This function was exclusively written to handle podcast label creation
@@ -209,9 +193,11 @@ def combine_podcast_datums(CONFIG, conversation):
     Returns:
         [type]: [description]
     """
-    datum_df = extract_conversation_contents(CONFIG, conversation)
-    datum_df = first_level_alignment(CONFIG, datum_df)
-    datum_df = second_level_alignment(CONFIG, datum_df)
+    datum_df = process_conversation(CONFIG, conversation)
+
+    if CONFIG["project_id"] == "podcast":
+        datum_df = first_level_alignment(CONFIG, datum_df)
+        datum_df = second_level_alignment(CONFIG, datum_df)
 
     return datum_df
 
@@ -226,9 +212,9 @@ def get_electrode_labels(conversation_dir):
         list: electrode labels
     """
     try:
-        header_file = glob.glob(
-            os.path.join(conversation_dir, "misc", "*_header.mat")
-        )[0]
+        header_file = glob.glob(os.path.join(conversation_dir, "misc", "*_header.mat"))[
+            0
+        ]
     except IndexError:
         raise ValueError("Header File Missing")
 
@@ -241,9 +227,7 @@ def get_electrode_labels(conversation_dir):
     except TypeError as e:
         header = sio.loadmat(header_file)
         labels = list(np.concatenate(header["header"][0][0][9][0]))
-        labels = [
-            item for item in labels if not item.startswith(("DC", "E", "T"))
-        ]
+        labels = [item for item in labels if not item.startswith(("DC", "E", "T"))]
 
     return labels
 

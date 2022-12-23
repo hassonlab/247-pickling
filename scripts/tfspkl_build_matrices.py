@@ -4,9 +4,9 @@ import os
 import numpy as np
 import pandas as pd
 from electrode_utils import return_electrode_array
+from tfspkl_config import DATUM_FILE_MAP
 from tfspkl_utils import (
-    combine_podcast_datums,
-    extract_conversation_contents,
+    get_conversation_contents,
     get_all_electrodes,
     get_conversation_list,
 )
@@ -16,7 +16,7 @@ def extract_subject_and_electrode(input_str):
     """Extract Subject and Electrode from the input string
 
     Args:
-        input_str (str): conversation delimier. Defaults to ','.
+        input_str (str): {conversation_name}_{electrode_name}
 
     Returns:
         tuple: (subject, electrode)
@@ -27,12 +27,17 @@ def extract_subject_and_electrode(input_str):
     return (subject, electrode)
 
 
-def build_design_matrices(CONFIG, delimiter=","):
+def update_config(CONFIG, subject):
+    CONFIG["subject"] = subject
+    CONFIG["CONV_DIRS"] = os.path.join(CONFIG["DATA_DIR"], str(subject))
+    return CONFIG
+
+
+def build_design_matrices(CONFIG):
     """Build examples and labels for the model
 
     Args:
         CONFIG (dict): configuration information
-        delimiter (str, optional): conversation delimier. Defaults to ','.
 
     Returns:
         tuple: (signals, labels)
@@ -53,7 +58,10 @@ def build_design_matrices(CONFIG, delimiter=","):
             df = pd.DataFrame(sigelec_list, columns=["subject", "electrode"])
         except:
             # If the electrode file is in the new format
-            df = pd.read_csv(CONFIG["sig_elec_file"])
+            df = pd.read_csv(
+                CONFIG["sig_elec_file"],
+                dtype={"subject": str, "electrode": str},
+            )
         finally:
             electrodes_dict = (
                 df.groupby("subject")["electrode"].apply(list).to_dict()
@@ -66,6 +74,7 @@ def build_design_matrices(CONFIG, delimiter=","):
         electrodes = []
         subject_id = []
         for subject, electrode_labels in electrodes_dict.items():
+            CONFIG = update_config(CONFIG, subject)
             (
                 full_signal_part,
                 full_stitch_index,
@@ -75,13 +84,11 @@ def build_design_matrices(CONFIG, delimiter=","):
                 bin_stitch_index,
                 all_examples,
                 all_trimmed_examples,
-                convo_all_examples_size,
-                convo_trimmed_examples_size,
                 electrodes_part,
                 electrode_names_part,
                 conversations,
                 subject_id_part,
-            ) = process_data_for_pickles(CONFIG, subject, electrode_labels)
+            ) = process_data_for_pickles(CONFIG, electrode_labels)
 
             full_signal.append(full_signal_part)
             trimmed_signal.append(trimmed_signal_part)
@@ -106,8 +113,6 @@ def build_design_matrices(CONFIG, delimiter=","):
             bin_stitch_index,
             all_examples,
             all_trimmed_examples,
-            convo_all_examples_size,
-            convo_trimmed_examples_size,
             electrodes,
             electrode_names,
             conversations,
@@ -118,13 +123,24 @@ def build_design_matrices(CONFIG, delimiter=","):
         return process_data_for_pickles(CONFIG)
 
 
-def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
-    if CONFIG["subject"] == "798":
-        suffix = "/misc/*_datum_trimmed.txt"
-    else:
-        suffix = "/misc/*trimmed.txt"
+def get_datum_suffix(CONFIG):
+    """Return subject's corresponding datum file suffix"""
+    datum_file_suffix = DATUM_FILE_MAP.get(CONFIG["project_id"], None).get(
+        CONFIG["subject"], None
+    )
 
-    conversations = get_conversation_list(CONFIG, subject)
+    if not datum_file_suffix:
+        print("Incorrect Project ID or Subject")
+        exit()
+
+    return datum_file_suffix
+
+
+def process_data_for_pickles(CONFIG, electrode_labels=None):
+
+    datum_file_suffix = get_datum_suffix(CONFIG)
+
+    conversations = get_conversation_list(CONFIG)
     electrodes, electrode_names = get_all_electrodes(CONFIG, conversations)
 
     if electrode_labels:
@@ -138,10 +154,7 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
 
         assert len(set(electrode_names) - set(electrode_labels)) == 0
 
-    if subject:
-        subject_id = [subject for i in electrodes]
-    else:
-        subject_id = [CONFIG["subject"] for i in electrodes]
+    subject_id = [CONFIG["subject"] for i in electrodes]
 
     full_signal, trimmed_signal, binned_signal = [], [], []
     full_stitch_index, trimmed_stitch_index, bin_stitch_index = [], [], []
@@ -149,14 +162,16 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
     all_examples = []
     all_trimmed_examples = []
 
-    convo_all_examples_size = []
-    convo_trimmed_examples_size = []
-
     for conv_idx, conversation in enumerate(conversations, 1):
         try:  # Check if files exists
-            datum_fn = glob.glob(conversation + suffix)[0]
+            datum_fn = glob.glob(
+                os.path.join(conversation, "misc", datum_file_suffix)
+            )[0]
         except IndexError:
-            print("File DNE: ", conversation + suffix)
+            print(
+                "File DNE: ",
+                os.path.join(conversation, "misc", datum_file_suffix),
+            )
             continue
 
         # Extract electrode data (signal_length, num_electrodes)
@@ -176,12 +191,7 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
         full_stitch_index.append(signal_length)
         a = ecogs.shape[0]
 
-        if CONFIG["project_id"] == "tfs":
-            examples_df = extract_conversation_contents(CONFIG, datum_fn)
-        elif CONFIG["project_id"] == "podcast":
-            examples_df = combine_podcast_datums(CONFIG, datum_fn)
-        else:
-            raise Exception("Invalid Project Id")
+        examples_df = get_conversation_contents(CONFIG, datum_fn)
 
         # examples = examples_df.values.tolist()
 
@@ -199,8 +209,6 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
         trimmed_examples = examples_df[
             examples_df.offset.isnull() | examples_df.offset < signal_length
         ]
-        convo_all_examples_size.append(len(examples_df))
-        convo_trimmed_examples_size.append(len(trimmed_examples))
 
         trimmed_signal.append(ecogs)
         trimmed_stitch_index.append(signal_length)
@@ -245,8 +253,6 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
         bin_stitch_index,
         all_examples,
         all_trimmed_examples,
-        convo_all_examples_size,
-        convo_trimmed_examples_size,
         electrodes,
         electrode_names,
         conversations,

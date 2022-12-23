@@ -8,11 +8,55 @@ from utils import get_git_revision_short_hash
 print(f"Git Commit Hash: {get_git_revision_short_hash()}")
 
 
+ELECTRODE_FOLDER_MAP = {
+    "podcast": dict.fromkeys(
+        [
+            "661",
+            "662",
+            "717",
+            "723",
+            "737",
+            "741",
+            "742",
+            "743",
+            "763",
+            "798",
+        ],
+        "preprocessed_all",
+    ),
+    "tfs": dict.fromkeys(["625", "676"], "preprocessed")
+    | dict.fromkeys(["7170"], "preprocessed_v2")
+    | dict.fromkeys(["798"], "preprocessed_allElec"),
+}
+
+DATUM_FILE_MAP = {
+    "podcast": dict.fromkeys(
+        [
+            "661",
+            "662",
+            "717",
+            "723",
+            "737",
+            "741",
+            "742",
+            "743",
+            "763",
+            "798",
+        ],
+        "*trimmed.txt",
+    ),
+    "tfs": dict.fromkeys(["625", "676", "7170"], "*trimmed.txt")
+    | dict.fromkeys(["798"], "*_datum_trimmed.txt"),
+}
+
+
 def create_directory_paths(args):
     # Format directory logistics
     DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)
     CONV_DIRS = os.path.join(DATA_DIR, args.subject)
-    SAVE_DIR = os.path.join(os.getcwd(), "results", args.project_id, args.subject)
+    SAVE_DIR = os.path.join(
+        os.getcwd(), "results", args.project_id, args.subject
+    )
     PKL_DIR = os.path.join(SAVE_DIR, "pickles")
 
     os.makedirs(PKL_DIR, exist_ok=True)
@@ -29,6 +73,10 @@ def create_directory_paths(args):
         sig_file_path, sig_file_name = os.path.split(args.sig_elec_file)
         if not sig_file_path:
             args.sig_elec_file = os.path.join(DATA_DIR, sig_file_name)
+
+    if not os.path.isfile(args.sig_elec_file):
+        print(f"FAILED: {args.sig_elec_file} does not exist")
+        exit()
 
     crude_flag_file = glob.glob(os.path.join(CONV_DIRS, "*alignment.txt"))
     args.crude_flag_file = crude_flag_file[0] if crude_flag_file else None

@@ -38,7 +38,7 @@ def select_tokenizer_and_model(args):
     model_name = args.full_model_name
 
     if model_name == "glove50":
-        args.layer_idx = [1]
+        args.layer_idx = [0]
         return
 
     try:
@@ -118,8 +118,8 @@ def setup_environ(args):
             stra,
             "layer_%02d",
         )
-        output_file_name = args.conversation_list[args.conversation_id - 1]
-        args.output_file = os.path.join(args.output_dir, output_file_name)
+        args.output_file_name = args.conversation_list[args.conversation_id - 1]
+        args.output_file = os.path.join(args.output_dir, args.output_file_name)
 
     # saving the base dataframe
     args.base_df_file = os.path.join(
@@ -130,10 +130,10 @@ def setup_environ(args):
     )
 
     # saving logits as dataframe
-    args.logits_df_file = os.path.join(
+    args.logits_folder = os.path.join(
         args.EMB_DIR,
         stra,
-        "logits.pkl",
+        "logits",
     )
 
     return

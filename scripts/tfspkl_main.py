@@ -240,12 +240,33 @@ def add_fine_flag(args, df):
     return df
 
 
+def add_signal_length(df, stitch_index):
+    """Add (full/trimmed) signal lengths to datum
+    Args:
+        df (DataFrame): datum being processed
+        stitch_index (List): list of signal lengths for each conversation
+    Returns:
+        DataFrame: df with full and trimmed conversation signal length
+    """
+    df["full_signal_length"] = df["conversation_id"].map(
+        dict(zip(df.conversation_id.unique(), stitch_index))
+    )
+
+    trim_stitch_index = np.array(stitch_index) - np.array(stitch_index) % 32
+    df["trimmed_signal_length"] = df["conversation_id"].map(
+        dict(zip(df.conversation_id.unique(), trim_stitch_index))
+    )
+
+    return df
+
+
 def create_labels_pickles(args, stitch_index, labels, convs, label_str=None):
-    labels_df = process_labels(args, stitch_index, labels, convs)
+    labels_df = process_labels(args, stitch_index.copy(), labels, convs)
     labels_df = create_production_flag(labels_df)
     labels_df = add_word_freqs(labels_df)
     labels_df = add_lemmatize_stemming(labels_df)
     labels_df = add_fine_flag(args, labels_df)
+    labels_df = add_signal_length(labels_df, stitch_index)
 
     labels_dict = dict(labels=labels_df.to_dict("records"))
     pkl_name = "_".join([args.subject, label_str, "labels"])
@@ -271,13 +292,11 @@ def main():
         bin_stitch_index,
         full_labels,
         trimmed_labels,
-        _,
-        _,
         electrodes,
         electrode_names,
         conversations,
         subject_id,
-    ) = build_design_matrices(vars(args), delimiter=" ")
+    ) = build_design_matrices(dict(vars(args)))
 
     # Create pickle with full signal
     full_signal_dict = dict(
