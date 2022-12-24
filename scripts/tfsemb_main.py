@@ -85,16 +85,13 @@ def tokenize_and_explode(args, df):
         DataFrame: a new dataframe object with the words tokenized
     """
     df["token"] = df.word.apply(args.tokenizer.tokenize)
-    df = df.explode("token", ignore_index=True)
+    df = df.explode("token", ignore_index=False)
     df = convert_token_to_word(args, df)
     df = convert_token_to_idx(args, df)
     df = check_token_is_root(args, df)
 
-    # Add a token index for each word's token
-    for value in df["index"].unique():
-        if value is not None:
-            flag = df["index"] == value
-            df.loc[flag, "token_idx"] = np.arange(sum(flag))
+    df["token_idx"] = (df.groupby([df.index, "word"]).cumcount()).astype(int)
+    df = df.reset_index(drop=True)
 
     return df
 
