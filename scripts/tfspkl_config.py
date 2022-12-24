@@ -96,7 +96,6 @@ def build_config(args):
     Returns:
         dict: combined configuration information
     """
-    args.subject = str(args.subject)
     args.exclude_words = ["sp", "{lg}", "{ns}", "{LG}", "{NS}", "SP"]
     args.non_words = ["hm", "huh", "mhm", "mm", "oh", "uh", "uhuh", "um"]
 
