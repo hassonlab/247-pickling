@@ -37,26 +37,25 @@ def set_context_length(args):
 
 
 def select_tokenizer_and_model(args):
-
-    model_name = args.full_model_name
-
-    if model_name == "glove50":
-        args.context_length = 1
-        args.layer_idx = [0]
-        return
-
-    try:
-        (args.model, args.tokenizer,) = tfsemb_dwnld.download_tokenizers_and_models(
-            model_name, local_files_only=True, debug=False
-        )[model_name]
-    except OSError:
-        # NOTE: Please refer to make-target: cache-models for more information.
-        print(
-            "Model and tokenizer not found. Please download into cache first.",
-            file=sys.stderr,
-        )
-        return
-
+    match args.embedding_type:
+        case "glove50":
+            args.context_length = 1
+            args.layer_idx = [0]
+        case item if item in [
+            *tfsemb_dwnld.CAUSAL_MODELS,
+            *tfsemb_dwnld.SEQ2SEQ_MODELS,
+            *tfsemb_dwnld.MLM_MODELS,
+        ]:
+            (args.model, args.tokenizer,) = tfsemb_dwnld.download_tokenizers_and_models(
+                item, local_files_only=True, debug=False
+            )[item]
+        case _:
+            print(
+                """Model and tokenizer not found. Please download into cache first.
+                Please refer to make-target: cache-models for more information.""",
+                file=sys.stderr,
+            )
+            exit()
     return
 
 
@@ -78,6 +77,7 @@ def process_inputs(args):
 
 def setup_environ(args):
 
+    select_tokenizer_and_model(args)
     process_inputs(args)
     set_layer_idx(args)
     set_context_length(args)
@@ -101,7 +101,6 @@ def setup_environ(args):
     args.input_dir = os.path.join(DATA_DIR, args.subject)
     args.conversation_list = sorted(glob.glob1(args.input_dir, "NY*Part*conversation*"))
 
-    select_tokenizer_and_model(args)
     stra = f"{args.trimmed_model_name}/{args.pkl_identifier}/cnxt_{args.context_length:04d}"
 
     # TODO: if multiple conversations are specified in input
