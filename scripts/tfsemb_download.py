@@ -1,6 +1,7 @@
 import os
 
 from transformers import (
+    AutoConfig,
     AutoModel,
     AutoModelForCausalLM,
     AutoModelForMaskedLM,
@@ -42,6 +43,76 @@ MODEL_CLASS_MAP = {
     "seq2seq": (SEQ2SEQ_MODELS, AutoModelForSeq2SeqLM),
     "mlm": (MLM_MODELS, AutoModelForMaskedLM),
 }
+
+
+def clean_lm_model_name(item):
+    """Remove unnecessary parts from the language model name.
+
+    Args:
+        item (str/list): full model name from HF Hub
+
+    Returns:
+        (str/list): pretty model name
+
+    Example:
+        clean_lm_model_name(EleutherAI/gpt-neo-1.3B) == 'gpt-neo-1.3B'
+    """
+    if isinstance(item, str):
+        return item.split("/")[-1]
+
+    if isinstance(item, list):
+        return [clean_lm_model_name(i) for i in item]
+
+    print("Invalid input. Please check.")
+
+
+def get_max_context_length(model_name, tokenizer_class=None):
+    """Return maximum possible context length for the model/tokenizer
+
+    Args:
+        model_name (str): Model name as seen on https://hugginface.co/models.
+        tokenizer_class (Tokenizer, optional):
+            Tokenizer class to be instantiated for the model.
+            Defaults to None.
+
+    Returns:
+        int: Maximum allowed context for the model/tokenizer
+    """
+    tokenizer = download_hf_tokenizer(
+        model_name,
+        tokenizer_class=tokenizer_class,
+        cache_dir=None,
+        local_files_only=False,
+    )
+
+    return tokenizer.max_len_single_sentence
+
+
+def get_model_num_layers(model_name):
+    """Return number of hidden layers in the model
+
+    Args:
+        model_name (str): Model name as seen on https://hugginface.co/models.
+
+    Returns:
+        int: value of {n_layer|num_layers|num_hidden_layers} attribute
+    """
+    config = AutoConfig.from_pretrained(model_name)
+    num_layers = getattr(
+        config,
+        "n_layer",
+        getattr(
+            config,
+            "num_layers",
+            getattr(config, "num_hidden_layers", None),
+        ),
+    )
+
+    if not num_layers:
+        print(f"{model_name} has no hidden layers")
+        exit()
+
+    return num_layers
 
 
 def download_hf_model(
@@ -101,9 +172,7 @@ def download_tokenizer_and_model(
         tuple: (tokenizer, model)
     """
     print("Downloading model")
-    model = download_hf_model(
-        model_name, model_class, CACHE_DIR, local_files_only
-    )
+    model = download_hf_model(model_name, model_class, CACHE_DIR, local_files_only)
 
     print("Downloading tokenizer")
     tokenizer = download_hf_tokenizer(
@@ -146,9 +215,7 @@ def get_models_and_class(model_name):
     return models, mod_class
 
 
-def download_tokenizers_and_models(
-    model_name=None, local_files_only=False, debug=True
-):
+def download_tokenizers_and_models(model_name=None, local_files_only=False, debug=True):
     """This function downloads the tokenizer and model for the specified model name.
 
     Args:
