@@ -621,15 +621,16 @@ def main():
     assert len(utterance_df) != 0, "Empty dataframe"
 
     # Select generation function based on model type
-    if args.embedding_type == "glove50":
-        generate_func = generate_glove_embeddings
-    elif args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
-        generate_func = generate_causal_embeddings
-    elif args.embedding_type in tfsemb_dwnld.SEQ2SEQ_MODELS:
-        generate_func = generate_conversational_embeddings
-    else:
-        print('Invalid embedding type: "{}"'.format(args.embedding_type))
-        return
+    match args.embedding_type:
+        case "glove50":
+            generate_func = generate_glove_embeddings
+        case item if item in tfsemb_dwnld.CAUSAL_MODELS:
+            generate_func = generate_causal_embeddings
+        case item if item in tfsemb_dwnld.SEQ2SEQ_MODELS:
+            generate_func = generate_conversational_embeddings
+        case _:
+            print('Invalid embedding type: "{}"'.format(args.embedding_type))
+            exit()
 
     # Generate Embeddings
     embeddings = None
