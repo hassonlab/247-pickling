@@ -578,7 +578,7 @@ def generate_causal_embeddings(args, df):
     else:
         final_embeddings = final_embeddings[0]
 
-    df = pd.DataFrame()
+    df = pd.DataFrame(index=df.index)
     df["topk_pred"] = final_top1_word
     df["topk_pred_prob"] = final_top1_prob
     df["true_pred_prob"] = final_true_y_prob
