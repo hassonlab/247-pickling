@@ -89,7 +89,6 @@ def setup_environ(args):
     args.PKL_DIR = os.path.join(RESULTS_DIR, args.subject, "pickles")
     args.EMB_DIR = os.path.join(RESULTS_DIR, args.subject, "embeddings")
 
-    args.full_model_name = args.embedding_type
     args.trimmed_model_name = tfsemb_dwnld.clean_lm_model_name(args.embedding_type)
 
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
