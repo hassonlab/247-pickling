@@ -19,7 +19,9 @@ def add_vocab_columns(args, df, column=None):
         *tfsemb_dwnld.MLM_MODELS,
     ]:
         try:
-            tokenizer = tfsemb_dwnld.download_hf_tokenizer(model, local_files_only=True)
+            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
+                model, local_files_only=True
+            )
         except:
             tokenizer = tfsemb_dwnld.download_hf_tokenizer(
                 model, local_files_only=False
@@ -57,7 +59,7 @@ def main():
 
     if args.embedding_type == "glove50":
         base_df = base_df[base_df["in_glove50"]]
-        base_df = add_vocab_columns(args, base_df, column="word", flag=True)
+        base_df = add_vocab_columns(args, base_df, column="word")
     else:
         base_df = tokenize_and_explode(args, base_df)
         base_df = add_vocab_columns(args, base_df, column="token2word")
