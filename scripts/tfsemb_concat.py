@@ -10,6 +10,13 @@ from tqdm import tqdm
 from utils import load_pickle, save_pickle
 
 
+def confirm_prompt(question: str) -> bool:
+    reply = None
+    while reply not in ("y", "n"):
+        reply = input(f"{question} (y/n): ").casefold()
+    return reply == "y"
+
+
 def removeEmptyfolders(path):
     for (_path, _, _files) in os.walk(path, topdown=False):
         if _files:
@@ -119,8 +126,13 @@ def main():
                 save_pickle(all_exs, os.path.join(args.emb_out_dir, fn))
 
     # Deleting embeddings after concatenation
-    shutil.rmtree(args.output_dir, ignore_errors=True)
-    removeEmptyfolders(args.EMB_DIR)
+    if confirm_prompt(
+        "Embeddings Concatenated. Do you want to delete the original files?"
+    ):
+        shutil.rmtree(args.output_dir, ignore_errors=True)
+        removeEmptyfolders(args.EMB_DIR)
+    else:
+        print("OK, Keeping them. Bye!")
 
 
 if __name__ == "__main__":
