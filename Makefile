@@ -51,7 +51,7 @@ endif
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
 %-pickle: CMD := python
 # {echo | python}
-%-pickle: PRJCT_ID := tfs
+%-pickle: PRJCT_ID := podcast
 # {tfs | podcast}
 %-pickle: SID_LIST = 676
 # {625 676 7170 798 | 661 662 717 723 741 742 743 763 798 | 777}
@@ -92,28 +92,30 @@ download-247-pickles:
 	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247-pickles/ results/676/
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: PRJCT_ID := podcast
+%-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 661
+%-embeddings: SID := 625
 # {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 1) 
+%-embeddings: CONV_IDS = $(shell seq 50 50) 
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
-%-embeddings: EMB_TYPE := gpt2-xl
+%-embeddings: EMB_TYPE := "openai/whisper-tiny.en"
 # {"gpt2", "gpt2-large", "gpt2-xl", \
 "EleutherAI/gpt-neo-125M", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-neo-2.7B", \
 "EleutherAI/gpt-neox-20b", \
 "facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", \
 "facebook/opt-2.7b", "facebook/opt-6.7b", "facebook/opt-30b", \
-"facebook/blenderbot_small-90M"}
+"facebook/blenderbot_small-90M", "openai/whisper-tiny", "openai/whisper-base", \
+"openai/whisper-small",  "openai/whisper-medium", "openai/whisper-large"}
 %-embeddings: CNXT_LEN := 1024 512 256 128 64 32 16 8 4 2 1
+%-embeddings: CNXT_LEN := 1
 %-embeddings: LAYER := all
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 %-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
-%-embeddings: CMD = python
+%-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
 # {echo | python | sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh}
 
 # 38 and 39 failed
@@ -156,16 +158,18 @@ concatenate-embeddings:
 # Podcast: copy embeddings to other subjects as well
 # for sid in 662 717 723 741 742 763 798 777; do 
 copy-embeddings:
-	@for fn in results/podcast/661/pickles/*embeddings.pkl; do \
-		for sid in 777; do \
-			cp -pf $$fn $$(echo $$fn | sed "s/661/$$sid/g"); \
+	@for fn in results/podcast/661/pickles/embeddings/whisper-tiny.en; do \
+		for sid in 662 717 723 741 742 763 798 777; do \
+			cp -rpf $$fn $$(echo $$fn | sed "s/661/$$sid/g"); \
 		done; \
 	done
 
+# python -c "from scripts import tfsemb_download; tfsemb_download.download_hf_tokenizer(\"$(MODEL)\")"
 
 # Download huggingface models to cache (before generating embeddings)
 # This target needs to be run on the head node
-cache-models: MODEL := causal
+cache-models: MODEL := openai/whisper-large-v2
 # {causal | seq2seq | mlm | or any model name specified in EMB_TYPE comments}
 cache-models:
 	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"
+	

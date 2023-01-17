@@ -16,6 +16,7 @@ def add_vocab_columns(args, df, column=None):
     for model in [
         *tfsemb_dwnld.CAUSAL_MODELS,
         *tfsemb_dwnld.SEQ2SEQ_MODELS,
+        *tfsemb_dwnld.SPEECHSEQ2SEQ_MODELS,
         *tfsemb_dwnld.MLM_MODELS,
     ]:
         try:

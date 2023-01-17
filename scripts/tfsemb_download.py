@@ -1,12 +1,8 @@
 import os
 
-from transformers import (
-    AutoModel,
-    AutoModelForCausalLM,
-    AutoModelForMaskedLM,
-    AutoModelForSeq2SeqLM,
-    AutoTokenizer,
-)
+from transformers import (AutoModel, AutoModelForCausalLM,
+                          AutoModelForMaskedLM, AutoModelForSeq2SeqLM, AutoModelForSpeechSeq2Seq,
+                          AutoTokenizer, AutoProcessor, WhisperForConditionalGeneration)
 
 CAUSAL_MODELS = [
     "gpt2",
@@ -22,9 +18,18 @@ CAUSAL_MODELS = [
     "facebook/opt-2.7b",
     "facebook/opt-6.7b",
     "facebook/opt-30b",
-    "bigscience/bloom",
 ]
 SEQ2SEQ_MODELS = ["facebook/blenderbot_small-90M", "facebook/blenderbot-3B"]
+
+SPEECHSEQ2SEQ_MODELS = ["openai/whisper-tiny.en", 
+                        "openai/whisper-tiny",
+                        "openai/whisper-base.en", 
+                        "openai/whisper-small.en", 
+                        "openai/whisper-medium.en", 
+                        "openai/whisper-large",
+                        "openai/whisper-large-v2"]
+
+CLONE_MODELS = []
 
 MLM_MODELS = [
     # "gpt2-xl", # uncomment to run this model with MLM input
@@ -57,6 +62,26 @@ def download_hf_model(
 
     return model
 
+def download_whisper_generative_model(
+    model_name, model_class=None, cache_dir=None, local_files_only=False
+):
+    """Download a Huggingface model from the model repository (cache)."""
+    if model_class is None:
+        model_class = AutoModel
+
+    if cache_dir is None:
+        cache_dir = set_cache_dir()
+
+    model = WhisperForConditionalGeneration.from_pretrained(
+        model_name,
+        output_hidden_states=True,
+        cache_dir=cache_dir,
+        local_files_only=local_files_only,
+    )
+
+    return model
+
+
 
 def download_hf_tokenizer(
     model_name, tokenizer_class=None, cache_dir=None, local_files_only=False
@@ -69,13 +94,36 @@ def download_hf_tokenizer(
         cache_dir = set_cache_dir()
 
     tokenizer = tokenizer_class.from_pretrained(
-        model_name,
+        model_name, 
+        language="english",
+        task="transcribe",
+        padding_side='left',
         add_prefix_space=True,
         cache_dir=cache_dir,
         local_files_only=local_files_only,
     )
 
     return tokenizer
+
+def download_hf_processor(
+    model_name, processor_class=None, cache_dir=None, local_files_only=False
+):
+    """Download a Huggingface processor from the model repository (cache)."""
+    if processor_class is None:
+        processor_class = AutoProcessor
+
+    if cache_dir is None:
+        cache_dir = set_cache_dir()
+
+    processor = processor_class.from_pretrained(
+        model_name,
+        language="english",
+        task="transcribe",
+        cache_dir=cache_dir,
+        local_files_only=local_files_only,
+    )
+
+    return processor
 
 
 def download_tokenizer_and_model(
@@ -105,6 +153,58 @@ def download_tokenizer_and_model(
     )
 
     return (model, tokenizer)
+
+
+def clone_model_repo(
+    CACHE_DIR,
+    tokenizer_class,
+    model_class,
+    model_name,
+    local_files_only=False,
+):
+    """Cache (load) the model and tokenizer from the model repository (cache).
+
+    Args:
+        CACHE_DIR (str): path where the model and tokenizer will be cached.
+        tokenizer_class (Tokenizer): Tokenizer class to be instantiated for the model.
+        model_class (Huggingface Model): Model class corresponding to model_name.
+        model_name (str):  Model name as seen on https://hugginface.co/models.
+        local_files_only (bool, optional): False (Default) if caching.
+                                            True if loading from cache.
+
+    Returns:
+        tuple or None: (tokenizer, model) if local_files_only is True
+                        None if local_files_only is False.
+    """
+    model_dir = os.path.join(CACHE_DIR, model_name)
+
+    if local_files_only:
+        if os.path.exists(model_dir):
+            model, tokenizer = download_tokenizer_and_model(
+                CACHE_DIR,
+                tokenizer_class,
+                model_class,
+                model_dir,
+                local_files_only,
+            )
+            return model, tokenizer
+        else:
+            print(f"Model directory {model_dir} does not exist")
+    else:
+        try:
+            if (
+                "tiger" in os.uname().nodename
+            ):  # probably redundant, but just in case we are on tiger
+                os.system("module load git")
+
+            os.system(f"git lfs install")
+            os.system(
+                f"git clone https://huggingface.co/{model_name} {model_dir}"
+            )
+        except:
+            # FIXME: Raise appropriate exception
+            print("Possible git lfs version issues")
+    exit(1)
 
 
 def set_cache_dir():
@@ -140,6 +240,9 @@ def download_tokenizers_and_models(
     elif model_name == "seq2seq":
         model_class = AutoModelForSeq2SeqLM
         MODELS = SEQ2SEQ_MODELS if model_name == "seq2seq" else [model_name]
+    elif model_name == "speechseq2seq" or model_name in SPEECHSEQ2SEQ_MODELS:
+        model_class = AutoModelForSpeechSeq2Seq 
+        MODELS = SPEECHSEQ2SEQ_MODELS if model_name == "speechseq2seq" else [model_name]
     elif model_name == "mlm" or model_name in MLM_MODELS:
         model_class = AutoModelForMaskedLM
         MODELS = MLM_MODELS if model_name == "mlm" else [model_name]
@@ -151,7 +254,13 @@ def download_tokenizers_and_models(
     for model_name in MODELS:
         print(f"Model Name: {model_name}")
 
-        model_dict[model_name] = download_tokenizer_and_model(
+        cache_function = (
+            clone_model_repo
+            if model_name in CLONE_MODELS
+            else download_tokenizer_and_model
+        )
+
+        model_dict[model_name] = cache_function(
             CACHE_DIR,
             AutoTokenizer,
             model_class,
@@ -163,7 +272,7 @@ def download_tokenizers_and_models(
         if debug:
             print("Checking if model has been cached successfully")
             try:
-                download_tokenizer_and_model(
+                cache_function(
                     CACHE_DIR,
                     AutoTokenizer,
                     model_class,
@@ -172,6 +281,8 @@ def download_tokenizers_and_models(
                 )
             except:
                 print(f"Caching of {model_name} failed")
+
+                breakpoint()
 
     return model_dict
 
