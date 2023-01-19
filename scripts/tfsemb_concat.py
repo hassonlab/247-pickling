@@ -32,6 +32,8 @@ def main():
         num_convs = 78
     elif args.subject == "7170":
         num_convs = 24
+    elif args.subject == "798":
+        num_convs = 15
     else:
         num_convs = 1
 
@@ -119,8 +121,8 @@ def main():
                 save_pickle(all_exs, os.path.join(args.emb_out_dir, fn))
 
     # Deleting embeddings after concatenation
-    shutil.rmtree(args.output_dir, ignore_errors=True)
-    removeEmptyfolders(args.EMB_DIR)
+    # shutil.rmtree(args.output_dir, ignore_errors=True)
+    # removeEmptyfolders(args.EMB_DIR)
 
 
 if __name__ == "__main__":

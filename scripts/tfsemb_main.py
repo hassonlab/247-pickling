@@ -251,7 +251,10 @@ def extract_select_vectors_average_all_layers(nhiddenstates, array, layers=None)
 
 def extract_select_vectors_logits(batch_idx, array):
 
-    x = array[:, -2, :].clone()
+    try:
+        x = array[:, -2, :].clone()
+    except:
+        x = array[:, -1, :].clone()
 
     return x
 
@@ -611,8 +614,8 @@ class AudioDataset(data.Dataset):
         chunk_data = self.audio[int(chunk_onset*sampling_rate):int(chunk_offset*sampling_rate)]
 
         # debug
-        chunk_name = f"results/tfs/audio_segments/audio_segment_{idx:03d}-{self.conversation_df.word.iloc[idx]}.wav" 
-        wavfile.write(chunk_name, sampling_rate, chunk_data)
+        # chunk_name = f"results/tfs/audio_segments/audio_segment_{idx:03d}-{self.conversation_df.word.iloc[idx]}.wav" 
+        # wavfile.write(chunk_name, sampling_rate, chunk_data)
 
         # generate input features using whisper feature_extractor
         inputs = self.args.processor.feature_extractor(chunk_data, return_tensors="pt", sampling_rate=sampling_rate)
@@ -735,8 +738,8 @@ def speech_model_forward_pass(args, data_dl):
             #      5, model_output.encoder_hidden_states, args.layer_idx
             #  )
 
-            # logits = extract_select_vectors_logits(batch_idx+1, logits) # concatenate logits across batches
-            logits = extract_select_vectors_logits(batch_idx, logits) # for now
+            # concatenate logits across batches
+            logits = extract_select_vectors_logits(batch_idx, logits) 
 
             all_embeddings.append(embeddings)
             all_logits.append(logits)
@@ -761,16 +764,13 @@ def generate_speech_embeddings(args,df):
     for conversation in df.conversation_id.unique():
         conversation_df = get_conversation_df(df, conversation) 
 
-        dir = 'data/tfs/625'
-        sub_dirs = os.listdir(dir)
-        sub_dirs = sorted(sub_dirs,key = lambda x: x.split()[0])
+        # for tfs
+        path = 'data/' + str(args.project_id) + '/' + str(args.subject) + '/' + df.conversation_name.unique().item() + '/audio/' + df.conversation_name.unique().item() + '_deid.wav'
 
-        path = dir + '/' + sub_dirs[conversation-1] + '/audio/' + sub_dirs[conversation-1] + '_deid.wav'
-
-        audio = whisper.load_audio(path)
-        
         # for podcast:
         # audio = whisper.load_audio("/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav")
+        
+        audio = whisper.load_audio(path)
         
         input_dataset = AudioDataset(args, audio, conversation_df, df)
         input_dl = make_dataloader_from_dataset(input_dataset)
@@ -818,7 +818,6 @@ def generate_speech_embeddings(args,df):
     df["surprise"] = -df["true_pred_prob"]* np.log2(df["true_pred_prob"])
     df["entropy"] = entropy[1:]
 
-    print(np.mean(df.true_pred_rank==0))
     print(np.mean(df.true_pred_rank==1))
 
     return df, final_embeddings

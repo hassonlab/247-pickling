@@ -51,9 +51,9 @@ endif
 # settings for target: create-pickle, create-sig-pickle, upload-pickle
 %-pickle: CMD := python
 # {echo | python}
-%-pickle: PRJCT_ID := podcast
+%-pickle: PRJCT_ID := tfs
 # {tfs | podcast}
-%-pickle: SID_LIST = 676
+%-pickle: SID_LIST = 7170
 # {625 676 7170 798 | 661 662 717 723 741 742 743 763 798 | 777}
 
 create-pickle:
@@ -94,9 +94,9 @@ download-247-pickles:
 ## settings for targets: generate-embeddings, concatenate-embeddings
 %-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 625
+%-embeddings: SID := 798
 # {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 50 50) 
+%-embeddings: CONV_IDS = $(shell seq 1 15) 
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
@@ -129,7 +129,7 @@ generate-base-for-embeddings:
 			--embedding-type $(EMB_TYPE);
 
 # generates embeddings (for each conversation separately)
-generate-embeddings: generate-base-for-embeddings
+generate-embeddings: # generate-base-for-embeddings
 	mkdir -p logs
 	for cnxt_len in $(CNXT_LEN); do \
 		for conv_id in $(CONV_IDS); do \
