@@ -738,12 +738,12 @@ def speech_model_forward_pass(args, data_dl):
             # decoder_attention_mask = batch["attention_mask"].to(args.device)
             # model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, decoder_attention_mask=decoder_attention_mask, output_hidden_states=True)
 
-            # # for full model:
-            # model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
-            # logits = model_output.logits.cpu()
-            # embeddings = extract_select_vectors_all_layers(
-            #     batch_idx+1, model_output.decoder_hidden_states, args.layer_idx
-            # )
+            # for full model:
+            model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
+            logits = model_output.logits.cpu()
+            embeddings = extract_select_vectors_all_layers(
+                batch_idx+1, model_output.decoder_hidden_states, args.layer_idx
+            )
            
             # # for decoder only
             # # set encoder_outputs to 0:
@@ -756,12 +756,12 @@ def speech_model_forward_pass(args, data_dl):
             #     batch_idx+1, model_output.decoder_hidden_states, args.layer_idx
             # )
 
-            # for encoder-only:
-            model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
-            logits = model_output.logits.cpu()
-            embeddings = extract_select_vectors_concat_all_layers(
-                 12, model_output.encoder_hidden_states, args.layer_idx
-             )
+            # # for encoder-only:
+            # model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
+            # logits = model_output.logits.cpu()
+            # embeddings = extract_select_vectors_concat_all_layers(
+            #      12, model_output.encoder_hidden_states, args.layer_idx
+            #  )
 
             # concatenate logits across batches
             logits = extract_select_vectors_logits(batch_idx, logits) 
@@ -789,11 +789,11 @@ def generate_speech_embeddings(args,df):
     for conversation in df.conversation_id.unique():
         conversation_df = get_conversation_df(df, conversation) 
 
-        # for tfs
-        path = 'data/' + str(args.project_id) + '/' + str(args.subject) + '/' + df.conversation_name.unique().item() + '/audio/' + df.conversation_name.unique().item() + '_deid.wav'
+        # # for tfs
+        # path = 'data/' + str(args.project_id) + '/' + str(args.subject) + '/' + df.conversation_name.unique().item() + '/audio/' + df.conversation_name.unique().item() + '_deid.wav'
 
-        # # for podcast:
-        # path = "/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav"
+        # for podcast:
+        path = "/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav"
         
         audio = whisper.load_audio(path)
         

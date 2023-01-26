@@ -92,11 +92,11 @@ download-247-pickles:
 	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247-pickles/ results/676/
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: PRJCT_ID := tfs
+%-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
-%-embeddings: SID := 798
+%-embeddings: SID := 777
 # {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 15) 
+%-embeddings: CONV_IDS = $(shell seq 1 1) 
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
