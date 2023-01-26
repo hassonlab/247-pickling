@@ -115,7 +115,7 @@ download-247-pickles:
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 %-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
-%-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
+%-embeddings: CMD =   sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
 # {echo | python | sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh}
 
 # 38 and 39 failed
@@ -129,7 +129,7 @@ generate-base-for-embeddings:
 			--embedding-type $(EMB_TYPE);
 
 # generates embeddings (for each conversation separately)
-generate-embeddings: # generate-base-for-embeddings
+generate-embeddings: generate-base-for-embeddings
 	mkdir -p logs
 	for cnxt_len in $(CNXT_LEN); do \
 		for conv_id in $(CONV_IDS); do \

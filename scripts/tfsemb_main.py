@@ -238,6 +238,26 @@ def extract_select_vectors_average(nhiddenstates, array):
     return x
 
 
+def extract_select_vectors_concat(nhiddenstates, array):
+
+    x = array[:,-nhiddenstates,:]
+
+    for i in range(-nhiddenstates+1,0):
+        x = torch.cat((x, array[:,i,:]),1)
+        
+    return x
+
+def extract_select_vectors_concat_all_layers(nhiddenstates, array, layers=None):
+
+    array_actual = tuple(y.cpu() for y in array)
+  
+    all_layers_x = dict()
+    for layer_idx in layers:
+        array = array_actual[layer_idx]
+        all_layers_x[layer_idx] = extract_select_vectors_concat(nhiddenstates, array)
+
+    return all_layers_x
+
 def extract_select_vectors_average_all_layers(nhiddenstates, array, layers=None):
 
     array_actual = tuple(y.cpu() for y in array)
@@ -718,25 +738,30 @@ def speech_model_forward_pass(args, data_dl):
             # decoder_attention_mask = batch["attention_mask"].to(args.device)
             # model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, decoder_attention_mask=decoder_attention_mask, output_hidden_states=True)
 
-            # if we want to cutoff decoder from encoder - basically only using decoder
-            # set encoder_outputs to 0:
+            # # for full model:
+            # model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
+            # logits = model_output.logits.cpu()
+            # embeddings = extract_select_vectors_all_layers(
+            #     batch_idx+1, model_output.decoder_hidden_states, args.layer_idx
+            # )
+           
+            # # for decoder only
+            # # set encoder_outputs to 0:
             # encoder_outputs = torch.zeros(1,1500,384).to(args.device)
-            # set cross attention heads to 0: (decoder layers, decoder attention heads)
+            # # set cross attention heads to 0: (decoder layers, decoder attention heads)
             # cross_attn_head_mask = torch.zeros(args.model.config.decoder_layers, args.model.config.decoder_attention_heads).to(args.device)
             # model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True, cross_attn_head_mask=cross_attn_head_mask, encoder_outputs=encoder_outputs)
+            # logits = model_output.logits.cpu()
+            # embeddings = extract_select_vectors_all_layers(
+            #     batch_idx+1, model_output.decoder_hidden_states, args.layer_idx
+            # )
 
+            # for encoder-only:
             model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
             logits = model_output.logits.cpu()
-
-            # check if that works - this is supposed to concatenate all embeddings across batches
-            embeddings = extract_select_vectors_all_layers(
-                batch_idx+1, model_output.decoder_hidden_states, args.layer_idx
-            )
-
-            # if encoder-only:
-            # embeddings = extract_select_vectors_average_all_layers(
-            #      5, model_output.encoder_hidden_states, args.layer_idx
-            #  )
+            embeddings = extract_select_vectors_concat_all_layers(
+                 12, model_output.encoder_hidden_states, args.layer_idx
+             )
 
             # concatenate logits across batches
             logits = extract_select_vectors_logits(batch_idx, logits) 
@@ -767,8 +792,8 @@ def generate_speech_embeddings(args,df):
         # for tfs
         path = 'data/' + str(args.project_id) + '/' + str(args.subject) + '/' + df.conversation_name.unique().item() + '/audio/' + df.conversation_name.unique().item() + '_deid.wav'
 
-        # for podcast:
-        # audio = whisper.load_audio("/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav")
+        # # for podcast:
+        # path = "/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav"
         
         audio = whisper.load_audio(path)
         
