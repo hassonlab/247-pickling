@@ -134,6 +134,7 @@ def process_conversation(CONFIG, conversation):
     df = df[~df.word.isnull()]
 
     df = df.reset_index(drop=True)
+    df = df.reset_index()
 
     return df
 
