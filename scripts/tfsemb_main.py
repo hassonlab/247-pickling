@@ -238,23 +238,23 @@ def extract_select_vectors_average(nhiddenstates, array):
     return x
 
 
-def extract_select_vectors_concat(nhiddenstates, array):
+def extract_select_vectors_concat(nhiddenstates, pad_mask, array):
 
-    x = array[:,-nhiddenstates,:]
-
-    for i in range(-nhiddenstates+1,0):
+    x = array[:,pad_mask-nhiddenstates,:]
+    
+    for i in range(pad_mask-nhiddenstates+1,pad_mask):
         x = torch.cat((x, array[:,i,:]),1)
         
     return x
 
-def extract_select_vectors_concat_all_layers(nhiddenstates, array, layers=None):
+def extract_select_vectors_concat_all_layers(nhiddenstates, pad_mask, array, layers=None):
 
     array_actual = tuple(y.cpu() for y in array)
   
     all_layers_x = dict()
     for layer_idx in layers:
         array = array_actual[layer_idx]
-        all_layers_x[layer_idx] = extract_select_vectors_concat(nhiddenstates, array)
+        all_layers_x[layer_idx] = extract_select_vectors_concat(nhiddenstates,pad_mask, array)
 
     return all_layers_x
 
@@ -625,22 +625,43 @@ class AudioDataset(data.Dataset):
 
     def __getitem__(self,idx):
 
-        # get word onset and offset
-        chunk_offset = self.conversation_df.offset_converted.iloc[idx]
+        # # get word onset and offset
+        # chunk_offset = self.conversation_df.offset_converted.iloc[idx]
+        # chunk_onset = np.max([0,(chunk_offset - 30)])
+
+        # look at current word onset + 130 ms (tfs) / 250 ms (podcast)
+        chunk_offset = self.conversation_df.onset_converted.iloc[idx] + 0.25
         chunk_onset = np.max([0,(chunk_offset - 30)])
+
+        # # look at current word onset + 130 ms
+        # chunk_offset = self.conversation_df.onset_converted.iloc[idx] + 0.25
+        # chunk_onset = np.max([0,(chunk_offset - 5)])
 
         # extract audio segment
         sampling_rate = 16000 
         chunk_data = self.audio[int(chunk_onset*sampling_rate):int(chunk_offset*sampling_rate)]
 
         # debug
-        # chunk_name = f"results/tfs/audio_segments/audio_segment_{idx:03d}-{self.conversation_df.word.iloc[idx]}.wav" 
+        # chunk_name = f"results/podcast/audio_segments_new/audio_segment_{idx:03d}-{self.conversation_df.word.iloc[idx]}.wav" 
         # wavfile.write(chunk_name, sampling_rate, chunk_data)
 
-        # generate input features using whisper feature_extractor
+        # # generate input features using whisper feature_extractor
+        # self.args.processor.feature_extractor.padding_side = "left"
+        # self.args.processor.feature_extractor.return_attention_mask = True
         inputs = self.args.processor.feature_extractor(chunk_data, return_tensors="pt", sampling_rate=sampling_rate)
+        
         input_features = inputs.input_features
+         
+        # function that counts non-padded input-features 
+        pad_mask = 0
+        for i in range(input_features.size(dim=2)-1,0,-1):
+            if input_features[0,0,i] != torch.min(input_features):
+                pad_mask = i + 1
+                break
 
+        # function that converts this into representation in encoder layers
+        pad_mask = int(pad_mask/2)
+   
         # to give empty audio input
         # input_features = torch.zeros(1,80,3000)
 
@@ -674,8 +695,8 @@ class AudioDataset(data.Dataset):
 
         # if batchsize > 1:
         # sample = {"input_features": input_features.squeeze(), "context_token_ids": context_token_IDs.squeeze(), "attention_mask": attention_mask.squeeze()}
-        sample = {"input_features": input_features.squeeze(), "context_token_ids": context_token_ids.squeeze()}
-
+        sample = {"input_features": input_features.squeeze(), "context_token_ids": context_token_ids.squeeze(), "pad_mask": pad_mask}
+        
         return sample
 
     
@@ -732,18 +753,19 @@ def speech_model_forward_pass(args, data_dl):
         for batch_idx, batch in enumerate(data_dl):
             print(batch_idx)
             input_features = batch["input_features"].to(args.device)
+            pad_mask = batch["pad_mask"].item()
             decoder_input_ids = batch["context_token_ids"].to(args.device)
             
             # if batchsize > 1
             # decoder_attention_mask = batch["attention_mask"].to(args.device)
             # model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, decoder_attention_mask=decoder_attention_mask, output_hidden_states=True)
 
-            # for full model:
-            model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
-            logits = model_output.logits.cpu()
-            embeddings = extract_select_vectors_all_layers(
-                batch_idx+1, model_output.decoder_hidden_states, args.layer_idx
-            )
+            # # for full model:
+            # model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
+            # logits = model_output.logits.cpu()
+            # embeddings = extract_select_vectors_all_layers(
+            #     batch_idx+1, model_output.decoder_hidden_states, args.layer_idx
+            # )
            
             # # for decoder only
             # # set encoder_outputs to 0:
@@ -756,12 +778,12 @@ def speech_model_forward_pass(args, data_dl):
             #     batch_idx+1, model_output.decoder_hidden_states, args.layer_idx
             # )
 
-            # # for encoder-only:
-            # model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
-            # logits = model_output.logits.cpu()
-            # embeddings = extract_select_vectors_concat_all_layers(
-            #      12, model_output.encoder_hidden_states, args.layer_idx
-            #  )
+            # for encoder-only:
+            model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
+            logits = model_output.logits.cpu()
+            embeddings = extract_select_vectors_concat_all_layers(
+                 12, pad_mask, model_output.encoder_hidden_states, args.layer_idx
+             )
 
             # concatenate logits across batches
             logits = extract_select_vectors_logits(batch_idx, logits) 
@@ -789,11 +811,10 @@ def generate_speech_embeddings(args,df):
     for conversation in df.conversation_id.unique():
         conversation_df = get_conversation_df(df, conversation) 
 
-        # # for tfs
-        # path = 'data/' + str(args.project_id) + '/' + str(args.subject) + '/' + df.conversation_name.unique().item() + '/audio/' + df.conversation_name.unique().item() + '_deid.wav'
-
-        # for podcast:
-        path = "/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav"
+        if args.project_id == "podcast":
+            path = "/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav"
+        elif args.project_id == "tfs":
+             path = 'data/' + str(args.project_id) + '/' + str(args.subject) + '/' + df.conversation_name.unique().item() + '/audio/' + df.conversation_name.unique().item() + '_deid.wav'
         
         audio = whisper.load_audio(path)
         
