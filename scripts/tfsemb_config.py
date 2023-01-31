@@ -61,7 +61,7 @@ def select_tokenizer_and_model(args):
 
 def process_inputs(args):
     if len(args.layer_idx) == 1:
-        if isinstance(args.layer_idx[0], int) or args.layer_idx[0].isdecimal():
+        if args.layer_idx[0].isdecimal():
             args.layer_idx = [int(args.layer_idx[0])]
         else:
             args.layer_idx = args.layer_idx[0]
@@ -79,9 +79,8 @@ def setup_environ(args):
 
     select_tokenizer_and_model(args)
     process_inputs(args)
-    if args.embedding_type != "glove50":
-        set_layer_idx(args)
-        set_context_length(args)
+    set_layer_idx(args)
+    set_context_length(args)
 
     DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)
     RESULTS_DIR = os.path.join(os.getcwd(), "results", args.project_id)
