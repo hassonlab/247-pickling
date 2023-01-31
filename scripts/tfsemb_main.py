@@ -373,6 +373,11 @@ def transformer_forward_pass(args, data_dl):
     return all_embeddings, all_logits
 
 
+def get_conversation_tokens(df, conversation):
+    token_list = df[df.conversation_id == conversation]["token_id"].tolist()
+    return token_list
+
+
 def make_conversational_input(args, df):
     """
     Create a conversational context/response pair to be fed into an encoder
@@ -551,28 +556,28 @@ def generate_causal_embeddings(args, df):
     final_true_y_prob = []
     final_true_y_rank = []
     final_logits = []
+    for conversation in df.conversation_id.unique():
+        token_list = get_conversation_tokens(df, conversation)
+        model_input = make_input_from_tokens(args, token_list)
+        embeddings, logits = inference_function(args, model_input)
 
-    token_list = df["token_id"].tolist()
-    model_input = make_input_from_tokens(args, token_list)
-    embeddings, logits = inference_function(args, model_input)
+        embeddings = process_extracted_embeddings_all_layers(args, embeddings)
+        for _, item in embeddings.items():
+            assert item.shape[0] == len(token_list)
+        final_embeddings.append(embeddings)
 
-    embeddings = process_extracted_embeddings_all_layers(args, embeddings)
-    for _, item in embeddings.items():
-        assert item.shape[0] == len(token_list)
-    final_embeddings.append(embeddings)
-
-    (
-        top1_word,
-        top1_prob,
-        true_y_prob,
-        true_y_rank,
-        entropy,
-    ) = process_extracted_logits(args, logits, model_input)
-    final_top1_word.extend(top1_word)
-    final_top1_prob.extend(top1_prob)
-    final_true_y_prob.extend(true_y_prob)
-    final_true_y_rank.extend(true_y_rank)
-    final_logits.extend([None] + torch.cat(logits, axis=0).tolist())
+        (
+            top1_word,
+            top1_prob,
+            true_y_prob,
+            true_y_rank,
+            entropy,
+        ) = process_extracted_logits(args, logits, model_input)
+        final_top1_word.extend(top1_word)
+        final_top1_prob.extend(top1_prob)
+        final_true_y_prob.extend(true_y_prob)
+        final_true_y_rank.extend(true_y_rank)
+        final_logits.extend([None] + torch.cat(logits, axis=0).tolist())
 
     if len(final_embeddings) > 1:
         # TODO concat all embeddings and return a dictionary
