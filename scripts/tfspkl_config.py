@@ -71,7 +71,7 @@ def create_directory_paths(args):
 
     if args.sig_elec_file:
         if not os.path.isabs(args.sig_elec_file):
-            args.sig_elec_file = os.path.join(DATA_DIR, args.sig_elec_file)
+            args.sig_elec_file = os.path.join(DATA_DIR, args.sig_file_name)
 
         if not os.path.isfile(args.sig_elec_file):
             print(f"FAILED: {args.sig_elec_file} does not exist")
