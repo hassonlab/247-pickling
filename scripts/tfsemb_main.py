@@ -243,8 +243,6 @@ def extract_select_vectors_concat(num_windows, start_windows, array):
     # concatenating all windows from start_windows to start_windows + num_windows
     x = array[:,start_windows,:]
 
-    breakpoint()
-
     for i in range(1, num_windows):
         x = torch.cat((x, array[:,start_windows + i,:]),1)
         
@@ -658,8 +656,6 @@ class AudioDataset(data.Dataset):
         # generate input features
         inputs = self.args.processor.feature_extractor(chunk_data, return_tensors="pt", sampling_rate=sampling_rate)
         input_features = inputs.input_features
-
-        breakpoint()
 
         # function that gives start of windows
         if chunk_offset < 30:
