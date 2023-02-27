@@ -18,6 +18,7 @@ from tfsemb_download import download_whisper_generative_model
 from utils import load_pickle, main_timer
 from utils import save_pickle as svpkl
 from scipy.io import wavfile
+import random
 
 
 
@@ -226,16 +227,16 @@ def extract_select_vectors(batch_idx, array):
     return x
 
 
-def extract_select_vectors_average(nhiddenstates, array):
+# def extract_select_vectors_average(nhiddenstates, array):
 
-    embeddings_sum = array[:, -1, :]
+#     embeddings_sum = array[:, -1, :]
 
-    for i in range(2,nhiddenstates):
-        embeddings_sum.add(array[:,-i,:])
+#     for i in range(2,nhiddenstates):
+#         embeddings_sum.add(array[:,-i,:])
 
-    x = embeddings_sum/nhiddenstates
+#     x = embeddings_sum/nhiddenstates
 
-    return x
+#     return x
 
 
 def extract_select_vectors_concat(num_windows, start_windows, array):
@@ -256,22 +257,12 @@ def extract_select_vectors_concat_all_layers(num_windows, start_windows, array, 
     for layer_idx in layers:
         array = array_actual[layer_idx]
         all_layers_x[layer_idx] = extract_select_vectors_concat(num_windows,start_windows, array)
-
-    return all_layers_x
-
-def extract_select_vectors_average_all_layers(nhiddenstates, array, layers=None):
-
-    array_actual = tuple(y.cpu() for y in array)
-  
-    all_layers_x = dict()
-    for layer_idx in layers:
-        array = array_actual[layer_idx]
-        all_layers_x[layer_idx] = extract_select_vectors_average(nhiddenstates, array)
+        # all_layers_x[layer_idx] = extract_select_vectors_average(num_windows,start_windows, array)
 
     return all_layers_x
 
 def extract_select_vectors_logits(batch_idx, array):
-
+    # TODO; harsha please clean this up
     try:
         x = array[:, -2, :].clone()
     except:
@@ -573,6 +564,8 @@ def make_dataloader_from_input(windows):
 
 
 def get_conversation_df(df, conversation):
+
+    # redundant
     conversation_df = df[df.conversation_id == conversation]
 
     # DEBUG
@@ -617,7 +610,6 @@ class AudioDataset(data.Dataset):
         self.conversation_df = conversation_df
         self.df = df
         self.audio = audio
-        print(audio.shape)
         self.transform = transform
 
     def __len__(self):
@@ -634,23 +626,57 @@ class AudioDataset(data.Dataset):
         # chunk_offset = self.conversation_df.onset_converted.iloc[idx] + 0.25
         # chunk_onset = np.max([0,(chunk_offset - 30)])
 
-        # look at current word onset + 272.5 ms (podcast) / 152.5 ms (tfs) 
+        # get current word onset
+        word_onset = self.conversation_df.onset_converted.iloc[idx]
 
+        # look at current word onset + 272.5 ms (podcast) / 152.5 ms (tfs)
         if self.args.project_id == "podcast":
-            chunk_offset = self.conversation_df.onset_converted.iloc[idx] + 0.2725
+            chunk_offset = word_onset + 0.2725
             num_windows = 12
         elif self.args.project_id == "tfs":
-            chunk_offset = self.conversation_df.onset_converted.iloc[idx] + 0.1525
+            chunk_offset = word_onset + 0.1525
             num_windows = 6
+
+        # # for full model
+        # chunk_offset = self.conversation_df.offset_converted.iloc[idx]
 
         chunk_onset = np.max([0,(chunk_offset - 30)])
 
+        sampling_rate = 16000 
+
+        # # for testing different ways of shuffling the audio
+
+        # # get audio until current word
+        # chunk1 = self.audio[int(chunk_onset*sampling_rate):int(word_onset*sampling_rate)]
+
+        # # shuffle samples
+        # np.random.shuffle(chunk1)
+
+        # # shuffle phonemes
+        # # split into smaller chunks of size (phoneme) 
+        # chunk1 = np.array_split(chunk1,int((word_onset-chunk_onset)*20))
+
+        # # shuffle words
+        # # split into smaller chunks of size (phoneme) 
+        # chunk1 = np.array_split(chunk1,int((word_onset-chunk_onset)*4))
+
+        # # shuffle and concatenate
+        # random.shuffle(chunk1)
+        # chunk1 = np.concatenate(chunk1)
+
+        # # get current word audio
+        # chunk2 = self.audio[int(word_onset*sampling_rate):int(chunk_offset*sampling_rate)]
+
+        # # concatenate
+        # chunk_data = np.append(chunk1,chunk2)
+
+        # # for normal audio extraction
         # extract audio segment
         sampling_rate = 16000 
         chunk_data = self.audio[int(chunk_onset*sampling_rate):int(chunk_offset*sampling_rate)]
 
-        # debug
-        # chunk_name = f"results/podcast/audio_segments_new/audio_segment_{idx:03d}-{self.conversation_df.word.iloc[idx]}.wav" 
+        # # debug
+        # chunk_name = f"results/podcast/audio_segments_synth/audio_segment_{idx:03d}-{self.conversation_df.word.iloc[idx]}.wav" 
         # wavfile.write(chunk_name, sampling_rate, chunk_data)
 
         # generate input features
@@ -658,38 +684,31 @@ class AudioDataset(data.Dataset):
         input_features = inputs.input_features
 
         # function that gives start of windows
+        # add some docs
         if chunk_offset < 30:
             start_windows = int((((self.conversation_df.onset_converted[idx] - chunk_onset) * 1000) - 7.5) // 20 + 3)
         else:
             start_windows = 1500 - num_windows
-
-        # # function that counts non-padded input-features 
-        # pad_mask = 0
-        # for i in range(input_features.size(dim=2)-1,0,-1):
-        #     if input_features[0,0,i] != torch.min(input_features):
-        #         pad_mask = i + 1
-        #         break
-
-        # # function that converts this into representation in encoder layers
-        # pad_mask = int(pad_mask/2)
    
-        # to give empty audio input
+        # to give empty audio input (test for decoder only)
+        # contrast with zero attention for decoder only
         # input_features = torch.zeros(1,80,3000)
 
-        # to give random audio input
+        # to give random audio input (for testing / baseline)
         # input_features = torch.randn(1,80,3000)
 
         if(self.args.project_id == 'podcast' and idx == 0):
-            context_tokens = self.df.iloc[:8]["token"].tolist() # to also include first 8 words that appear in the audio, but are cut off due to onset = NaN (only podcast)
+            context_tokens = self.df.iloc[:8]["token"].tolist() # to also include first 8 words that appear in the audio, but are cut off due to onset = NaN (only podcast) / check if that can be removed
             context_tokens.extend(self.conversation_df[(self.conversation_df.onset_converted >= chunk_onset) & (self.conversation_df.offset_converted <= chunk_offset)]["token"].tolist()) 
         else:
             context_tokens = self.conversation_df[(self.conversation_df.onset_converted >= chunk_onset) & (self.conversation_df.offset_converted <= chunk_offset)]["token"].tolist()
 
         # add prefix tokens (for large v2):
-        # self.args.tokenizer.set_prefix_tokens(language="english", task="transcribe") - this does not work in current version of transformers (!)
+        # self.args.tokenizer.set_prefix_tokens(language="english", task="transcribe") - this does not work in current version (leos - 4.23.1) of transformers (!)
         # therefore use this: 
-        # prefix_tokens = self.args.tokenizer.tokenize("<|startoftranscript|> <|en|> <|transcribe|>")
-        prefix_tokens = self.args.tokenizer.tokenize("<|startoftranscript|> ")
+        # if version of transformers == 4.23.1
+        prefix_tokens = self.args.tokenizer.tokenize("<|startoftranscript|> <|en|> <|transcribe|>")
+        # prefix_tokens = self.args.tokenizer.tokenize("<|startoftranscript|> ")
         prefix_tokens.extend(context_tokens)
         context_tokens = prefix_tokens
         
@@ -794,7 +813,6 @@ def speech_model_forward_pass(args, data_dl):
                 num_windows = 12
             elif args.project_id == "tfs":
                 num_windows = 6
-
             model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
             logits = model_output.logits.cpu()
             embeddings = extract_select_vectors_concat_all_layers(
@@ -818,7 +836,7 @@ def generate_speech_embeddings(args,df):
     final_true_y_prob = []
     final_true_y_rank = []
 
-    # get model processor
+    # get model processor - move to tfsemb_download
     args.processor = download_hf_processor(args.full_model_name)
 
     # when using generative model:
@@ -828,10 +846,11 @@ def generate_speech_embeddings(args,df):
         conversation_df = get_conversation_df(df, conversation) 
 
         if args.project_id == "podcast":
-            path = "/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav"
+            path = "/scratch/gpfs/ln1144/247-pickling/data/podcast/synth_podcast_16k.wav"
         elif args.project_id == "tfs":
              path = 'data/' + str(args.project_id) + '/' + str(args.subject) + '/' + df.conversation_name.unique().item() + '/audio/' + df.conversation_name.unique().item() + '_deid.wav'
         
+        # call args.model
         audio = whisper.load_audio(path)
         
         input_dataset = AudioDataset(args, audio, conversation_df, df)

@@ -92,11 +92,11 @@ download-247-pickles:
 	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247-pickles/ results/676/
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: PRJCT_ID := tfs
+%-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
-%-embeddings: SID := 625
+%-embeddings: SID := 777
 # {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 54) 
+%-embeddings: CONV_IDS = $(shell seq 1 1) 
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
@@ -168,7 +168,7 @@ copy-embeddings:
 
 # Download huggingface models to cache (before generating embeddings)
 # This target needs to be run on the head node
-cache-models: MODEL := openai/whisper-tiny.en
+cache-models: MODEL := openai/whisper-large-v2
 # {causal | seq2seq | mlm | or any model name specified in EMB_TYPE comments}
 cache-models:
 	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"
