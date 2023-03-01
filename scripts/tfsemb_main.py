@@ -85,16 +85,15 @@ def tokenize_and_explode(args, df):
         DataFrame: a new dataframe object with the words tokenized
     """
     df["token"] = df.word.apply(args.tokenizer.tokenize)
-    df = df.explode("token", ignore_index=True)
+    df = df.explode("token", ignore_index=False)
     df = convert_token_to_word(args, df)
     df = convert_token_to_idx(args, df)
     df = check_token_is_root(args, df)
 
-    # Add a token index for each word's token
-    for value in df["index"].unique():
-        if value is not None:
-            flag = df["index"] == value
-            df.loc[flag, "token_idx"] = np.arange(sum(flag))
+    df["token_idx"] = (
+        df.groupby(["adjusted_onset", "word"]).cumcount()
+    ).astype(int)
+    df = df.reset_index(drop=True)
 
     return df
 
@@ -373,11 +372,6 @@ def transformer_forward_pass(args, data_dl):
     return all_embeddings, all_logits
 
 
-def get_conversation_tokens(df, conversation):
-    token_list = df[df.conversation_id == conversation]["token_id"].tolist()
-    return token_list
-
-
 def make_conversational_input(args, df):
     """
     Create a conversational context/response pair to be fed into an encoder
@@ -556,28 +550,28 @@ def generate_causal_embeddings(args, df):
     final_true_y_prob = []
     final_true_y_rank = []
     final_logits = []
-    for conversation in df.conversation_id.unique():
-        token_list = get_conversation_tokens(df, conversation)
-        model_input = make_input_from_tokens(args, token_list)
-        embeddings, logits = inference_function(args, model_input)
 
-        embeddings = process_extracted_embeddings_all_layers(args, embeddings)
-        for _, item in embeddings.items():
-            assert item.shape[0] == len(token_list)
-        final_embeddings.append(embeddings)
+    token_list = df["token_id"].tolist()
+    model_input = make_input_from_tokens(args, token_list)
+    embeddings, logits = inference_function(args, model_input)
 
-        (
-            top1_word,
-            top1_prob,
-            true_y_prob,
-            true_y_rank,
-            entropy,
-        ) = process_extracted_logits(args, logits, model_input)
-        final_top1_word.extend(top1_word)
-        final_top1_prob.extend(top1_prob)
-        final_true_y_prob.extend(true_y_prob)
-        final_true_y_rank.extend(true_y_rank)
-        final_logits.extend([None] + torch.cat(logits, axis=0).tolist())
+    embeddings = process_extracted_embeddings_all_layers(args, embeddings)
+    for _, item in embeddings.items():
+        assert item.shape[0] == len(token_list)
+    final_embeddings.append(embeddings)
+
+    (
+        top1_word,
+        top1_prob,
+        true_y_prob,
+        true_y_rank,
+        entropy,
+    ) = process_extracted_logits(args, logits, model_input)
+    final_top1_word.extend(top1_word)
+    final_top1_prob.extend(top1_prob)
+    final_true_y_prob.extend(true_y_prob)
+    final_true_y_rank.extend(true_y_rank)
+    final_logits.extend([None] + torch.cat(logits, axis=0).tolist())
 
     if len(final_embeddings) > 1:
         # TODO concat all embeddings and return a dictionary
@@ -586,7 +580,7 @@ def generate_causal_embeddings(args, df):
     else:
         final_embeddings = final_embeddings[0]
 
-    df = pd.DataFrame()
+    df = pd.DataFrame(index=df.index)
     df["topk_pred"] = final_top1_word
     df["topk_pred_prob"] = final_top1_prob
     df["true_pred_prob"] = final_true_y_prob
@@ -629,15 +623,16 @@ def main():
     assert len(utterance_df) != 0, "Empty dataframe"
 
     # Select generation function based on model type
-    if args.embedding_type == "glove50":
-        generate_func = generate_glove_embeddings
-    elif args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
-        generate_func = generate_causal_embeddings
-    elif args.embedding_type in tfsemb_dwnld.SEQ2SEQ_MODELS:
-        generate_func = generate_conversational_embeddings
-    else:
-        print('Invalid embedding type: "{}"'.format(args.embedding_type))
-        return
+    match args.embedding_type:
+        case "glove50":
+            generate_func = generate_glove_embeddings
+        case item if item in tfsemb_dwnld.CAUSAL_MODELS:
+            generate_func = generate_causal_embeddings
+        case item if item in tfsemb_dwnld.SEQ2SEQ_MODELS:
+            generate_func = generate_conversational_embeddings
+        case _:
+            print('Invalid embedding type: "{}"'.format(args.embedding_type))
+            exit()
 
     # Generate Embeddings
     embeddings = None

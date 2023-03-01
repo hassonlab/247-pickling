@@ -10,6 +10,13 @@ from tqdm import tqdm
 from utils import load_pickle, save_pickle
 
 
+def confirm_prompt(question: str) -> bool:
+    reply = None
+    while reply not in ("y", "n"):
+        reply = input(f"{question} (y/n): ").casefold()
+    return reply == "y"
+
+
 def removeEmptyfolders(path):
     for (_path, _, _files) in os.walk(path, topdown=False):
         if _files:
@@ -58,7 +65,7 @@ def main():
         print("Base DataFrame Exists")
     else:
         print("Moving Base DataFrame")
-        shutil.move(src, dst)
+        shutil.copy(src, dst)
 
     if not os.path.isdir(args.output_dir):
         print(f"DNE: {args.output_dir}")
@@ -68,7 +75,9 @@ def main():
             [x for x in pathlib.Path(args.output_dir).glob("*") if x.is_dir()]
         )
 
-    for layer_folder in tqdm(layer_folders, bar_format="Merging Layer..{n_fmt}"):
+    for layer_folder in tqdm(
+        layer_folders, bar_format="Merging Layer..{n_fmt}"
+    ):
         conversation_pickles = sorted(
             [x for x in layer_folder.glob("*") if x.is_file()]
         )
@@ -81,7 +90,9 @@ def main():
             )
             continue
 
-        all_df = [load_pickle(conversation) for conversation in conversation_pickles]
+        all_df = [
+            load_pickle(conversation) for conversation in conversation_pickles
+        ]
 
         all_df = pd.concat(all_df, ignore_index=True)
         all_exs = all_df.to_dict("records")
@@ -119,8 +130,15 @@ def main():
                 save_pickle(all_exs, os.path.join(args.emb_out_dir, fn))
 
     # Deleting embeddings after concatenation
-    shutil.rmtree(args.output_dir, ignore_errors=True)
-    removeEmptyfolders(args.EMB_DIR)
+    if confirm_prompt(
+        "Embeddings Concatenated. Do you want to delete the original files?"
+    ):
+        shutil.rmtree(args.output_dir, ignore_errors=True)
+        os.remove(src)
+        removeEmptyfolders(args.EMB_DIR)
+
+    else:
+        print("OK, Keeping them. Bye!")
 
 
 if __name__ == "__main__":

@@ -70,13 +70,12 @@ def create_directory_paths(args):
     vars(args).update(DIR_DICT)
 
     if args.sig_elec_file:
-        sig_file_path, sig_file_name = os.path.split(args.sig_elec_file)
-        if not sig_file_path:
-            args.sig_elec_file = os.path.join(DATA_DIR, sig_file_name)
+        if not os.path.isabs(args.sig_elec_file):
+            args.sig_elec_file = os.path.join(DATA_DIR, args.sig_elec_file)
 
-    if not os.path.isfile(args.sig_elec_file):
-        print(f"FAILED: {args.sig_elec_file} does not exist")
-        exit()
+        if not os.path.isfile(args.sig_elec_file):
+            print(f"FAILED: {args.sig_elec_file} does not exist")
+            exit()
 
     crude_flag_file = glob.glob(os.path.join(CONV_DIRS, "*alignment.txt"))
     args.crude_flag_file = crude_flag_file[0] if crude_flag_file else None
@@ -97,7 +96,6 @@ def build_config(args):
     Returns:
         dict: combined configuration information
     """
-    args.subject = str(args.subject)
     args.exclude_words = ["sp", "{lg}", "{ns}", "{LG}", "{NS}", "SP"]
     args.non_words = ["hm", "huh", "mhm", "mm", "oh", "uh", "uhuh", "um"]
 
