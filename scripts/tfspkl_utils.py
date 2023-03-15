@@ -26,7 +26,7 @@ def get_electrode_ids(CONFIG, conversation):
     )
 
     if not electrode_folder:
-        print("Incorrect Project ID or Subject")
+        print("ELECTRODE_FOLDER_MAP: Incorrect Project ID or Subject")
         exit()
 
     elec_files = glob.glob(os.path.join(conversation, electrode_folder, "*.mat"))
@@ -129,6 +129,21 @@ def process_conversation(CONFIG, conversation):
     # drop duplicate rows
     df = df.drop_duplicates()
     df = df.drop_duplicates(subset=["word", "onset"])
+
+    # drop rows with duplicate onset and offset
+    # to avoid cases like {audible} and audible that have the same onset & offset
+    df = df.drop_duplicates(subset=["onset", "offset"])
+
+    # split words with underscores and explode
+    df["word"] = df.word.str.split("_")
+    df = df.explode("word")
+
+    # remove asterisk and double quotes
+    df["word"] = df.word.str.strip('*"')
+
+    # remove words enclosed in curly brackets
+    df["word"] = df["word"].str.replace(r"\{.*\}", "", regex=True)
+    df = df[df["word"] != ""]
 
     # drop empty words in datum
     df = df[~df.word.isnull()]
