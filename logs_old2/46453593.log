@@ -1,0 +1,6 @@
+It's della-gpu
+Requester: ln1144
+Node: della-i14g2
+Start time: Thu Mar 23 23:25:14 EDT 2023
+scripts/tfsemb_main.py --project-id tfs --pkl-identifier full --subject 676 --conversation-id 37 --embedding-type openai/whisper-tiny.en --model-type de-only --shuffle-audio none --prod-comp-split True --layer-idx 3 4 --context-length 1
+slurmstepd: error: *** JOB 46453593 ON della-i14g2 CANCELLED AT 2023-03-23T23:25:18 ***

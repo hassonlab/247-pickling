@@ -1,0 +1,16 @@
+It's della-gpu
+Requester: ln1144
+Node: della-l05g1
+Start time: Thu Mar 23 13:40:27 EDT 2023
+scripts/tfsemb_main.py --project-id tfs --pkl-identifier full --subject 676 --conversation-id 72 --embedding-type openai/whisper-tiny.en --model-type full --shuffle-audio none --layer-idx 3 --context-length 1
+Model Name: openai/whisper-tiny.en
+Downloading model
+Downloading tokenizer
+Downloading preprocessor
+Traceback (most recent call last):
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 1106, in <module>
+    main()
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 1072, in main
+    raise Exception("Base dataframe does not exist")
+Exception: Base dataframe does not exist
+End time: Thu Mar 23 13:40:30 EDT 2023

@@ -1,0 +1,32 @@
+import pandas as pd
+import numpy as np
+import matplotlib as plt
+
+SIDS = [625, 676, 798, 7170]
+
+for sid in SIDS:
+
+    # read base df
+    df = pd.read_pickle(f'/scratch/gpfs/ln1144/247-pickling/results/tfs/{sid}/pickles/embeddings/whisper-tiny.en-decoder')
+
+    df = pd.DataFrame(df)
+
+    for index,row in df.iterrows():
+
+        diff = np.diff(df.onset) < 0
+
+        breakpoint()
+
+        perc = len(diff) / len(df.onset)
+
+        fig = plt.figure()
+        plt.plot(diff)
+        plt.title(sid)
+        plt.subtitle(perc + 'percent of all words')
+
+        fname = f'/scratch/gpfs/ln1144/247-pickling/results/{sid}_onset_check.png'
+
+        plt.savefig(fname,'png')
+        
+
+

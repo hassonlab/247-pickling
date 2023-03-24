@@ -1,0 +1,31 @@
+It's della-gpu
+Requester: ln1144
+Node: della-l05g6
+Start time: Fri Mar 24 01:56:47 EDT 2023
+scripts/tfsemb_main.py --project-id tfs --pkl-identifier full --subject 676 --conversation-id 52 --embedding-type openai/whisper-tiny.en --model-type de-only --shuffle-audio none --prod-comp-split True --layer-idx 3 4 --context-length 1
+Model Name: openai/whisper-tiny.en
+Downloading model
+Downloading tokenizer
+Downloading preprocessor
+Selecting conversation 52
+Traceback (most recent call last):
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 1127, in <module>
+    main()
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 1113, in main
+    output = generate_func(args, utterance_df)
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 973, in generate_speech_embeddings
+    embeddings, logits = speech_model_forward_pass(args, input_dl)
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 882, in speech_model_forward_pass
+    for batch_idx, batch in enumerate(data_dl):
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 628, in __next__
+    data = self._next_data()
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 671, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 58, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 58, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 778, in __getitem__
+    if context_df.empty():
+TypeError: 'bool' object is not callable
+End time: Fri Mar 24 01:56:52 EDT 2023

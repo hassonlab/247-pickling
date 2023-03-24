@@ -1,11 +1,10 @@
 #!/bin/bash
-#SBATCH --time=02:10:00
-#SBATCH --mem=128GB
+#SBATCH --time=03:00:00
+#SBATCH --mem=64GB
 #SBATCH --gres=gpu:1
 #SBATCH --nodes=1
 ##SBATCH --cpus-per-task=4
-#SBATCH -o './logs/%x.out'
-#SBATCH -e './logs/%x.err'
+#SBATCH -o 'logs/%A.log'
  
 if [[ "$HOSTNAME" == *"tiger"* ]]
 then
@@ -17,7 +16,7 @@ then
     echo "It's della-gpu"
     module purge
     module load anaconda3/2021.11
-    conda activate 247-main-new
+    conda activate 247-main
 else
     module purge
     module load anacondapy

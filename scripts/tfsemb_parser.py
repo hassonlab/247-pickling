@@ -5,6 +5,9 @@ import sys
 def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--embedding-type", type=str, default="glove")
+    parser.add_argument("--model-type", type=str)
+    parser.add_argument("--shuffle-audio",type=str,default="none")
+    parser.add_argument("--prod-comp-split", type=str)
     parser.add_argument("--context-length", type=int, default=0)
     parser.add_argument(
         "--save-predictions", action="store_true", default=False

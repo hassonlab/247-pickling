@@ -117,8 +117,8 @@ def download_hf_processor(
 
     processor = processor_class.from_pretrained(
         model_name,
-        language="english",
-        task="transcribe",
+        # language="english",
+        # task="transcribe",
         cache_dir=cache_dir,
         local_files_only=local_files_only,
     )
@@ -152,7 +152,14 @@ def download_tokenizer_and_model(
         model_name, tokenizer_class, CACHE_DIR, local_files_only
     )
 
-    return (model, tokenizer)
+    if model_name in SPEECHSEQ2SEQ_MODELS:
+        print("Downloading preprocessor")
+        preprocessor = download_hf_processor(
+            model_name, model_class, CACHE_DIR, local_files_only
+        )
+        return (model, tokenizer, preprocessor)
+    else:
+        return (model, tokenizer)
 
 
 def clone_model_repo(
@@ -180,14 +187,24 @@ def clone_model_repo(
 
     if local_files_only:
         if os.path.exists(model_dir):
-            model, tokenizer = download_tokenizer_and_model(
+            if model_name in SPEECHSEQ2SEQ_MODELS:
+                model, tokenizer, preprocessor = download_tokenizer_and_model(
                 CACHE_DIR,
                 tokenizer_class,
                 model_class,
                 model_dir,
                 local_files_only,
             )
-            return model, tokenizer
+                return model, tokenizer, preprocessor
+            else:
+                model, tokenizer = download_tokenizer_and_model(
+                    CACHE_DIR,
+                    tokenizer_class,
+                    model_class,
+                    model_dir,
+                    local_files_only,
+                )
+                return model, tokenizer
         else:
             print(f"Model directory {model_dir} does not exist")
     else:

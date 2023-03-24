@@ -1,0 +1,46 @@
+It's della-gpu
+Requester: ln1144
+Node: della-i14g18
+Start time: Thu Mar 23 22:43:58 EDT 2023
+scripts/tfsemb_main.py --project-id tfs --pkl-identifier full --subject 798 --conversation-id 13 --embedding-type openai/whisper-tiny.en --model-type de-only --shuffle-audio none --prod-comp-split True --layer-idx 3 --context-length 1
+Model Name: openai/whisper-tiny.en
+Downloading model
+Downloading tokenizer
+Downloading preprocessor
+Selecting conversation 13
+Traceback (most recent call last):
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/pandas/core/indexing.py", line 769, in _validate_tuple_indexer
+    self._validate_key(k, i)
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/pandas/core/indexing.py", line 1378, in _validate_key
+    raise ValueError(f"Can only index by location with a [{self._valid_types}]")
+ValueError: Can only index by location with a [integer, integer slice (START point is INCLUDED, END point is EXCLUDED), listlike of integers, boolean array]
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 1122, in <module>
+    main()
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 1108, in main
+    output = generate_func(args, utterance_df)
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 968, in generate_speech_embeddings
+    embeddings, logits = speech_model_forward_pass(args, input_dl)
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 877, in speech_model_forward_pass
+    for batch_idx, batch in enumerate(data_dl):
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 628, in __next__
+    data = self._next_data()
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 671, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 58, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 58, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 781, in __getitem__
+    if context_df.iloc[idx,'speaker'] == 's1': # speaker
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/pandas/core/indexing.py", line 961, in __getitem__
+    return self._getitem_tuple(key)
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/pandas/core/indexing.py", line 1458, in _getitem_tuple
+    tup = self._validate_tuple_indexer(tup)
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/pandas/core/indexing.py", line 771, in _validate_tuple_indexer
+    raise ValueError(
+ValueError: Location based indexing can only have [integer, integer slice (START point is INCLUDED, END point is EXCLUDED), listlike of integers, boolean array] types
+End time: Thu Mar 23 22:44:15 EDT 2023

@@ -1,0 +1,40 @@
+It's della-gpu
+Requester: ln1144
+Node: della-i14g6
+Start time: Thu Mar 23 23:34:23 EDT 2023
+scripts/tfsemb_main.py --project-id tfs --pkl-identifier full --subject 7170 --conversation-id 13 --embedding-type openai/whisper-tiny.en --model-type de-only --shuffle-audio none --prod-comp-split True --layer-idx 3 4 --context-length 1
+Model Name: openai/whisper-tiny.en
+Downloading model
+Downloading tokenizer
+Downloading preprocessor
+Selecting conversation 13
+> /scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py(780)__getitem__()
+-> if self.args.prod_comp_split == 'True':
+(Pdb) 
+Traceback (most recent call last):
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 1123, in <module>
+    main()
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 1109, in main
+    output = generate_func(args, utterance_df)
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 969, in generate_speech_embeddings
+    embeddings, logits = speech_model_forward_pass(args, input_dl)
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 878, in speech_model_forward_pass
+    for batch_idx, batch in enumerate(data_dl):
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 628, in __next__
+    data = self._next_data()
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 671, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 58, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 58, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 780, in __getitem__
+    if self.args.prod_comp_split == 'True':
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 780, in __getitem__
+    if self.args.prod_comp_split == 'True':
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/bdb.py", line 90, in trace_dispatch
+    return self.dispatch_line(frame)
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/bdb.py", line 115, in dispatch_line
+    if self.quitting: raise BdbQuit
+bdb.BdbQuit
+End time: Thu Mar 23 23:34:28 EDT 2023

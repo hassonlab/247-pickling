@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 1087, in <module>
+    main()
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 1073, in main
+    output = generate_func(args, utterance_df)
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 933, in generate_speech_embeddings
+    embeddings, logits = speech_model_forward_pass(args, input_dl)
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 842, in speech_model_forward_pass
+    for batch_idx, batch in enumerate(data_dl):
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 628, in __next__
+    data = self._next_data()
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 671, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 58, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/home/ln1144/.conda/envs/247-main/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 58, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/scratch/gpfs/ln1144/247-pickling/scripts/tfsemb_main.py", line 735, in __getitem__
+    start_windows = 1500 - num_windows
+UnboundLocalError: local variable 'num_windows' referenced before assignment

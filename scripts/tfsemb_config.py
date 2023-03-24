@@ -41,22 +41,41 @@ def select_tokenizer_and_model(args):
         args.layer_idx = [1]
         return
 
-    try:
-        (
-            args.model,
-            args.tokenizer,
-        ) = tfsemb_dwnld.download_tokenizers_and_models(
-            model_name, local_files_only=True, debug=False
-        )[
-            model_name
-        ]
-    except OSError:
-        # NOTE: Please refer to make-target: cache-models for more information.
-        print(
-            "Model and tokenizer not found. Please download into cache first.",
-            file=sys.stderr,
-        )
-        return
+    if "whisper" in model_name:
+        try:
+            (
+                args.model,
+                args.tokenizer,
+                args.preprocessor
+            ) = tfsemb_dwnld.download_tokenizers_and_models(
+                model_name, local_files_only=True, debug=False
+            )[
+                model_name
+            ]
+        except OSError:
+            # NOTE: Please refer to make-target: cache-models for more information.
+            print(
+                "Model and tokenizer not found. Please download into cache first.",
+                file=sys.stderr,
+            )
+            return
+    else:
+        try:
+            (
+                args.model,
+                args.tokenizer,
+            ) = tfsemb_dwnld.download_tokenizers_and_models(
+                model_name, local_files_only=True, debug=False
+            )[
+                model_name
+            ]
+        except OSError:
+            # NOTE: Please refer to make-target: cache-models for more information.
+            print(
+                "Model and tokenizer not found. Please download into cache first.",
+                file=sys.stderr,
+            )
+            return
 
     args = get_model_layer_count(args)
 
