@@ -976,14 +976,7 @@ def generate_speech_embeddings(args,df):
 
     # get model processor - move to tfsemb_download
     args.processor = download_hf_processor(args.full_model_name)
-
-    # # get processor and tokenizer from Arnab's fine-tuned model
-    # model_path='/scratch/gpfs/arnab/fine_tune_whisper/data/625/saved_models'
-    # checkpoint=2000 # changeable parameter
-
-    # args.processor = WhisperProcessor.from_pretrained(model_path)
-    # args.tokenizer = WhisperTokenizer.from_pretrained(model_path)
-
+    
     # when using generative model:
     # args.generativemodel = download_whisper_generative_model(args.full_model_name)
 
