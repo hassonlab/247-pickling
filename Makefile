@@ -94,9 +94,9 @@ download-247-pickles:
 ## settings for targets: generate-embeddings, concatenate-embeddings
 %-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 798
+%-embeddings: SID := 625
 # {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 15) 
+%-embeddings: CONV_IDS = $(shell seq 1 24) 
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
@@ -105,17 +105,22 @@ download-247-pickles:
 "openai/whisper-tiny", "openai/whisper-base", \
 "openai/whisper-small",  "openai/whisper-medium", "openai/whisper-large"}
 %-embeddings: MDL_TYPE := de-only
-# encoder-only | decoder-only
+# full | full-onset | encoder-only | decoder-only
 %-embeddings: SHUFFLE_AUDIO := none
-# samples | phonemes | words | 2-words
+# none | samples | phonemes | words | 2-words | flip
+%-embeddings: SHUFFLE_WORDS := flip
+%-embeddings: CUTOFF := 20
+# the duration (in s) of the audio window before word onset that will be kept intact
+# 0 = only word is intact, 5 = 5 s before word onset is kept intact
+# if shuffle_word then cutoff refers to the word that is kept intact, 0 = only current word
 %-embeddings: PROD_COMP_SPLIT := False
 %-embeddings: CNXT_LEN := 1
-%-embeddings: LAYER := $(shell seq 3 3) 
+%-embeddings: LAYER := $(shell seq 0 4) 
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 %-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
-%-embeddings: CMD =  sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
+%-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
 # {echo | python | sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh}
 
 # 38 and 39 failed
@@ -141,6 +146,8 @@ generate-embeddings: generate-base-for-embeddings
 				--embedding-type $(EMB_TYPE) \
 				--model-type $(MDL_TYPE) \
 				--shuffle-audio $(SHUFFLE_AUDIO) \
+				--shuffle-words $(SHUFFLE_WORDS) \
+				--cutoff $(CUTOFF) \
 				--prod-comp-split $(PROD_COMP_SPLIT) \
 				--layer-idx $(LAYER) \
 				--context-length $$cnxt_len; \

@@ -1,0 +1,77 @@
+It's della-gpu
+Requester: ln1144
+Node: della-l03g15
+Start time: Fri Mar 24 10:59:15 EDT 2023
+scripts/tfsemb_main.py --project-id tfs --pkl-identifier full --subject 676 --conversation-id 22 --embedding-type openai/whisper-tiny.en --model-type de-only --shuffle-audio none --prod-comp-split False --layer-idx 3 --context-length 1
+Model Name: openai/whisper-tiny.en
+Downloading model
+Downloading tokenizer
+Downloading preprocessor
+Selecting conversation 22
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+0.1076923076923077
+End time: Fri Mar 24 10:59:23 EDT 2023

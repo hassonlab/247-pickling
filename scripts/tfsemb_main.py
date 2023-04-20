@@ -127,8 +127,6 @@ def process_extracted_embeddings(args, concat_output):
             [init_token_embedding, concatenated_embeddings], axis=0
         )
 
-    # here is where we could handle special tokens in whisper?
-
     return extracted_embeddings
 
 
@@ -216,23 +214,21 @@ def extract_select_vectors(batch_idx, array):
 
     # batch size / seq_length / dim
 
-    # if batch_idx == 0:
-    #     x = array[0, :-1, :].clone()
-    #     if array.shape[0] > 1:
+    if batch_idx == 0:
+        x = array[0, :-1, :].clone()
+        if array.shape[0] > 1:
 
-    #         rem_sentences_preds = array[1:, -1, :].clone()
+            rem_sentences_preds = array[1:, -1, :].clone()
 
-    #         x = torch.cat([x, rem_sentences_preds], axis=0)
-    # else:
-    #     # try:
-    #     #     x = array[:, -2, :].clone()
-    #     # except:
-    #     #     x = array[:, -1, :].clone()
-    #     # x = array[:, -2, :].clone()
-    #     x = array[:, -1, :].clone()
+            x = torch.cat([x, rem_sentences_preds], axis=0)
+    else:
+        try:
+            x = array[:, -1, :].clone()
+        except:
+            x = array[:, -2, :].clone()
 
-    x = array[:, -1, :].clone()
-    # x = array[:, -2, :].clone()
+    # x = array[:, -1, :].clone()
+    # # x = array[:, -2, :].clone()
 
     return x
 
@@ -277,8 +273,6 @@ def extract_select_vectors_logits(batch_idx, array):
         x = array[:, -2, :].clone()
     except:
         x = array[:, -1, :].clone()
-
-    # x = array[:, -1, :].clone()
 
     return x
 
@@ -595,26 +589,6 @@ def get_conversation_df(df, conversation):
 
     return conversation_df
 
-# def load_audio(conversation):
-
-#     breakpoint()
-
-#     # TO DO: from /conversation/*.wav something like this
-#     sampling_rate, audio = wavfile.read('/data/tfs/' + args.sid + '/*_conversation' + conversation + '/audio/*.wav')
-
-#     breakpoint()
-
-#     # for now implement it only for podcast
-#     # sampling_rate, audio = wavfile.read("/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav")
-
-#     # convert to 16kHz if not already
-#     if sampling_rate != 16000:
-#         new_rate = 16000
-#         n_samples = round(len(audio) * float(new_rate)/sampling_rate)
-#         audio = sps.resample(audio,n_samples)
-
-#     return audio
-
 class AudioDataset(data.Dataset):
 
     def __init__(self, args, audio, conversation_df, df, transform=None):
@@ -640,12 +614,20 @@ class AudioDataset(data.Dataset):
             chunk_offset = self.conversation_df.offset_converted.iloc[idx]
             chunk_onset = np.max([0,(chunk_offset - 30)])
         
-            # # HACK
-            # word_onset = self.conversation_df.onset_converted.iloc[idx]
-            # chunk_offset = word_onset + 0.2325
-            # num_windows = 10
-            # chunk_onset = np.max([0,(chunk_offset - 30)])
-            # word_offset = self.conversation_df.offset_converted.iloc[idx]
+            chunk_data = self.audio[int(chunk_onset*sampling_rate):int(chunk_offset*sampling_rate)]
+
+            start_windows = 0
+
+        ###########################
+        ## for full-onset model ##
+        ###########################
+        elif self.args.model_type == "full-onset":
+
+            word_onset = self.conversation_df.onset_converted.iloc[idx]
+            chunk_offset = word_onset + 0.2325
+            num_windows = 10
+            chunk_onset = np.max([0,(chunk_offset - 30)])
+            word_offset = self.conversation_df.offset_converted.iloc[idx]
 
             chunk_data = self.audio[int(chunk_onset*sampling_rate):int(chunk_offset*sampling_rate)]
 
@@ -720,32 +702,53 @@ class AudioDataset(data.Dataset):
         elif self.args.shuffle_audio == "phonemes":
             # get audio until current word
             chunk1 = self.audio[int(chunk_onset*sampling_rate):int(word_onset*sampling_rate)]
-            # shuffle phonemes
-            # split into smaller chunks of size (phoneme)
-            chunk1 = np.array_split(chunk1,int((word_onset-chunk_onset)*20))
-            # shuffle and concatenate
-            random.shuffle(chunk1)
-            chunk1 = np.concatenate(chunk1)
-            # get current word audio
-            chunk2 = self.audio[int(word_onset*sampling_rate):int(chunk_offset*sampling_rate)]
-            # concatenate
-            chunk_data = np.append(chunk1,chunk2)
+            try:
+                # shuffle phonemes
+                # split into smaller chunks of size (phoneme)
+                chunk1 = np.array_split(chunk1,int((word_onset-chunk_onset)*20))
+                # shuffle and concatenate
+                random.shuffle(chunk1)
+                chunk1 = np.concatenate(chunk1)
+                # get current word audio
+                chunk2 = self.audio[int(word_onset*sampling_rate):int(chunk_offset*sampling_rate)]
+                # concatenate
+                chunk_data = np.append(chunk1,chunk2)
+            except:
+                chunk_data = self.audio[int(word_onset*sampling_rate):int(chunk_offset*sampling_rate)]
 
         elif self.args.shuffle_audio == "words":
             # get audio until current word
             chunk1 = self.audio[int(chunk_onset*sampling_rate):int(word_onset*sampling_rate)]
-            # shuffle words
-            # split into smaller chunks of size (word)
-            chunk1 = np.array_split(chunk1,int((word_onset-chunk_onset)*7.5))
-            # shuffle and concatenate
-            random.shuffle(chunk1)
-            chunk1 = np.concatenate(chunk1)
-            # get current word audio
-            chunk2 = self.audio[int(word_onset*sampling_rate):int(chunk_offset*sampling_rate)]
-            # concatenate
-            chunk_data = np.append(chunk1,chunk2)            
+            # TODO there is one case (676, conversation 52), where this does not work, because word_onset is smaller than 0
+            # look at it
+            try:
+                # shuffle words
+                # split into smaller chunks of size (word)
+                chunk1 = np.array_split(chunk1,int((word_onset-chunk_onset)*4))
+                # shuffle and concatenate
+                random.shuffle(chunk1)
+                chunk1 = np.concatenate(chunk1)
+                # get current word audio
+                chunk2 = self.audio[int(word_onset*sampling_rate):int(chunk_offset*sampling_rate)]
+                # concatenate
+                chunk_data = np.append(chunk1,chunk2)   
+            except:
+                chunk_data = self.audio[int(word_onset*sampling_rate):int(chunk_offset*sampling_rate)]
 
-
+        elif self.args.shuffle_audio == "flip":
+            # get audio until current word (or cutoff defined)
+            chunk1 = self.audio[int(chunk_onset*sampling_rate):int((word_onset-self.args.cutoff)*sampling_rate)]
+            try:
+                # flip audio
+                chunk1 = np.flip(chunk1)
+                # get current word audio
+                chunk2 = self.audio[int((word_onset-self.args.cutoff)*sampling_rate):int(chunk_offset*sampling_rate)]
+                # concatenate 
+                chunk_data = np.append(chunk1,chunk2)
+            except:
+                chunk_data = self.audio[int(word_onset*sampling_rate):int(chunk_offset*sampling_rate)]
+            
+        
         ######################################
         ## DEBUG for writing audio to files ##
         ######################################
@@ -799,23 +802,34 @@ class AudioDataset(data.Dataset):
             # print(1)
             # if context_tokens1[-1] != context_tokens[-1]:
             #      print("ALARM")
-        
 
-            # # HACK
-            # context_tokens1 = self.conversation_df[(self.conversation_df.onset_converted >= chunk_onset) & (self.conversation_df.offset_converted <= word_offset)]["token"].tolist()
-            # # HACK 
-            # context_tokens = self.conversation_df[(self.conversation_df.onset_converted >= chunk_onset) & (self.conversation_df.index <= idx)]["token"].tolist()
+        if self.args.shuffle_words == 'flip':
+            
+            # get context_tokens until current word (or cutoff we define)
+            # if 0 we go to -2 - excluding last word
+            # if 1 we go to -3 excluding last two words ... and so on
+            try:
+                shuffle_context = context_tokens[:int(-self.args.cutoff-1)]
+                random.shuffle(shuffle_context)
+                shuffle_context.extend(context_tokens[int(-self.args.cutoff-1):])
+                context_tokens = shuffle_context
 
+            except:
+                context_tokens = context_tokens
+                
         # add prefix tokens (for large v2):
         # self.args.tokenizer.set_prefix_tokens(language="english", task="transcribe") - this does not work in current version (leos - 4.23.1) of transformers (!)
         # therefore use this:
         # if version of transformers == 4.23.1
-        # prefix_tokens = self.args.tokenizer.tokenize("<|startoftranscript|> <|en|> <|transcribe|>")
+        prefix_tokens = self.args.tokenizer.tokenize("<|startoftranscript|> <|en|> <|transcribe|>")
         prefix_tokens = self.args.tokenizer.tokenize("<|startoftranscript|> ")
         prefix_tokens.extend(context_tokens)
         context_tokens = prefix_tokens
 
-        #print(context_tokens)
+        # # TEST
+        # context_tokens = self.args.tokenizer.tokenize("test")
+
+        # print(context_tokens)
 
         # encoded_dict = self.args.processor.tokenizer.encode_plus(context_tokens, padding=False, return_attention_mask=False, return_tensors="pt")
         # encoded_dict = self.args.processor.tokenizer.encode(context_tokens, add_special_tokens=False, return_tensors="pt")
@@ -890,7 +904,7 @@ def speech_model_forward_pass(args, data_dl):
         all_embeddings = []
         all_logits = []
         for batch_idx, batch in enumerate(data_dl):
-            #print(batch_idx)
+            print(batch_idx)
             input_features = batch["input_features"].to(args.device)
             start_windows = batch["start_windows"].item()
             decoder_input_ids = batch["context_token_ids"].to(args.device)
@@ -902,7 +916,7 @@ def speech_model_forward_pass(args, data_dl):
             #####################
             ## for full model: ##
             #####################
-            if args.model_type == "full":
+            if args.model_type == "full" or args.model_type == "full-onset":
                 model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, output_hidden_states=True)
                 logits = model_output.logits.cpu()
                 embeddings = extract_select_vectors_all_layers(
@@ -963,6 +977,13 @@ def generate_speech_embeddings(args,df):
     # get model processor - move to tfsemb_download
     args.processor = download_hf_processor(args.full_model_name)
 
+    # # get processor and tokenizer from Arnab's fine-tuned model
+    # model_path='/scratch/gpfs/arnab/fine_tune_whisper/data/625/saved_models'
+    # checkpoint=2000 # changeable parameter
+
+    # args.processor = WhisperProcessor.from_pretrained(model_path)
+    # args.tokenizer = WhisperTokenizer.from_pretrained(model_path)
+
     # when using generative model:
     # args.generativemodel = download_whisper_generative_model(args.full_model_name)
 
@@ -975,6 +996,7 @@ def generate_speech_embeddings(args,df):
         elif args.project_id == "tfs":
              path = 'data/' + str(args.project_id) + '/' + str(args.subject) + '/' + df.conversation_name.unique().item() + '/audio/' + df.conversation_name.unique().item() + '_deid.wav'
 
+        # HACK
         # call args.model
         audio = whisper.load_audio(path)
 
@@ -1016,6 +1038,9 @@ def generate_speech_embeddings(args,df):
     else:
         final_embeddings = final_embeddings[0]
 
+    # TODO check what is happening here - why do we take df[1:]?
+    # HACK 
+    # adding none as a first item, this we want to skip
     df = pd.DataFrame()
     df["top1_pred"] = final_top1_word[1:]
     df["top1_pred_prob"] = final_top1_prob[1:]
