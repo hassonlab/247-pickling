@@ -137,6 +137,7 @@ def process_conversation(CONFIG, conversation):
     # split words with underscores and explode
     df["word"] = df.word.str.split("_")
     df = df.explode("word")
+    df.loc[df.index.duplicated(),("onset","offset")] = np.nan
 
     # remove asterisk and double quotes
     df["word"] = df.word.str.strip('*"')
