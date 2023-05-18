@@ -45,8 +45,9 @@ def select_tokenizer_and_model(args):
             *tfsemb_dwnld.CAUSAL_MODELS,
             *tfsemb_dwnld.SEQ2SEQ_MODELS,
             *tfsemb_dwnld.MLM_MODELS,
+            *tfsemb_dwnld.SPEECHSEQ2SEQ_MODELS,
         ]:
-            (args.model, args.tokenizer,) = tfsemb_dwnld.download_tokenizers_and_models(
+            (args.model, args.tokenizer, args.processor,) = tfsemb_dwnld.download_tokenizers_and_models(
                 item, local_files_only=True, debug=False
             )[item]
         case _:

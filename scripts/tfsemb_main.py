@@ -14,6 +14,8 @@ from tfsemb_config import setup_environ
 from tfsemb_parser import arg_parser
 from utils import load_pickle, main_timer
 from utils import save_pickle as svpkl
+from tfsemb_genemb_whisper import generate_speech_embeddings
+from tfsemb_genemb_mlm import generate_mlm_embeddings
 
 
 def save_pickle(args, item, embeddings=None):
@@ -609,6 +611,7 @@ def generate_glove_embeddings(args, df):
     return df1
 
 
+
 # @main_timer
 def main():
     args = arg_parser()
@@ -630,6 +633,10 @@ def main():
             generate_func = generate_causal_embeddings
         case item if item in tfsemb_dwnld.SEQ2SEQ_MODELS:
             generate_func = generate_conversational_embeddings
+        case item if item in tfsemb_dwnld.SPEECHSEQ2SEQ_MODELS:
+            generate_func = generate_speech_embeddings
+        case item if item in tfsemb_dwnld.MLM_MODELS:
+            generate_func = generate_mlm_embeddings
         case _:
             print('Invalid embedding type: "{}"'.format(args.embedding_type))
             exit()

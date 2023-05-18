@@ -6,7 +6,9 @@ from transformers import (
     AutoModelForCausalLM,
     AutoModelForMaskedLM,
     AutoModelForSeq2SeqLM,
+    AutoModelForSpeechSeq2Seq,
     AutoTokenizer,
+    AutoProcessor,
 )
 
 CAUSAL_MODELS = [
@@ -25,13 +27,23 @@ CAUSAL_MODELS = [
     "facebook/opt-30b",
     "bigscience/bloom",
 ]
+
 SEQ2SEQ_MODELS = ["facebook/blenderbot_small-90M", "facebook/blenderbot-3B"]
 
+SPEECHSEQ2SEQ_MODELS = [
+    "openai/whisper-tiny.en",
+    "openai/whisper-tiny",
+    "openai/whisper-base.en",
+    "openai/whisper-small.en",
+    "openai/whisper-medium.en",
+    "openai/whisper-large",
+    "openai/whisper-large-v2",
+]
+
 MLM_MODELS = [
-    # "gpt2-xl", # uncomment to run this model with MLM input
-    # "gpt2-medium", # uncomment to run this model with MLM input
     "bert-base-uncased",
     "bert-large-uncased",
+    "bert-large-uncased-whole-word-masking",
     "bert-base-cased",
     "bert-large-cased",
     "roberta-base",
@@ -41,6 +53,7 @@ MLM_MODELS = [
 MODEL_CLASS_MAP = {
     "causal": (CAUSAL_MODELS, AutoModelForCausalLM),
     "seq2seq": (SEQ2SEQ_MODELS, AutoModelForSeq2SeqLM),
+    "speechseq2seq": (SPEECHSEQ2SEQ_MODELS, AutoModelForSpeechSeq2Seq),
     "mlm": (MLM_MODELS, AutoModelForMaskedLM),
 }
 
@@ -155,6 +168,26 @@ def download_hf_tokenizer(
     return tokenizer
 
 
+def download_hf_processor(
+    model_name, processor_class=None, cache_dir=None, local_files_only=False
+):
+    """Download a Huggingface processor from the model repository (cache)."""
+    if processor_class is None:
+        processor_class = AutoProcessor
+
+    if cache_dir is None:
+        cache_dir = set_cache_dir()
+
+    processor = processor_class.from_pretrained(
+        model_name,
+        # language="english",
+        # task="transcribe",
+        cache_dir=cache_dir,
+        local_files_only=local_files_only,
+    )
+    return processor
+
+
 def download_tokenizer_and_model(
     CACHE_DIR, tokenizer_class, model_class, model_name, local_files_only
 ):
@@ -179,7 +212,15 @@ def download_tokenizer_and_model(
         model_name, tokenizer_class, CACHE_DIR, local_files_only
     )
 
-    return (model, tokenizer)
+    if model_name in SPEECHSEQ2SEQ_MODELS:
+        print("Downloading preprocessor")
+        preprocessor = download_hf_processor(
+            model_name, None, CACHE_DIR, local_files_only
+        )
+    else:
+        preprocessor = None
+
+    return (model, tokenizer, preprocessor)
 
 
 def set_cache_dir():

@@ -100,23 +100,47 @@ download-247-pickles:
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
-%-embeddings: EMB_TYPE := gpt2-xl
+%-embeddings: EMB_TYPE := openai/whisper-tiny.en
 # {"gpt2", "gpt2-large", "gpt2-xl", \
 "EleutherAI/gpt-neo-125M", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-neo-2.7B", \
 "EleutherAI/gpt-neox-20b", \
 "facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", \
 "facebook/opt-2.7b", "facebook/opt-6.7b", "facebook/opt-30b", \
 "facebook/blenderbot_small-90M"}
-%-embeddings: CNXT_LEN := 1024
+%-embeddings: CNXT_LEN := 1
 %-embeddings: LAYER := all
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
+
+
+# Whisper specific args
+%-embeddings: MDL_TYPE := en-only
+# {full | full-onset | full_n-1 | en-only | de-only}
+%-embeddings: SHUFFLE_AUDIO := none
+# {none | samples | phonemes | words | 2-words | flip}
+%-embeddings: SHUFFLE_WORDS := none
+# {none | flip}
+%-embeddings: CUTOFF := 20
+# the duration (in s) of the audio window before word onset that will be kept intact
+# only works when SHUFFLE_AUDIO or SHUFFLE_WORDS == flip
+# 0 = only word is intact, 5 = 5s before word onset is kept intact
+# if shuffle_word then cutoff refers to the word that is kept intact, 0 = only current word
+# %-embeddings: PROD_COMP_SPLIT := --prod-comp-split
+
+# MLM specific args (comment out for false)
+# %-embeddings: MASKED := --masked
+# %-embeddings: LCTX := --lctx
+# %-embeddings: RCTX := --rctx
+# %-embeddings: RCTXP := --rctxp
+# %-embeddings: UTT := --utt
+
+
+
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 %-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
-%-embeddings: CMD = python
+%-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
 # {echo | python | sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh}
 
-# 38 and 39 failed
 
 # generate-base-for-embeddings: Generates the base dataframe for embedding generation
 generate-base-for-embeddings:
@@ -127,7 +151,7 @@ generate-base-for-embeddings:
 			--embedding-type $(EMB_TYPE);
 
 # generates embeddings (for each conversation separately)
-generate-embeddings: generate-base-for-embeddings
+generate-embeddings:
 	mkdir -p logs
 	for cnxt_len in $(CNXT_LEN); do \
 		for conv_id in $(CONV_IDS); do \
@@ -137,6 +161,16 @@ generate-embeddings: generate-base-for-embeddings
 				--subject $(SID) \
 				--conversation-id $$conv_id \
 				--embedding-type $(EMB_TYPE) \
+				--model-type $(MDL_TYPE) \
+				--shuffle-audio $(SHUFFLE_AUDIO) \
+				--shuffle-words $(SHUFFLE_WORDS) \
+				--cutoff $(CUTOFF) \
+				$(PROD_COMP_SPLIT) \
+				$(MASKED) \
+				$(LCTX) \
+				$(RCTX) \
+				$(RCTXP) \
+				$(UTT) \
 				--layer-idx $(LAYER) \
 				--context-length $$cnxt_len; \
 		done; \
@@ -163,7 +197,7 @@ copy-embeddings:
 
 # Download huggingface models to cache (before generating embeddings)
 # This target needs to be run on the head node
-cache-models: MODEL := causal
+cache-models: MODEL := openai/whisper-medium.en
 # {causal | seq2seq | mlm | or any model name specified in EMB_TYPE comments}
 cache-models:
 	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"
