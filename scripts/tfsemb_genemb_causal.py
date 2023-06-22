@@ -259,6 +259,6 @@ def generate_causal_embeddings(args, df):
     df["entropy"] = entropy
 
     df_logits = pd.DataFrame()
-    df_logits["logits"] = final_logits
+    # df_logits["logits"] = final_logits
 
     return df, df_logits, final_embeddings

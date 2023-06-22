@@ -698,7 +698,7 @@ def generate_speech_embeddings(args, df):
     df["entropy"] = entropy[1:]
 
     df_logits = pd.DataFrame()
-    df_logits["logits"] = final_logits
+    # df_logits["logits"] = final_logits
 
     print(np.mean(df.true_pred_rank == 1))
     return df, df_logits, final_embeddings
