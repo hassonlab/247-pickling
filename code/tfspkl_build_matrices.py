@@ -142,6 +142,7 @@ def process_data_for_pickles(CONFIG, subject=None, electrode_labels=None):
             continue
 
         bin_size = 32  # 62.5 ms (62.5/1000 * 512)
+        bin_size = 102  # 200 ms (200/1000 * 512)
         signal_length = ecogs.shape[0]
 
         if signal_length < bin_size:
