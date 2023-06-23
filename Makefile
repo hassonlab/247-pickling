@@ -92,11 +92,11 @@ download-247-pickles:
 	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247-pickles/ results/676/
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: PRJCT_ID := podcast
+%-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 661
+%-embeddings: SID := 625
 # {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 1) 
+%-embeddings: CONV_IDS = $(shell seq 1 54)
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
@@ -106,7 +106,10 @@ download-247-pickles:
 "EleutherAI/gpt-neox-20b", \
 "facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", \
 "facebook/opt-2.7b", "facebook/opt-6.7b", "facebook/opt-30b", \
-"facebook/blenderbot_small-90M"}
+"facebook/blenderbot_small-90M", \
+"openai/whisper-tiny.en", "openai/whisper-base.en", "openai/whisper-medium.en", \
+"openai/whisper-large", "openai/whisper-large-v2" \
+}
 %-embeddings: CNXT_LEN := 1
 %-embeddings: LAYER := all
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
@@ -119,7 +122,7 @@ download-247-pickles:
 # {none | samples | phonemes | words | 2-words | flip}
 %-embeddings: SHUFFLE_WORDS := none
 # {none | flip}
-%-embeddings: CUTOFF := 20
+%-embeddings: CUTOFF := 30
 # the duration (in s) of the audio window before word onset that will be kept intact
 # only works when SHUFFLE_AUDIO or SHUFFLE_WORDS == flip
 # 0 = only word is intact, 5 = 5s before word onset is kept intact
