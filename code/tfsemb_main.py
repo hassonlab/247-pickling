@@ -23,6 +23,7 @@ from transformers import (
     BlenderbotSmallForConditionalGeneration,
 )
 from utils import main_timer
+from tfsemb_symbolic import generate_symbolic_embeddings
 
 
 def save_pickle(args, item, file_name, embeddings=None):
@@ -170,7 +171,6 @@ def get_token_indices(args, num_tokens):
 
 
 def map_embeddings_to_tokens(args, df, embed):
-
     multi = df.set_index(["conversation_id", "sentence_idx", "sentence"])
     unique_sentence_idx = multi.index.unique().values
 
@@ -292,7 +292,6 @@ def extract_select_vectors(batch_idx, array):
 
 
 def extract_select_vectors_all_layers(batch_idx, array, layers=None):
-
     array_actual = tuple(y.cpu() for y in array)
 
     all_layers_x = dict()
@@ -677,7 +676,7 @@ def get_vector(x, glove):
         return None
 
 
-def generate_glove_embeddings(args, df):
+def generate_glove_embeddings(df):
     glove = api.load("glove-wiki-gigaword-50")
     df["embeddings"] = df["word"].apply(lambda x: get_vector(x.lower(), glove))
 
@@ -685,7 +684,6 @@ def generate_glove_embeddings(args, df):
 
 
 def setup_environ(args):
-
     DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)
     RESULTS_DIR = os.path.join(os.getcwd(), "results", args.project_id)
     PKL_DIR = os.path.join(RESULTS_DIR, args.subject, "pickles")
@@ -727,7 +725,6 @@ def setup_environ(args):
 
 
 def select_tokenizer_and_model(args):
-
     if "gpt2" in args.embedding_type:
         tokenizer_class = GPT2Tokenizer
         model_class = GPT2LMHeadModel
@@ -752,6 +749,8 @@ def select_tokenizer_and_model(args):
         args.layer_idx = []  # NOTE hardcoded. always generate all layers.
     elif args.embedding_type == "glove50":
         args.layer_idx = [1]
+    elif args.embedding_type == "symbolic":
+        args.layer_idx = [17]
         return
     else:
         print("No model found for", args.model_name)
@@ -839,7 +838,6 @@ def parse_arguments():
 
 
 def generate_embeddings_with_context_by_fold(args, df):
-
     all_df = []
 
     for fold in df.fold.unique():
@@ -880,16 +878,17 @@ def main():
     utterance_df = load_pickle(args)
     utterance_df = select_conversation(args, utterance_df)
 
-    utterance_df = get_folds(args, utterance_df)
-
     if len(utterance_df) == 0:
         print("Conversation data does not exist")
         return
 
     embeddings = None
-    if args.embedding_type == "glove50":
-        df = generate_glove_embeddings(args, utterance_df)
-    elif args.embedding_type == "gpt2-xl":
+    if args.embedding_type == "glove50":  # glove
+        df = generate_glove_embeddings(utterance_df)
+    elif args.embedding_type == "symbolic":  # symbolic
+        df = generate_symbolic_embeddings(utterance_df)
+    elif args.embedding_type == "gpt2-xl":  # gpt2-fold
+        utterance_df = get_folds(args, utterance_df)
         print("Generate by fold for 0shot")
         df = generate_embeddings_with_context_by_fold(args, utterance_df)
     elif any([item in args.embedding_type for item in ["gpt2", "bert"]]):
@@ -904,7 +903,6 @@ def main():
     else:
         df = generate_embeddings(args, utterance_df)
 
-    breakpoint()
     save_pickle(args, df, args.output_file, embeddings)
 
     return

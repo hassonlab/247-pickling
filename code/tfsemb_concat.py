@@ -127,7 +127,6 @@ def main():
         )
 
         all_df = pd.concat(all_df, ignore_index=True)
-        breakpoint()
         all_exs = all_df.to_dict("records")
         save_pickle(all_exs, os.path.join(args.emb_out_dir, args.emb_out_file))
 
