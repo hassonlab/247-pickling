@@ -50,6 +50,11 @@ def main():
     setup_environ(args)
 
     base_df = load_pickle(args.labels_pickle, "labels")
+    # base_df.loc[:, "word"] = base_df.word.apply(  # HACK strip punc
+    #     lambda x: x.translate(
+    #         str.maketrans("", "", '!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~')
+    #     )
+    # )
 
     glove = api.load("glove-wiki-gigaword-50")
     base_df["in_glove50"] = base_df.word.str.lower().apply(
@@ -60,6 +65,7 @@ def main():
         base_df = base_df[base_df["in_glove50"]]
         base_df = add_vocab_columns(args, base_df, column="word")
     else:
+        # base_df = base_df[base_df.speaker.str.contains("Speaker")]  # HACK
         base_df = tokenize_and_explode(args, base_df)
         base_df = add_vocab_columns(args, base_df, column="token2word")
 

@@ -46,7 +46,7 @@ DATUM_FILE_MAP = {
         "*trimmed.txt",
     ),
     "tfs": dict.fromkeys(["625", "676", "7170"], "*trimmed.txt")
-    | dict.fromkeys(["798"], "*_datum_trimmed.txt"),
+    | dict.fromkeys(["798"], "*_datum_large-v2-x.txt"),
 }
 
 

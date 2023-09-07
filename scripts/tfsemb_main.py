@@ -16,6 +16,7 @@ from utils import load_pickle, main_timer
 from utils import save_pickle as svpkl
 from tfsemb_genemb_glove import generate_glove_embeddings
 from tfsemb_genemb_causal import generate_causal_embeddings
+from tfsemb_generate_causal import generate_causal
 from tfsemb_genemb_seq2seq import generate_conversational_embeddings
 from tfsemb_genemb_whisper import generate_speech_embeddings
 from tfsemb_genemb_mlm import generate_mlm_embeddings
@@ -54,7 +55,9 @@ def check_token_is_root(args, df):
     token_is_root_string = args.embedding_type.split("/")[-1] + "_token_is_root"
     df[token_is_root_string] = (
         df["word"]
-        == df["token"].apply(args.tokenizer.convert_tokens_to_string).str.strip()
+        == df["token"]
+        .apply(args.tokenizer.convert_tokens_to_string)
+        .str.strip()
     )
 
     return df
@@ -93,7 +96,9 @@ def tokenize_and_explode(args, df):
     df = convert_token_to_idx(args, df)
     df = check_token_is_root(args, df)
 
-    df["token_idx"] = (df.groupby(["adjusted_onset", "word"]).cumcount()).astype(int)
+    df["token_idx"] = (
+        df.groupby(["adjusted_onset", "word"]).cumcount()
+    ).astype(int)
     df = df.reset_index(drop=True)
 
     return df
@@ -124,7 +129,8 @@ def main():
         case "glove50":
             generate_func = generate_glove_embeddings
         case item if item in tfsemb_dwnld.CAUSAL_MODELS:
-            generate_func = generate_causal_embeddings
+            generate_func = generate_causal
+            # generate_func = generate_causal_embeddings
         case item if item in tfsemb_dwnld.SEQ2SEQ_MODELS:
             generate_func = generate_conversational_embeddings
         case item if item in tfsemb_dwnld.SPEECHSEQ2SEQ_MODELS:

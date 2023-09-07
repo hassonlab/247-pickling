@@ -49,7 +49,9 @@ def build_design_matrices(CONFIG):
     if CONFIG["sig_elec_file"]:
         try:
             # If the electrode file is in Bobbi's original format
-            sigelec_list = pd.read_csv(CONFIG["sig_elec_file"], header=None)[0].tolist()
+            sigelec_list = pd.read_csv(CONFIG["sig_elec_file"], header=None)[
+                0
+            ].tolist()
             sigelec_list = [
                 extract_subject_and_electrode(item) for item in sigelec_list
             ]
@@ -61,22 +63,24 @@ def build_design_matrices(CONFIG):
                 dtype={"subject": str, "electrode": str},
             )
         finally:
-            electrodes_dict = df.groupby("subject")["electrode"].apply(list).to_dict()
+            electrodes_dict = (
+                df.groupby("subject")["electrode"].apply(list).to_dict()
+            )
 
-        full_signal = []
-        trimmed_signal = []
-        binned_signal = []
+        # full_signal = []
+        # trimmed_signal = []
+        # binned_signal = []
         electrode_names = []
         electrodes = []
         subject_id = []
         for subject, electrode_labels in electrodes_dict.items():
             CONFIG = update_config(CONFIG, subject)
             (
-                full_signal_part,
+                # full_signal_part,
                 full_stitch_index,
-                trimmed_signal_part,
+                # trimmed_signal_part,
                 trimmed_stitch_index,
-                binned_signal_part,
+                # binned_signal_part,
                 bin_stitch_index,
                 all_examples,
                 all_trimmed_examples,
@@ -86,9 +90,9 @@ def build_design_matrices(CONFIG):
                 subject_id_part,
             ) = process_data_for_pickles(CONFIG, electrode_labels)
 
-            full_signal.append(full_signal_part)
-            trimmed_signal.append(trimmed_signal_part)
-            binned_signal.append(binned_signal_part)
+            # full_signal.append(full_signal_part)
+            # trimmed_signal.append(trimmed_signal_part)
+            # binned_signal.append(binned_signal_part)
 
             electrode_names.extend(electrode_names_part)
             electrodes.extend(electrodes_part)
@@ -96,16 +100,16 @@ def build_design_matrices(CONFIG):
 
         conversations = [None]
 
-        full_signal = np.concatenate(full_signal, axis=1)
-        trimmed_signal = np.concatenate(trimmed_signal, axis=1)
-        binned_signal = np.concatenate(binned_signal, axis=1)
+        # full_signal = np.concatenate(full_signal, axis=1)
+        # trimmed_signal = np.concatenate(trimmed_signal, axis=1)
+        # binned_signal = np.concatenate(binned_signal, axis=1)
 
         return (
-            full_signal,
+            # full_signal,
             full_stitch_index,
-            trimmed_signal,
+            # trimmed_signal,
             trimmed_stitch_index,
-            binned_signal,
+            # binned_signal,
             bin_stitch_index,
             all_examples,
             all_trimmed_examples,
@@ -133,14 +137,15 @@ def get_datum_suffix(CONFIG):
 
 
 def process_data_for_pickles(CONFIG, electrode_labels=None):
-
     datum_file_suffix = get_datum_suffix(CONFIG)
 
     conversations = get_conversation_list(CONFIG)
     electrodes, electrode_names = get_all_electrodes(CONFIG, conversations)
 
     if electrode_labels:
-        idx = [i for i, e in enumerate(electrode_names) if e in electrode_labels]
+        idx = [
+            i for i, e in enumerate(electrode_names) if e in electrode_labels
+        ]
 
         electrodes, electrode_names = zip(
             *[(electrodes[i], electrode_names[i]) for i in idx]
@@ -150,7 +155,7 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
 
     subject_id = [CONFIG["subject"] for i in electrodes]
 
-    full_signal, trimmed_signal, binned_signal = [], [], []
+    # full_signal, trimmed_signal, binned_signal = [], [], []
     full_stitch_index, trimmed_stitch_index, bin_stitch_index = [], [], []
 
     all_examples = []
@@ -158,9 +163,9 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
 
     for conv_idx, conversation in enumerate(conversations, 1):
         try:  # Check if files exists
-            datum_fn = glob.glob(os.path.join(conversation, "misc", datum_file_suffix))[
-                0
-            ]
+            datum_fn = glob.glob(
+                os.path.join(conversation, "misc", datum_file_suffix)
+            )[0]
         except IndexError:
             print(
                 "File DNE: ",
@@ -181,7 +186,7 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
             print("Ignoring conversation: Small signal")
             continue
 
-        full_signal.append(ecogs)
+        # full_signal.append(ecogs)
         full_stitch_index.append(signal_length)
         a = ecogs.shape[0]
 
@@ -204,15 +209,17 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
             examples_df.offset.isnull() | examples_df.offset < signal_length
         ]
 
-        trimmed_signal.append(ecogs)
+        # trimmed_signal.append(ecogs)
         trimmed_stitch_index.append(signal_length)
 
-        mean_binned_signal = [np.mean(split, axis=0) for split in convo_binned_signal]
+        mean_binned_signal = [
+            np.mean(split, axis=0) for split in convo_binned_signal
+        ]
 
         mean_binned_signal = np.vstack(mean_binned_signal)
         bin_stitch_index.append(mean_binned_signal.shape[0])
 
-        binned_signal.append(mean_binned_signal)
+        # binned_signal.append(mean_binned_signal)
 
         all_examples.append(examples_df)
         all_trimmed_examples.append(trimmed_examples)
@@ -227,21 +234,21 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
             mean_binned_signal.shape[0],
         )
 
-    full_signal = np.concatenate(full_signal)
+    # full_signal = np.concatenate(full_signal)
     full_stitch_index = np.cumsum(full_stitch_index).tolist()
 
-    trimmed_signal = np.concatenate(trimmed_signal)
+    # trimmed_signal = np.concatenate(trimmed_signal)
     trimmed_stitch_index = np.cumsum(trimmed_stitch_index).tolist()
 
-    binned_signal = np.vstack(binned_signal)
+    # binned_signal = np.vstack(binned_signal)
     bin_stitch_index = np.cumsum(bin_stitch_index).tolist()
 
     return (
-        full_signal,
+        # full_signal,
         full_stitch_index,
-        trimmed_signal,
+        # trimmed_signal,
         trimmed_stitch_index,
-        binned_signal,
+        # binned_signal,
         bin_stitch_index,
         all_examples,
         all_trimmed_examples,
