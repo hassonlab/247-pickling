@@ -47,9 +47,15 @@ def select_tokenizer_and_model(args):
             *tfsemb_dwnld.MLM_MODELS,
             *tfsemb_dwnld.SPEECHSEQ2SEQ_MODELS,
         ]:
-            (args.model, args.tokenizer, args.processor,) = tfsemb_dwnld.download_tokenizers_and_models(
+            (
+                args.model,
+                args.tokenizer,
+                args.processor,
+            ) = tfsemb_dwnld.download_tokenizers_and_models(
                 item, local_files_only=True, debug=False
-            )[item]
+            )[
+                item
+            ]
         case _:
             print(
                 """Model and tokenizer not found. Please download into cache first.
@@ -77,7 +83,6 @@ def process_inputs(args):
 
 
 def setup_environ(args):
-
     select_tokenizer_and_model(args)
     process_inputs(args)
     if args.embedding_type != "glove50":
@@ -94,13 +99,19 @@ def setup_environ(args):
 
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    # args.labels_pickle = os.path.join(
+    #     args.PKL_DIR,
+    #     f"{args.subject}_{args.pkl_identifier}_labels.pkl",
+    # )
     args.labels_pickle = os.path.join(
-        args.PKL_DIR,
-        f"{args.subject}_{args.pkl_identifier}_labels.pkl",
+        args.PKL_DIR, f"sub-{args.subject[1:]}_task-conversation_audio.csv"
+    )
+    args.lag_json = os.path.join(
+        args.PKL_DIR, f"sub-{args.subject[1:]}_task-conversation_xcorr.json"
     )
 
     args.input_dir = os.path.join(DATA_DIR, args.subject)
-    args.conversation_list = sorted(glob.glob1(args.input_dir, "NY*Part*conversation*"))
+    # args.conversation_list = sorted(glob.glob1(args.input_dir, "NY*Part*conversation*"))
 
     stra = f"{args.trimmed_model_name}/{args.pkl_identifier}/cnxt_{args.context_length:04d}"
 
@@ -111,7 +122,8 @@ def setup_environ(args):
             stra,
             "layer_%02d",
         )
-        args.output_file_name = args.conversation_list[args.conversation_id - 1]
+        # args.output_file_name = args.conversation_list[args.conversation_id - 1]
+        args.output_file_name = f"{args.subject}_conversation1"
         args.output_file = os.path.join(args.output_dir, args.output_file_name)
 
     # saving the base dataframe

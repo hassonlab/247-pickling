@@ -1,5 +1,7 @@
 import gensim.downloader as api
 import tfsemb_download as tfsemb_dwnld
+import pandas as pd
+import json
 from tfsemb_config import setup_environ
 from tfsemb_main import tokenize_and_explode
 from tfsemb_parser import arg_parser
@@ -49,7 +51,20 @@ def main():
     args = arg_parser()
     setup_environ(args)
 
-    base_df = load_pickle(args.labels_pickle, "labels")
+    # base_df = load_pickle(args.labels_pickle, "labels")
+    base_df = pd.read_csv(args.labels_pickle, index_col=0)
+    base_df.insert(0, "word_idx", base_df.index.values)
+
+    # filter out words
+    filter_values = ["[inaudible]", "{inaudible}", "{inaudbile}", "{Gasps}", "{LG}"]
+    base_df = base_df[~base_df.word.isin(filter_values)]
+
+    with open(args.lag_json, "r") as j:
+        lag_info = json.loads(j.read())
+
+    base_df["adjusted_onset"] = base_df.start + lag_info["lag_s"]
+    base_df["adjusted_offset"] = base_df.end + lag_info["lag_s"]
+
     # base_df.loc[:, "word"] = base_df.word.apply(  # HACK strip punc
     #     lambda x: x.translate(
     #         str.maketrans("", "", '!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~')
@@ -67,7 +82,7 @@ def main():
     else:
         # base_df = base_df[base_df.speaker.str.contains("Speaker")]  # HACK
         base_df = tokenize_and_explode(args, base_df)
-        base_df = add_vocab_columns(args, base_df, column="token2word")
+        # base_df = add_vocab_columns(args, base_df, column="token2word")
 
     svpkl(base_df, args.base_df_file)
 

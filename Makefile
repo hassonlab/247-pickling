@@ -94,9 +94,9 @@ download-247-pickles:
 ## settings for targets: generate-embeddings, concatenate-embeddings
 %-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 625
+%-embeddings: SID := 502 503 504 505 506 507 508 509 510 511 512
 # {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 54)
+%-embeddings: CONV_IDS = $(shell seq 1 1)
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
@@ -111,7 +111,7 @@ download-247-pickles:
 "openai/whisper-large", "openai/whisper-large-v2" \
 }
 %-embeddings: CNXT_LEN := 1
-%-embeddings: LAYER := all
+%-embeddings: LAYER := last
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
 
 
@@ -141,27 +141,30 @@ download-247-pickles:
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 %-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
-%-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
+%-embeddings: CMD = python
+%-embeddings: CMD = sbatch --job-name=$$sub-$(JOB_NAME) submit.sh
 # {echo | python | sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh}
 
 
 # generate-base-for-embeddings: Generates the base dataframe for embedding generation
 generate-base-for-embeddings:
-	python scripts/tfsemb_LMBase.py \
-			--project-id $(PRJCT_ID) \
-			--pkl-identifier $(PKL_IDENTIFIER) \
-			--subject $(SID) \
-			--embedding-type $(EMB_TYPE);
+	for sub in $(SID); do \
+		python scripts/tfsemb_LMBase.py \
+				--project-id $(PRJCT_ID) \
+				--pkl-identifier $(PKL_IDENTIFIER) \
+				--subject $$sub \
+				--embedding-type $(EMB_TYPE); \
+	done;
 
 # generates embeddings (for each conversation separately)
 generate-embeddings:
 	mkdir -p logs
-	for cnxt_len in $(CNXT_LEN); do \
+	for sub in $(SID); do \
 		for conv_id in $(CONV_IDS); do \
 			 $(CMD) scripts/tfsemb_main.py \
 				--project-id $(PRJCT_ID) \
 				--pkl-identifier $(PKL_IDENTIFIER) \
-				--subject $(SID) \
+				--subject $$sub \
 				--conversation-id $$conv_id \
 				--embedding-type $(EMB_TYPE) \
 				--model-type $(MDL_TYPE) \
@@ -175,7 +178,7 @@ generate-embeddings:
 				$(RCTXP) \
 				$(UTT) \
 				--layer-idx $(LAYER) \
-				--context-length $$cnxt_len; \
+				--context-length $(CNXT_LEN); \
 		done; \
 	done;
 

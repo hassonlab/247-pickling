@@ -55,9 +55,7 @@ def check_token_is_root(args, df):
     token_is_root_string = args.embedding_type.split("/")[-1] + "_token_is_root"
     df[token_is_root_string] = (
         df["word"]
-        == df["token"]
-        .apply(args.tokenizer.convert_tokens_to_string)
-        .str.strip()
+        == df["token"].apply(args.tokenizer.convert_tokens_to_string).str.strip()
     )
 
     return df
@@ -91,14 +89,12 @@ def tokenize_and_explode(args, df):
         DataFrame: a new dataframe object with the words tokenized
     """
     df["token"] = df.word.apply(args.tokenizer.tokenize)
-    df = df.explode("token", ignore_index=False)
+    df = df.explode("token", ignore_index=True)
     df = convert_token_to_word(args, df)
     df = convert_token_to_idx(args, df)
     df = check_token_is_root(args, df)
 
-    df["token_idx"] = (
-        df.groupby(["adjusted_onset", "word"]).cumcount()
-    ).astype(int)
+    df["token_idx"] = (df.groupby(["adjusted_onset", "word"]).cumcount()).astype(int)
     df = df.reset_index(drop=True)
 
     return df
@@ -121,8 +117,8 @@ def main():
     else:
         raise Exception("Base dataframe does not exist")
 
-    utterance_df = select_conversation(args, base_df)
-    assert len(utterance_df) != 0, "Empty dataframe"
+    # utterance_df = select_conversation(args, base_df)
+    # assert len(utterance_df) != 0, "Empty dataframe"
 
     # Select generation function based on model type
     match args.embedding_type:
@@ -143,7 +139,7 @@ def main():
 
     # Generate Embeddings
     embeddings = None
-    output = generate_func(args, utterance_df)
+    output = generate_func(args, base_df)
     if len(output) == 3:
         df, df_logits, embeddings = output
         if not df_logits.empty:

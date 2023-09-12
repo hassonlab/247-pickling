@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --time=02:10:00
-#SBATCH --mem=128GB
+#SBATCH --time=01:10:00
+#SBATCH --mem=64GB
 #SBATCH --gres=gpu:1
 #SBATCH --nodes=1
 ##SBATCH --cpus-per-task=4
@@ -18,7 +18,7 @@ then
     echo "It's della-gpu"
     module purge
     module load anaconda3/2021.11
-    conda activate 247-main
+    conda activate /home/hgazula/.conda/envs/247-main
 else
     module purge
     module load anacondapy

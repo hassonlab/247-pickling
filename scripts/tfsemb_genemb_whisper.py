@@ -634,25 +634,16 @@ def generate_speech_embeddings(args, df):
     # for conversation in df.conversation_id.unique():
     #     conversation_df = get_conversation_df(df, conversation)
 
-    df["audio_onset"] = (df.onset + 3000) / 512
-    df["audio_offset"] = (df.offset + 3000) / 512
-    conversation_df = df.dropna(subset=["onset", "offset"])
-    conversation_df.reset_index(drop=True, inplace=True)
+    df["audio_onset"] = df.adjusted_onset
+    df["audio_offset"] = df.adjusted_offset
+    # conversation_df = df.dropna(subset=["onset", "offset"])
+    # conversation_df.reset_index(drop=True, inplace=True)
+    conversation_df = df
 
     if args.project_id == "podcast":
         audio_path = "/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav"
     elif args.project_id == "tfs":
-        audio_path = (
-            "data/"
-            + str(args.project_id)
-            + "/"
-            + str(args.subject)
-            + "/"
-            + df.conversation_name.unique().item()
-            + "/audio/"
-            + df.conversation_name.unique().item()
-            + "_deid.wav"
-        )
+        audio_path = f"/scratch/gpfs/zzada/b2b/dataset/derivatives/preprocessed/sub-{args.subject[1:]}/audio/sub-{args.subject[1:]}_task-conversation_audio.wav"
 
     audio = whisper.load_audio(audio_path)
     input_dataset = AudioDataset(args, audio, conversation_df, df)
