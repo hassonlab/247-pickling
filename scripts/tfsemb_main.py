@@ -18,6 +18,7 @@ from tfsemb_genemb_glove import generate_glove_embeddings
 from tfsemb_genemb_causal import generate_causal_embeddings
 from tfsemb_genemb_seq2seq import generate_conversational_embeddings
 from tfsemb_genemb_whisper import generate_speech_embeddings
+from tfsemb_genemb_whisper_en_win import generate_acoustic_embeddings
 from tfsemb_genemb_mlm import generate_mlm_embeddings
 
 
@@ -128,7 +129,7 @@ def main():
         case item if item in tfsemb_dwnld.SEQ2SEQ_MODELS:
             generate_func = generate_conversational_embeddings
         case item if item in tfsemb_dwnld.SPEECHSEQ2SEQ_MODELS:
-            generate_func = generate_speech_embeddings
+            generate_func = generate_acoustic_embeddings
         case item if item in tfsemb_dwnld.MLM_MODELS:
             generate_func = generate_mlm_embeddings
         case _:
