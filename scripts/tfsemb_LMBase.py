@@ -1,4 +1,5 @@
 import gensim.downloader as api
+import numpy as np
 import tfsemb_download as tfsemb_dwnld
 from tfsemb_config import setup_environ
 from tfsemb_main import tokenize_and_explode
@@ -51,9 +52,14 @@ def get_windows(df):
     )
 
     # get datum of utterances
+    df["new_conv"] = np.where(  # HACK ask Bobbi why
+        (df.adjusted_onset - df.adjusted_offset.shift()) > 300 * 512, 1, 0
+    )
+    print(f"Word gap longer than 5 min for {df.new_conv.sum()} instances")
     df["utt_idx"] = (
         df.speaker.ne(df.speaker.shift())
         | df.conversation_id.ne(df.conversation_id.shift())
+        | df.new_conv
     ).cumsum()
 
     df["utt_adjusted_onset"] = (
@@ -167,6 +173,7 @@ def main():
     en_win = True  # HACK to get encoder windows
     if en_win:
         base_df = get_windows(base_df)
+        print(len(base_df))
         return
 
     glove = api.load("glove-wiki-gigaword-50")

@@ -4,9 +4,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --nodes=1
 ##SBATCH --cpus-per-task=4
-#SBATCH --open-mode=truncate
-#SBATCH -o './logs/%x.out'
-#SBATCH -e './logs/%x.err'
+#SBATCH -o 'logs/%A.log'
  
 if [[ "$HOSTNAME" == *"tiger"* ]]
 then
