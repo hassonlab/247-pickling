@@ -139,12 +139,12 @@ def main():
     embeddings = None
     output = generate_func(args, utterance_df)
     if len(output) == 3:
-        df, df_logits, embeddings = output
-        if not df_logits.empty:
-            svpkl(
-                df_logits,
-                os.path.join(args.logits_folder, args.output_file_name),
-            )
+        df, _, embeddings = output
+        # if not df_logits.empty:
+        #     svpkl(
+        #         df_logits,
+        #         os.path.join(args.logits_folder, args.output_file_name),
+        #     )
     else:
         df = output
 
