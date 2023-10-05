@@ -21,7 +21,9 @@ def add_vocab_columns(args, df, column=None):
         *tfsemb_dwnld.MLM_MODELS,
     ]:
         try:
-            tokenizer = tfsemb_dwnld.download_hf_tokenizer(model, local_files_only=True)
+            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
+                model, local_files_only=True
+            )
         except:
             tokenizer = tfsemb_dwnld.download_hf_tokenizer(
                 model, local_files_only=False
@@ -63,10 +65,14 @@ def get_windows(df):
     ).cumsum()
 
     df["utt_adjusted_onset"] = (
-        df.loc[:, ("utt_idx", "adjusted_onset")].groupby("utt_idx").transform(min)
+        df.loc[:, ("utt_idx", "adjusted_onset")]
+        .groupby("utt_idx")
+        .transform(min)
     )
     df["utt_adjusted_offset"] = (
-        df.loc[:, ("utt_idx", "adjusted_offset")].groupby("utt_idx").transform(max)
+        df.loc[:, ("utt_idx", "adjusted_offset")]
+        .groupby("utt_idx")
+        .transform(max)
     )
     df["adj_len"] = (df.adjusted_onset - df.onset).round(0).astype(int)
     df["utt_len"] = (df.utt_adjusted_offset - df.utt_adjusted_onset) / 512
@@ -108,15 +114,13 @@ def get_windows(df):
     df["utt_adjusted_onset"] = (
         df.utt_adjusted_onset + 30 * 512 * df.chunk_idx
     )  # shift utt onset
-    df.loc[
-        df.utt_adjusted_offset - df.utt_adjusted_onset > 30 * 512,
-        "utt_adjusted_offset",
-    ] = (
+    df["chunk_num"] = (
+        df.loc[:, ("utt_idx", "chunk_idx")].groupby("utt_idx").transform(max)
+    )  # get total chunk_num
+    df.loc[df.chunk_idx < df.chunk_num, "utt_adjusted_offset"] = (
         df.utt_adjusted_onset + 30 * 512
     )  # shift utt offset
-    df.loc[
-        df.utt_adjusted_offset - df.utt_adjusted_onset == 30 * 512, "window_num"
-    ] = 1500  # full window_nums
+    df.loc[df.chunk_idx < df.chunk_num, "window_num"] = 1500  # full window_nums
     df.window_num = (df.window_num - 1) % 1500 + 1  # shift window_num
 
     # for each window, shift onset and offset
@@ -173,6 +177,7 @@ def main():
     en_win = True  # HACK to get encoder windows
     if en_win:
         base_df = get_windows(base_df)
+        svpkl(base_df, args.base_df_file)
         print(len(base_df))
         return
 
