@@ -21,9 +21,7 @@ def add_vocab_columns(args, df, column=None):
         *tfsemb_dwnld.MLM_MODELS,
     ]:
         try:
-            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
-                model, local_files_only=True
-            )
+            tokenizer = tfsemb_dwnld.download_hf_tokenizer(model, local_files_only=True)
         except:
             tokenizer = tfsemb_dwnld.download_hf_tokenizer(
                 model, local_files_only=False
@@ -65,14 +63,10 @@ def get_windows(df):
     ).cumsum()
 
     df["utt_adjusted_onset"] = (
-        df.loc[:, ("utt_idx", "adjusted_onset")]
-        .groupby("utt_idx")
-        .transform(min)
+        df.loc[:, ("utt_idx", "adjusted_onset")].groupby("utt_idx").transform(min)
     )
     df["utt_adjusted_offset"] = (
-        df.loc[:, ("utt_idx", "adjusted_offset")]
-        .groupby("utt_idx")
-        .transform(max)
+        df.loc[:, ("utt_idx", "adjusted_offset")].groupby("utt_idx").transform(max)
     )
     df["adj_len"] = (df.adjusted_onset - df.onset).round(0).astype(int)
     df["utt_len"] = (df.utt_adjusted_offset - df.utt_adjusted_onset) / 512
@@ -133,9 +127,11 @@ def get_windows(df):
     df.loc[
         df.adjusted_offset > df.utt_adjusted_offset, "adjusted_offset"
     ] = df.utt_adjusted_offset  # deal with chunk back
+    epsilon = 0.000001  # HACK to compare with int
     df["full_window"] = np.where(
-        df.adjusted_offset - df.adjusted_onset == 0.065 * 512, 1, 0
+        abs(df.adjusted_offset - df.adjusted_onset - 0.065 * 512) < epsilon, 1, 0
     )
+    print(f"Full window #: {df.full_window.sum()}")
 
     # get on/offsets back from adjusted on/offsets
     df["utt_onset"] = df.utt_adjusted_onset - df.adj_len
