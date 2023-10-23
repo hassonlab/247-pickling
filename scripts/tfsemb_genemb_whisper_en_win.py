@@ -89,9 +89,7 @@ def process_extracted_embeddings_all_layers(args, layer_embeddings_dict):
         concat_output = []
         for item_dict in layer_embeddings_dict:
             concat_output.append(item_dict[layer_idx])
-        layer_embeddings[layer_idx] = process_extracted_embeddings(
-            args, concat_output
-        )
+        layer_embeddings[layer_idx] = process_extracted_embeddings(args, concat_output)
 
     return layer_embeddings
 
@@ -108,9 +106,7 @@ def extract_select_vectors_concat_all_layers(num_windows, array, layers=None):
     all_layers_x = dict()
     for layer_idx in layers:
         array = array_actual[layer_idx]
-        all_layers_x[layer_idx] = extract_select_vectors_concat(
-            num_windows, array
-        )
+        all_layers_x[layer_idx] = extract_select_vectors_concat(num_windows, array)
 
     return all_layers_x
 
@@ -155,19 +151,14 @@ def generate_acoustic_embeddings(args, df):
 
     # taking unique chunks
     conversation_df = df.drop_duplicates(subset=["utt_idx", "chunk_idx"]).copy()
-    assert (
-        conversation_df.duplicated(subset=["utt_onset", "utt_offset"]).sum()
-        == 0
-    )
+    assert conversation_df.duplicated(subset=["utt_onset", "utt_offset"]).sum() == 0
     assert conversation_df.window_num.sum() == len(df)
     conversation_df.reset_index(drop=True, inplace=True)
-    conversation_df["audio_onset"] = (conversation_df.onset + 3000) / 512
-    conversation_df["audio_offset"] = (conversation_df.offset + 3000) / 512
+    conversation_df["audio_onset"] = (conversation_df.utt_onset + 3000) / 512
+    conversation_df["audio_offset"] = (conversation_df.utt_offset + 3000) / 512
 
     if args.project_id == "podcast":
-        audio_path = (
-            "/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav"
-        )
+        audio_path = "/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav"
     elif args.project_id == "tfs":
         audio_path = (
             "data/"

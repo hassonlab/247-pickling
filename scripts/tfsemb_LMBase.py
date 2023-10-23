@@ -52,24 +52,24 @@ def get_windows(df):
     )
 
     # get datum of utterances
-    df["new_conv"] = np.where(  # HACK ask Bobbi why
+    df["new_conv"] = np.where(  # HACK 798 parts (mark new convs)
         (df.adjusted_onset - df.adjusted_offset.shift()) > 300 * 512, 1, 0
     )
     print(f"Word gap longer than 5 min for {df.new_conv.sum()} instances")
-    df["utt_idx"] = (
+    df["utt_idx"] = (  # utterance index
         df.speaker.ne(df.speaker.shift())
         | df.conversation_id.ne(df.conversation_id.shift())
         | df.new_conv
     ).cumsum()
 
-    df["utt_adjusted_onset"] = (
+    df["utt_adjusted_onset"] = (  # start of utterance
         df.loc[:, ("utt_idx", "adjusted_onset")].groupby("utt_idx").transform(min)
     )
-    df["utt_adjusted_offset"] = (
+    df["utt_adjusted_offset"] = (  # end of utterance
         df.loc[:, ("utt_idx", "adjusted_offset")].groupby("utt_idx").transform(max)
     )
+    df["utt_len"] = (df.utt_adjusted_offset - df.utt_adjusted_onset) / 512  # in seconds
     df["adj_len"] = (df.adjusted_onset - df.onset).round(0).astype(int)
-    df["utt_len"] = (df.utt_adjusted_offset - df.utt_adjusted_onset) / 512
 
     if sum(df.utt_len <= 0):  # filter non-positive utts
         len_df = len(df)
@@ -92,7 +92,7 @@ def get_windows(df):
 
     # get datum of windows
     def get_window_num(x):  # get number of windows given utterance
-        return int((x - 0.0325) // 0.02) + 1
+        return int((x - 0.0325) // 0.02) + 2
 
     def get_windows(x):  # get windows to explode
         return np.arange(0, x)
