@@ -38,7 +38,7 @@ def set_context_length(args):
 
 def select_tokenizer_and_model(args):
     match args.embedding_type:
-        case "glove50":
+        case static if static in ["glove50", "symbolic-speech", "symbolic-lang"]:
             args.context_length = 1
             args.layer_idx = [0]
         case item if item in [
@@ -47,9 +47,15 @@ def select_tokenizer_and_model(args):
             *tfsemb_dwnld.MLM_MODELS,
             *tfsemb_dwnld.SPEECHSEQ2SEQ_MODELS,
         ]:
-            (args.model, args.tokenizer, args.processor,) = tfsemb_dwnld.download_tokenizers_and_models(
+            (
+                args.model,
+                args.tokenizer,
+                args.processor,
+            ) = tfsemb_dwnld.download_tokenizers_and_models(
                 item, local_files_only=True, debug=False
-            )[item]
+            )[
+                item
+            ]
         case _:
             print(
                 """Model and tokenizer not found. Please download into cache first.
@@ -77,10 +83,9 @@ def process_inputs(args):
 
 
 def setup_environ(args):
-
     select_tokenizer_and_model(args)
     process_inputs(args)
-    if args.embedding_type != "glove50":
+    if args.embedding_type != "glove50" and "symbolic" not in args.embedding_type:
         set_layer_idx(args)
         set_context_length(args)
 

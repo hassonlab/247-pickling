@@ -170,7 +170,7 @@ def main():
 
     base_df = load_pickle(args.labels_pickle, "labels")
 
-    en_win = True  # HACK to get encoder windows
+    en_win = False  # HACK to get encoder windows
     if en_win:
         base_df = get_windows(base_df)
         svpkl(base_df, args.base_df_file)
@@ -184,6 +184,8 @@ def main():
 
     if args.embedding_type == "glove50":
         base_df = base_df[base_df["in_glove50"]]
+        base_df = add_vocab_columns(args, base_df, column="word")
+    elif "symbolic" in args.embedding_type:
         base_df = add_vocab_columns(args, base_df, column="word")
     else:
         base_df = tokenize_and_explode(args, base_df)

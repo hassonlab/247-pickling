@@ -20,6 +20,7 @@ from tfsemb_genemb_seq2seq import generate_conversational_embeddings
 from tfsemb_genemb_whisper import generate_speech_embeddings
 from tfsemb_genemb_whisper_en_win import generate_acoustic_embeddings
 from tfsemb_genemb_mlm import generate_mlm_embeddings
+from tfsemb_genemb_symbolic import generate_symbolic_embeddings
 
 
 def save_pickle(args, item, embeddings=None):
@@ -124,6 +125,8 @@ def main():
     match args.embedding_type:
         case "glove50":
             generate_func = generate_glove_embeddings
+        case item if item in ["symbolic-speech", "symbolic-lang"]:
+            generate_func = generate_symbolic_embeddings
         case item if item in tfsemb_dwnld.CAUSAL_MODELS:
             generate_func = generate_causal_embeddings
         case item if item in tfsemb_dwnld.SEQ2SEQ_MODELS:
