@@ -3,7 +3,7 @@ import os
 import sys
 
 import numpy as np
-import tfsemb_download as tfsemb_dwnld
+import tfspickling.tfsemb_download as tfsemb_dwnld
 import torch
 
 
@@ -36,7 +36,7 @@ def set_context_length(args):
     ), "given length is greater than max length"
 
 
-def select_tokenizer_and_model(args):
+def select_tokenizer_and_model(args, local_files_only=True):
     match args.embedding_type:
         case "glove50":
             args.context_length = 1
@@ -47,7 +47,7 @@ def select_tokenizer_and_model(args):
             *tfsemb_dwnld.MLM_MODELS,
         ]:
             (args.model, args.tokenizer,) = tfsemb_dwnld.download_tokenizers_and_models(
-                item, local_files_only=True, debug=False
+                item, local_files_only=local_files_only, debug=False
             )[item]
         case _:
             print(
@@ -55,7 +55,7 @@ def select_tokenizer_and_model(args):
                 Please refer to make-target: cache-models for more information.""",
                 file=sys.stderr,
             )
-            exit()
+            sys.exit()
     return
 
 
@@ -70,7 +70,7 @@ def process_inputs(args):
             args.layer_idx = list(map(int, args.layer_idx))
         except ValueError:
             print("Invalid layer index")
-            exit(1)
+            sys.exit(1)
 
     return
 

@@ -4,10 +4,10 @@ import pathlib
 import shutil
 
 import pandas as pd
-from tfsemb_config import setup_environ
-from tfsemb_parser import arg_parser
+from tfspickling.tfsemb_config import setup_environ
+from tfspickling.tfsemb_parser import arg_parser
 from tqdm import tqdm
-from utils import load_pickle, save_pickle
+from tfspickling.utils import load_pickle, save_pickle
 
 
 def confirm_prompt(question: str) -> bool:
