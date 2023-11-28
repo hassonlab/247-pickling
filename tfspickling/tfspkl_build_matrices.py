@@ -1,11 +1,12 @@
 import glob
 import os
+import sys
 
 import numpy as np
 import pandas as pd
-from electrode_utils import return_electrode_array
-from tfspkl_config import DATUM_FILE_MAP
-from tfspkl_utils import (
+from tfspickling.electrode_utils import return_electrode_array
+from tfspickling.tfspkl_config import DATUM_FILE_MAP
+from tfspickling.tfspkl_utils import (
     get_conversation_contents,
     get_all_electrodes,
     get_conversation_list,
@@ -131,7 +132,7 @@ def get_datum_suffix(CONFIG):
 
     if not datum_file_suffix:
         print("Incorrect Project ID or Subject")
-        exit()
+        sys.exit()
 
     return datum_file_suffix
 

@@ -6,7 +6,7 @@ from multiprocessing import Pool
 
 import numpy as np
 from scipy.io import loadmat
-from tfspkl_config import ELECTRODE_FOLDER_MAP
+from tfspickling.tfspkl_config import ELECTRODE_FOLDER_MAP
 
 
 def get_electrode(CONFIG, elec_id):

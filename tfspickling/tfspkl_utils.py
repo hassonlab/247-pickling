@@ -7,8 +7,8 @@ import mat73
 import numpy as np
 import pandas as pd
 import scipy.io as sio
-from tfspkl_config import ELECTRODE_FOLDER_MAP
-from utils import lcs
+from tfspickling.tfspkl_config import ELECTRODE_FOLDER_MAP
+from tfspickling.utils import lcs
 
 
 def get_electrode_ids(CONFIG, conversation):

@@ -1,10 +1,10 @@
 import gensim.downloader as api
-import tfsemb_download as tfsemb_dwnld
-from tfsemb_config import setup_environ
-from tfsemb_main import tokenize_and_explode
-from tfsemb_parser import arg_parser
-from utils import load_pickle, main_timer
-from utils import save_pickle as svpkl
+import tfspickling.tfsemb_download as tfsemb_dwnld
+from tfspickling.tfsemb_config import setup_environ
+from tfspickling.tfsemb_main import tokenize_and_explode
+from tfspickling.tfsemb_parser import arg_parser
+from tfspickling.utils import load_pickle, main_timer
+from tfspickling.utils import save_pickle as svpkl
 
 
 def add_vocab_columns(args, df, column=None):

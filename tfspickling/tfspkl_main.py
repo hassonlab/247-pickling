@@ -14,10 +14,10 @@ import numpy as np
 import pandas as pd
 from nltk.stem import PorterStemmer as ps
 from nltk.stem import WordNetLemmatizer as lt
-from tfspkl_build_matrices import build_design_matrices
-from tfspkl_config import build_config
-from tfspkl_parser import arg_parser
-from utils import main_timer, save_pickle
+from tfspickling.tfspkl_build_matrices import build_design_matrices
+from tfspickling.tfspkl_config import build_config
+from tfspickling.tfspkl_parser import arg_parser
+from tfspickling.utils import main_timer, save_pickle
 
 nltk.download("omw-1.4")
 

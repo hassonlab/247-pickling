@@ -3,9 +3,9 @@ import json
 import os
 from datetime import datetime
 
-from utils import get_git_revision_short_hash
+from tfspickling.utils import get_git_revision_short_hash
 
-print(f"Git Commit Hash: {get_git_revision_short_hash()}")
+
 
 
 ELECTRODE_FOLDER_MAP = {
@@ -116,3 +116,6 @@ def write_config(dictionary):
     config_file = os.path.join(dictionary["SAVE_DIR"], "config.json")
     with open(config_file, "w") as outfile:
         outfile.write(json_object)
+
+if __name__ == '__main__':
+    print(f"Git Commit Hash: {get_git_revision_short_hash()}")

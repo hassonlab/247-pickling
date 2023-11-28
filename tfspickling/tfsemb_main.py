@@ -5,15 +5,15 @@ import sys
 import gensim.downloader as api
 import numpy as np
 import pandas as pd
-import tfsemb_download as tfsemb_dwnld
+import tfspickling.tfsemb_download as tfsemb_dwnld
 import torch
 import torch.nn.functional as F
 import torch.utils.data as data
 from accelerate import Accelerator, find_executable_batch_size
-from tfsemb_config import setup_environ
-from tfsemb_parser import arg_parser
-from utils import load_pickle, main_timer
-from utils import save_pickle as svpkl
+from tfspickling.tfsemb_config import setup_environ
+from tfspickling.tfsemb_parser import arg_parser
+from tfspickling.utils import load_pickle, main_timer
+from tfspickling.utils import save_pickle as svpkl
 
 
 def save_pickle(args, item, embeddings=None):
