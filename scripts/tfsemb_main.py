@@ -30,7 +30,7 @@ def save_pickle(args, item, embeddings=None):
 
     if embeddings is not None:
         for layer_idx, embedding in embeddings.items():
-            item["embeddings"] = embedding.tolist()
+            item["embeddings"] = embedding
             filename = file_name % layer_idx
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             with open(filename, "wb") as fh:

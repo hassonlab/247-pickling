@@ -20,6 +20,7 @@ def arg_parser():
 
     # whisper specific args
     parser.add_argument("--model-type", type=str, default="full")
+    parser.add_argument("--bin-type", type=str, default="fixed-bin")
     parser.add_argument("--shuffle-audio", type=str, default="none")
     parser.add_argument("--shuffle-words", type=str, default="none")
     parser.add_argument("--cutoff", type=float, default=0)

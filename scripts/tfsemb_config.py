@@ -111,6 +111,7 @@ def setup_environ(args):
             stra,
             "layer_%02d",
         )
+        
         args.output_file_name = args.conversation_list[args.conversation_id - 1]
         args.output_file = os.path.join(args.output_dir, args.output_file_name)
 

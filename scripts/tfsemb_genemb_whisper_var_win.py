@@ -8,11 +8,33 @@ import torch.utils.data as data
 import torch.nn.functional as F
 import tfsemb_download as tfsemb_dwnld
 
+# def get_conversation_df(df):
+
+#     # redundant
+#     # conversation_df = df[df.conversation_id == conversation]
+
+#     # DEBUG
+#     # conversation_df = conversation_df.iloc[:50]
+
+#     # remove onset/ offset isnan
+#     conversation_df = conversation_df.dropna(subset=["onset", "offset"])
+
+#     # reset index
+#     conversation_df.reset_index(drop=True, inplace=True)
+
+#     # convert timestamps back to seconds and align
+#     conversation_df["onset_converted"] = (conversation_df.onset + 3000) / 512
+#     conversation_df["offset_converted"] = (conversation_df.offset + 3000) / 512
+
+#     return df
+
+
 class AudioDataset(data.Dataset):
-    def __init__(self, args, audio, conversation_df, transform=None):
+    def __init__(self, args, audio, conversation_df, df, transform=None):
         self.args = args
-        self.audio = audio
         self.conversation_df = conversation_df
+        self.df = df
+        self.audio = audio
         self.transform = transform
 
     def __len__(self):
@@ -26,7 +48,7 @@ class AudioDataset(data.Dataset):
         ####################
         if self.args.model_type == "full" or self.args.model_type == "de-only":
             # get word onset and offset
-            chunk_offset = self.conversation_df.word_offset.iloc[idx]
+            chunk_offset = self.conversation_df.audio_offset.iloc[idx]
             chunk_onset = np.max([0, (chunk_offset - 30)])
 
             chunk_data = self.audio[
@@ -39,7 +61,7 @@ class AudioDataset(data.Dataset):
         ## for full-onset model  ##
         ###########################
         elif self.args.model_type == "full-onset":
-            word_onset = self.conversation_df.word_onset.iloc[idx]
+            word_onset = self.conversation_df.audio_onset.iloc[idx]
             chunk_offset = word_onset + 0.2325
             num_windows = 10
             chunk_onset = np.max([0, (chunk_offset - 30)])
@@ -53,12 +75,12 @@ class AudioDataset(data.Dataset):
         #########################
         ## for full model n-1 ##
         #########################
-        elif self.args.model_type == "full-n-1":
+        elif self.args.model_type == "full_n-1":
             # get word onset and offset
             if idx == 0:
-                chunk_offset = self.conversation_df.word_onset.iloc[idx]
+                chunk_offset = self.conversation_df.audio_onset.iloc[idx]
             else:
-                chunk_offset = self.conversation_df.word_offset.iloc[idx - 1]
+                chunk_offset = self.conversation_df.audio_offset.iloc[idx - 1]
 
             chunk_onset = np.max([0, (chunk_offset - 30)])
             chunk_data = self.audio[
@@ -71,46 +93,56 @@ class AudioDataset(data.Dataset):
         ## for encoder only ##
         ######################
         elif self.args.model_type == "en-only":
+            # get current word onset
+            word_onset = self.conversation_df.audio_onset.iloc[idx]
+            # look at current word onset + 272.5 ms (podcast) / 232.5 ms (tfs)
 
-            # get word onset
-            word_onset = self.conversation_df.word_onset.iloc[idx]
+            # # HACK
+            # chunk_offset = word_onset + 0.2325
+            # num_windows = 10
 
-            # change this if we want to 20 ms per unit #TODO 
-            # look at word onset + 252.5 ms (podcast) / 232.5 ms (tfs)
-            if self.args.bin_type == "fixed-bin":
-                if self.args.project_id == "podcast":
-                    chunk_offset = word_onset + 0.2525 
-                    num_windows = 11 
-                elif self.args.project_id == "tfs":
-                    chunk_offset = word_onset + 0.2325
-                    num_windows = 10
+            word_offset = self.conversation_df.audio_offset.iloc[idx]
 
-            elif self.args.bin_type == "var-bin":
-                
-                chunk_offset = self.conversation_df.word_offset.iloc[idx]
-                num_windows = self.conversation_df.num_windows.iloc[idx]
+            # calculate number of hidden state windows for each word
+            word_len = self.conversation_df.word_len.iloc[idx]
+            num_windows = self.conversation_df.num_windows.iloc[idx]
 
-                # for two conversations (676 conv 68 and 38) chunk_offset is smaller than 30 sec, but it falls within the last unit of 
-                # the encoder, so there is no padding applied - therefore this #HACK
-                if round(chunk_offset,2) == 30:
-                    chunk_offset = 30
+            # print(word_len)
+            # print(num_windows)
 
-            # get start of 30 sec audio chunk
-            chunk_onset = np.max([0, (chunk_offset - 30)])
+        word_offset = self.conversation_df.audio_offset.iloc[idx]
+        num_windows = self.conversation_df.num_windows.iloc[idx]
 
-            # if the audio chunk we're providing to Whisper is shorter than 30 sec, padding tokens will be added
-            # here we calculate the start of the tokens that represent actual audio
-            if chunk_offset < 30:
-                start_windows = int(
-                    (
-                        ((self.conversation_df.word_onset[idx] - chunk_onset) * 1000) # get the time elapsed before word onset in msec (which will be equal to word onset, right?) TODO
-                        - 7.5 # first encoder bin starts at -7.5 ms
-                    )
-                    // 20 # each bin represents 20 msec
-                    + 3 # shift bins by 3 (why?) TODO
+        chunk_offset = word_offset
+        chunk_onset = np.max([0, (chunk_offset - 30)])
+
+        # if(idx == 84):
+        #     breakpoint()
+
+        # # #HACK for 676 conv 68 (91) and 38 (18)
+        # because for those cases chunk_onset < 30, but actually there is no padding applied, so start windows won't be correct
+        # if(idx == 18):
+        #     chunk_offset = 30
+
+        # if round(chunk_offset,2) == 30:
+        #     chunk_offset = 30
+
+        # maybe something like this
+
+        # calculate start of windows when padding is applied
+        # add some docs
+        if chunk_offset < 30:
+            start_windows = int(
+                (
+                    ((self.conversation_df.audio_onset[idx] - chunk_onset) * 1000)
+                    - 7.5
                 )
-            else:
-                start_windows = 1500 - num_windows
+                // 20
+                + 3
+            )
+        else:
+            start_windows = 1500 - num_windows
+
 
         #######################################################
         ## for testing different ways of shuffling the audio ##
@@ -125,9 +157,9 @@ class AudioDataset(data.Dataset):
                 int(chunk_onset * sampling_rate) : int(chunk_offset * sampling_rate)
             ]
 
-        ######################
-        # different shuffles #
-        ######################
+        # ######################
+        # # different shuffles #
+        # ######################
 
         elif self.args.shuffle_audio == "samples":
             # get audio until current word
@@ -172,6 +204,7 @@ class AudioDataset(data.Dataset):
                 int(chunk_onset * sampling_rate) : int(word_onset * sampling_rate)
             ]
             # TODO there is one case (676, conversation 52), where this does not work, because word_onset is smaller than 0
+            # look at it
             try:
                 # shuffle words
                 # split into smaller chunks of size (word)
@@ -219,7 +252,7 @@ class AudioDataset(data.Dataset):
         # chunk_name = f"results/tfs/audio_segments/{self.args.subject}-{self.args.conversation_id}-audio_segment_{idx:03d}-{self.conversation_df.word.iloc[idx]}.wav"
         # wavfile.write(chunk_name, sampling_rate, chunk_data)
 
-        # input features
+        # generate input features
         inputs = self.args.processor.feature_extractor(
             chunk_data, return_tensors="pt", sampling_rate=sampling_rate
         )
@@ -238,22 +271,24 @@ class AudioDataset(data.Dataset):
             ].tolist()  # to also include first 8 words that appear in the audio, but are cut off due to onset = NaN (only podcast) / check if that can be removed
             context_tokens.extend(
                 self.conversation_df[
-                    (self.conversation_df.word_onset >= chunk_onset)
-                    & (self.conversation_df.word_offset <= chunk_offset)
+                    (self.conversation_df.audio_onset >= chunk_onset)
+                    & (self.conversation_df.audio_offset <= chunk_offset)
                 ]["token"].tolist()
             )
         else:
+            # context_tokens = self.conversation_df[(self.conversation_df.audio_onset >= chunk_onset) & (self.conversation_df.audio_offset <= chunk_offset)]["token"].tolist()
+
             # get all tokens within input window
             context_df = self.conversation_df[
-                (self.conversation_df["word_onset"] >= chunk_onset)
+                (self.conversation_df["audio_onset"] >= chunk_onset)
                 & (
-                    self.conversation_df["word_onset"]
-                    <= self.conversation_df.iloc[idx].word_onset
+                    self.conversation_df["audio_onset"]
+                    <= self.conversation_df.iloc[idx].audio_onset
                 )
             ]
 
             # sort on word onset
-            context_df = context_df.sort_values("word_onset")
+            context_df = context_df.sort_values("audio_onset")
 
             if len(context_df.index) == 0:
                 context_df = context_df.append(self.conversation_df.iloc[idx])
@@ -275,6 +310,16 @@ class AudioDataset(data.Dataset):
 
             context_tokens = context_df["token"].tolist()
 
+            ###########
+            ## DEBUG ##
+            ###########
+
+            # context_tokens1 = (self.conversation_df[(self.conversation_df.audio_onset >= chunk_onset) & (self.conversation_df.audio_offset <= chunk_offset)]["token"].tolist())
+
+            # print(1)
+            # if context_tokens1[-1] != context_tokens[-1]:
+            #      print("ALARM")
+
         if self.args.shuffle_words == "flip":
             # get context_tokens until current word (or cutoff we define)
             # if 0 we go to -2 - excluding last word
@@ -288,25 +333,47 @@ class AudioDataset(data.Dataset):
             except:
                 context_tokens = context_tokens
 
-        # TODO look into how this works in new transformers version (current version: 4.23.1)
+        # add prefix tokens (for large v2):
+        # self.args.tokenizer.set_prefix_tokens(language="english", task="transcribe") - this does not work in current version (leos - 4.23.1) of transformers (!)
+        # therefore use this:
+        # if version of transformers == 4.23.1
         prefix_tokens = self.args.tokenizer.tokenize(
             "<|startoftranscript|> <|en|> <|transcribe|> <|notimestamps|>"
         )
+        prefix_tokens = self.args.tokenizer.tokenize("<|startoftranscript|> <|notimestamps|>")
+        prefix_tokens.extend(context_tokens)
+        context_tokens = prefix_tokens
 
-        # prefix_tokens = self.args.tokenizer.tokenize("<|startoftranscript|> <|notimestamps|>")
+        # # TEST
+        # context_tokens = self.args.tokenizer.tokenize("test")
 
-        tokens = prefix_tokens + context_tokens
+        # print(context_tokens)
 
-        token_ids = self.args.processor.tokenizer.encode(
-            tokens, add_special_tokens=False, return_tensors="pt"
+        # encoded_dict = self.args.processor.tokenizer.encode_plus(context_tokens, padding=False, return_attention_mask=False, return_tensors="pt")
+        # encoded_dict = self.args.processor.tokenizer.encode(context_tokens, add_special_tokens=False, return_tensors="pt")
+        context_token_ids = self.args.processor.tokenizer.encode(
+            context_tokens, add_special_tokens=False, return_tensors="pt"
         )
 
+        # if we want to use batch size > 1 we need to use padding (might be useful for large models)
+        # encoded_dict = self.args.tokenizer.encode_plus(context_tokens, padding="max_length", max_length=self.args.model.config.max_length, return_attention_mask=True, return_tensors="pt")
+
+        # DEBUG
+        # context_token_ids = torch.tensor(self.args.tokenizer.convert_tokens_to_ids(context_tokens))
+
+        # context_token_ids = encoded_dict["input_ids"]
+        # if batchsize > 1:
+        # attention_mask = encoded_dict["attention_mask"]
+
+        # sample = {"input_features": input_features.squeeze(), "context_token_ids": context_token_ids.squeeze()}
         sample = {
             "input_features": input_features.squeeze(),
-            "token_ids": token_ids.squeeze(),
+            "context_token_ids": context_token_ids.squeeze(),
             "start_windows": start_windows,
             "num_windows": num_windows
         }
+        # if batchsize > 1:
+        # sample = {"input_features": input_features.squeeze(), "context_token_ids": context_token_IDs.squeeze(), "attention_mask": attention_mask.squeeze()}
 
         return sample
 
@@ -325,6 +392,19 @@ def process_extracted_embeddings(args, concat_output):
 
         embeddings.append(c.numpy().squeeze())
 
+    # concatenated_embeddings = torch.cat(concat_output, dim=0).numpy()
+    # extracted_embeddings = concatenated_embeddings
+
+    # if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
+    #     emb_dim = concatenated_embeddings.shape[-1]
+
+    #     # the first token is always empty
+    #     init_token_embedding = np.empty((1, emb_dim)) * np.nan
+
+    #     extracted_embeddings = np.concatenate(
+    #         [init_token_embedding, concatenated_embeddings], axis=0
+    #     )
+
     return embeddings
 
 
@@ -335,13 +415,14 @@ def process_extracted_embeddings_all_layers(args, layer_embeddings_dict):
         for item_dict in layer_embeddings_dict:
             concat_output.append(item_dict[layer_idx])
         layer_embeddings[layer_idx] = process_extracted_embeddings(args, concat_output)
+        # layer_embeddings[layer_idx] = concat_output
 
     return layer_embeddings
 
 
 def process_extracted_logits(args, concat_logits, sentence_token_ids):
     """Get the probability for the _correct_ word"""
-
+    # (batch_size, max_len, vocab_size)
     # concatenate all batches
     prediction_scores = torch.cat(concat_logits, axis=0)
 
@@ -401,10 +482,8 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
 
 
 def extract_select_vectors(batch_idx, array):
+    # batch size / seq_length / dim
 
-    # what is going on here? #TODO
-    # here we select either n or n-1 token
-    # it would be better to use a param here instead of manually changing the code
     if batch_idx == 0:
         x = array[0, :-1, :].clone()
         if array.shape[0] > 1:
@@ -412,19 +491,36 @@ def extract_select_vectors(batch_idx, array):
 
             x = torch.cat([x, rem_sentences_preds], axis=0)
     else:
-        try: # why do we have a try and except statement here? #TODO
+        try:
             x = array[:, -1, :].clone()
         except:
             x = array[:, -2, :].clone()
 
+    # x = array[:, -1, :].clone()
+    # # x = array[:, -2, :].clone()
+
     return x
+
+
+# def extract_select_vectors_average(nhiddenstates, array):
+
+#     embeddings_sum = array[:, -1, :]
+
+#     for i in range(2,nhiddenstates):
+#         embeddings_sum.add(array[:,-i,:])
+
+#     x = embeddings_sum/nhiddenstates
+
+#     return x
+
 
 def extract_select_vectors_concat(num_windows, start_windows, array):
     # concatenating all windows from start_windows to start_windows + num_windows
     x = array[:, start_windows, :]
 
-    for i in range(1, num_windows):
-        x = torch.cat((x, array[:, start_windows + i, :]), 1)
+    if num_windows > 1:
+        for i in range(1, num_windows):
+            x = torch.cat((x, array[:, start_windows + i, :]), 1)
 
     return x
 
@@ -440,6 +536,7 @@ def extract_select_vectors_concat_all_layers(
         all_layers_x[layer_idx] = extract_select_vectors_concat(
             num_windows, start_windows, array
         )
+        # all_layers_x[layer_idx] = extract_select_vectors_average(num_windows,start_windows, array)
 
     return all_layers_x
 
@@ -476,14 +573,15 @@ def speech_model_forward_pass(args, data_dl):
         all_embeddings = []
         all_logits = []
         for batch_idx, batch in enumerate(data_dl):
-
-            # DEBUG
             print(batch_idx)
-
             input_features = batch["input_features"].to(args.device)
-            decoder_input_ids = batch["token_ids"].to(args.device)
             start_windows = batch["start_windows"].item()
             num_windows = batch["num_windows"].item()
+            decoder_input_ids = batch["context_token_ids"].to(args.device)
+
+            # if batchsize > 1
+            # decoder_attention_mask = batch["attention_mask"].to(args.device)
+            # model_output = model(input_features=input_features, decoder_input_ids=decoder_input_ids, decoder_attention_mask=decoder_attention_mask, output_hidden_states=True)
 
             #####################
             ## for full model: ##
@@ -504,16 +602,13 @@ def speech_model_forward_pass(args, data_dl):
             #####################
             elif args.model_type == "en-only":
                 if args.project_id == "podcast":
-                    if args.bin_type == "fixed_bin":
-                        num_windows = 12 
-                    elif args.bin_type == "var-bin":
-                        pass
+                    # num_windows = 12
+                    pass
                 elif args.project_id == "tfs":
-                    if args.bin_type == "fixed_bin":
-                        num_windows = 10 
-                    elif args.bin_type == "var-bin":
-                        pass
-
+                    # HACK
+                    # num_windows = 6
+                    # num_windows = 10
+                    pass
                 model_output = model(
                     input_features=input_features,
                     decoder_input_ids=decoder_input_ids,
@@ -531,20 +626,17 @@ def speech_model_forward_pass(args, data_dl):
             ## for decoder only ##
             ######################
             elif args.model_type == "de-only":
-
-                # set encoder_outputs to 0
-                # TODO make it work for different model sizes
+                # set encoder_outputs to 0:
+                # HACK
                 if "tiny" in args.embedding_type:
                     encoder_outputs = torch.zeros(1, 1500, 384).to(args.device)
                 elif "medium" in args.embedding_type:
                     encoder_outputs = torch.zeros(1, 1500, 1024).to(args.device)
-
-                # set cross attention heads to 0
+                # set cross attention heads to 0: (decoder layers, decoder attention heads)
                 cross_attn_head_mask = torch.zeros(
                     args.model.config.decoder_layers,
                     args.model.config.decoder_attention_heads,
                 ).to(args.device)
-
                 model_output = model(
                     input_features=input_features,
                     decoder_input_ids=decoder_input_ids,
@@ -567,7 +659,6 @@ def speech_model_forward_pass(args, data_dl):
 
 
 def generate_speech_embeddings(args, df):
-
     final_embeddings = []
     final_top1_word = []
     final_top1_prob = []
@@ -575,26 +666,21 @@ def generate_speech_embeddings(args, df):
     final_true_y_rank = []
     final_logits = []
 
-    # # disable pandas warnings #HACK
-    # # change the code so that the warnings are not issued #TODO
-    # pd.options.mode.chained_assignment = None 
+    # for conversation in df.conversation_id.unique():
+    #     conversation_df = get_conversation_df(df, conversation)
 
-    # drop rows that have NaN as onset or offset (only relevant for podcast)
-    conversation_df = df.dropna(subset=['onset','offset']).copy()
+    df.dropna(subset=['onset','offset'],inplace=True)
+    df["audio_onset"] = (df.onset + 3000) / 512
+    df["audio_offset"] = (df.offset + 3000) / 512
+    df["word_len"] = df.audio_offset - df.audio_onset
+    df["num_windows"] = ((df["word_len"] - 0.0525) // 0.020 + 2).astype(int)
+    df.loc[df["num_windows"] < 1, "num_windows"] = 1
+
+    conversation_df = df.dropna(subset=["onset", "offset"])
     conversation_df.reset_index(drop=True, inplace=True)
 
-    # translate onset and offset from Hz to sec and calculate word length
-    conversation_df["word_onset"] = (conversation_df.onset + 3000) / 512
-    conversation_df["word_offset"] = (conversation_df.offset + 3000) / 512
-    conversation_df["word_len"] = conversation_df.word_offset - conversation_df.word_onset
-
-    # calculate number of encoder windows to cover word length audio segment
-    # explain formula #TODO
-    conversation_df["num_windows"] = ((conversation_df["word_len"] - 0.0525) // 0.020 + 2).astype(int)
-    conversation_df.loc[conversation_df["num_windows"] < 1, "num_windows"] = 1
-
     if args.project_id == "podcast":
-        audio_path = "/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav" #TODO change this to be flexible
+        audio_path = "/scratch/gpfs/ln1144/247-pickling/data/podcast/podcast_16k.wav"
     elif args.project_id == "tfs":
         audio_path = (
             "data/"
@@ -609,7 +695,7 @@ def generate_speech_embeddings(args, df):
         )
 
     audio = whisper.load_audio(audio_path)
-    input_dataset = AudioDataset(args, audio, conversation_df)
+    input_dataset = AudioDataset(args, audio, conversation_df, df)
     input_dl = make_dataloader_from_dataset(input_dataset)
     embeddings, logits = speech_model_forward_pass(args, input_dl)
 
@@ -627,7 +713,6 @@ def generate_speech_embeddings(args, df):
         true_y_rank,
         entropy,
     ) = process_extracted_logits(args, logits, token_ids)
-
     final_top1_word.extend(top1_word)
     final_top1_prob.extend(top1_prob)
     final_true_y_prob.extend(true_y_prob)
@@ -642,8 +727,8 @@ def generate_speech_embeddings(args, df):
         final_embeddings = final_embeddings[0]
 
     # HACK
-    # None is added as first item (why?)
-    # therefore we select from index 1 onwards
+    # adding none as a first item, this we want to skip
+
     df = pd.DataFrame()
     df["top1_pred"] = final_top1_word[1:]
     df["top1_pred_prob"] = final_top1_prob[1:]
@@ -653,7 +738,7 @@ def generate_speech_embeddings(args, df):
     df["entropy"] = entropy[1:]
 
     df_logits = pd.DataFrame()
+    # df_logits["logits"] = final_logits
 
-    print('Conversation ' + str(args.conversation_id) + ' done. Prediction accuracy: ' + str(np.mean(df.true_pred_rank == 1)))
-
+    print(np.mean(df.true_pred_rank == 1))
     return df, df_logits, final_embeddings

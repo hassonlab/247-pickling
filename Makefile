@@ -53,7 +53,7 @@ endif
 # {echo | python}
 %-pickle: PRJCT_ID := tfs
 # {tfs | podcast}
-%-pickle: SID_LIST = 676
+%-pickle: SID_LIST = 625
 # {625 676 7170 798 | 661 662 717 723 741 742 743 763 798 | 777}
 
 create-pickle:
@@ -96,7 +96,7 @@ download-247-pickles:
 # {tfs | podcast}
 %-embeddings: SID := 625
 # {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 54)
+%-embeddings: CONV_IDS = $(shell seq 1 1)
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
@@ -117,7 +117,9 @@ download-247-pickles:
 
 # Whisper specific args
 %-embeddings: MDL_TYPE := en-only
-# {full | full-onset | full_n-1 | en-only | de-only}
+# {full | full-onset | full-n-1 | en-only | de-only}
+%-embeddings: BIN_TYPE := var-bin
+# {var-bin | fixed-bin}
 %-embeddings: SHUFFLE_AUDIO := none
 # {none | samples | phonemes | words | 2-words | flip}
 %-embeddings: SHUFFLE_WORDS := none
@@ -136,14 +138,11 @@ download-247-pickles:
 # %-embeddings: RCTXP := --rctxp
 # %-embeddings: UTT := --utt
 
-
-
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 %-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
-%-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
+%-embeddings: CMD = python
 # {echo | python | sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh}
-
 
 # generate-base-for-embeddings: Generates the base dataframe for embedding generation
 generate-base-for-embeddings:
@@ -165,6 +164,7 @@ generate-embeddings:
 				--conversation-id $$conv_id \
 				--embedding-type $(EMB_TYPE) \
 				--model-type $(MDL_TYPE) \
+				--bin-type $(BIN_TYPE) \
 				--shuffle-audio $(SHUFFLE_AUDIO) \
 				--shuffle-words $(SHUFFLE_WORDS) \
 				--cutoff $(CUTOFF) \
@@ -200,7 +200,7 @@ copy-embeddings:
 
 # Download huggingface models to cache (before generating embeddings)
 # This target needs to be run on the head node
-cache-models: MODEL := openai/whisper-medium.en
+cache-models: MODEL := openai/whisper-tiny.en
 # {causal | seq2seq | mlm | or any model name specified in EMB_TYPE comments}
 cache-models:
 	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"
