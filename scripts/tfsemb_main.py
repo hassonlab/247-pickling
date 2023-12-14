@@ -17,8 +17,10 @@ from utils import save_pickle as svpkl
 from tfsemb_genemb_glove import generate_glove_embeddings
 from tfsemb_genemb_causal import generate_causal_embeddings
 from tfsemb_genemb_seq2seq import generate_conversational_embeddings
-from tfsemb_genemb_whisper import generate_speech_embeddings
+# from tfsemb_genemb_whisper import generate_speech_embeddings
+from tfsemb_genemb_whisper_var_win import generate_speech_embeddings
 from tfsemb_genemb_whisper_en_win import generate_acoustic_embeddings
+from tfsemb_genemb_whisper_gen import generate_whisper_gen_embeddings
 from tfsemb_genemb_mlm import generate_mlm_embeddings
 from tfsemb_genemb_symbolic import generate_symbolic_embeddings
 

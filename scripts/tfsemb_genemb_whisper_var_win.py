@@ -8,7 +8,6 @@ import torch.utils.data as data
 import torch.nn.functional as F
 import tfsemb_download as tfsemb_dwnld
 
-
 # def get_conversation_df(df):
 
 #     # redundant
@@ -97,17 +96,26 @@ class AudioDataset(data.Dataset):
             # get current word onset
             word_onset = self.conversation_df.audio_onset.iloc[idx]
             # look at current word onset + 272.5 ms (podcast) / 232.5 ms (tfs)
-            if self.args.project_id == "podcast":
-                chunk_offset = word_onset + 0.2725
-                num_windows = 12
-            elif self.args.project_id == "tfs":
-                # HACK
-                chunk_offset = word_onset + 0.2325
-                num_windows = 10
+            # if self.args.project_id == "podcast":
+            #     chunk_offset = word_onset + 0.2725
+            #     num_windows = 12
+            # elif self.args.project_id == "tfs":
+            #     # chunk_offset = word_onset + 0.2325
+            #     # num_windows = 10
 
+            # calculate number of hidden state windows for each word
+            word_offset = self.conversation_df.audio_offset.iloc[idx]
+            word_len = self.conversation_df.word_len.iloc[idx]
+            num_windows = self.conversation_df.num_windows.iloc[idx]
+
+            chunk_offset = word_offset
             chunk_onset = np.max([0, (chunk_offset - 30)])
 
-            # function that gives start of windows
+            # # #HACK for 676 conv 68 (91) and 38 (18)
+            # if(idx == 18):
+            #     chunk_offset = 30
+
+            # calculate start of windows when padding is applied
             # add some docs
             if chunk_offset < 30:
                 start_windows = int(
@@ -317,14 +325,9 @@ class AudioDataset(data.Dataset):
         prefix_tokens = self.args.tokenizer.tokenize(
             "<|startoftranscript|> <|en|> <|transcribe|>"
         )
-        prefix_tokens = self.args.tokenizer.tokenize("<|startoftranscript|>")
-        prefix_tokens2 = self.args.tokenizer.tokenize(
-            "<|startoftranscript|><|notimestamps|>"
-        )
+        prefix_tokens = self.args.tokenizer.tokenize("<|startoftranscript|> ")
         prefix_tokens.extend(context_tokens)
-        prefix_tokens2.extend(context_tokens)
         context_tokens = prefix_tokens
-        context_tokens2 = prefix_tokens2
 
         # # TEST
         # context_tokens = self.args.tokenizer.tokenize("test")
@@ -335,9 +338,6 @@ class AudioDataset(data.Dataset):
         # encoded_dict = self.args.processor.tokenizer.encode(context_tokens, add_special_tokens=False, return_tensors="pt")
         context_token_ids = self.args.processor.tokenizer.encode(
             context_tokens, add_special_tokens=False, return_tensors="pt"
-        )
-        context_token_ids2 = self.args.processor.tokenizer.encode(
-            context_tokens2, add_special_tokens=False, return_tensors="pt"
         )
 
         # if we want to use batch size > 1 we need to use padding (might be useful for large models)
@@ -354,8 +354,8 @@ class AudioDataset(data.Dataset):
         sample = {
             "input_features": input_features.squeeze(),
             "context_token_ids": context_token_ids.squeeze(),
-            "context_token_ids2": context_token_ids2.squeeze(),
             "start_windows": start_windows,
+            "num_windows": num_windows,
         }
         # if batchsize > 1:
         # sample = {"input_features": input_features.squeeze(), "context_token_ids": context_token_IDs.squeeze(), "attention_mask": attention_mask.squeeze()}
@@ -371,20 +371,25 @@ def make_dataloader_from_dataset(input_dataset):
 def process_extracted_embeddings(args, concat_output):
     """(batch_size, max_len, embedding_size)"""
 
-    concatenated_embeddings = torch.cat(concat_output, dim=0).numpy()
-    extracted_embeddings = concatenated_embeddings
+    embeddings = []
 
-    if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
-        emb_dim = concatenated_embeddings.shape[-1]
+    for c in concat_output:
+        embeddings.append(c.numpy().squeeze())
 
-        # the first token is always empty
-        init_token_embedding = np.empty((1, emb_dim)) * np.nan
+    # concatenated_embeddings = torch.cat(concat_output, dim=0).numpy()
+    # extracted_embeddings = concatenated_embeddings
 
-        extracted_embeddings = np.concatenate(
-            [init_token_embedding, concatenated_embeddings], axis=0
-        )
+    # if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
+    #     emb_dim = concatenated_embeddings.shape[-1]
 
-    return extracted_embeddings
+    #     # the first token is always empty
+    #     init_token_embedding = np.empty((1, emb_dim)) * np.nan
+
+    #     extracted_embeddings = np.concatenate(
+    #         [init_token_embedding, concatenated_embeddings], axis=0
+    #     )
+
+    return embeddings
 
 
 def process_extracted_embeddings_all_layers(args, layer_embeddings_dict):
@@ -394,6 +399,7 @@ def process_extracted_embeddings_all_layers(args, layer_embeddings_dict):
         for item_dict in layer_embeddings_dict:
             concat_output.append(item_dict[layer_idx])
         layer_embeddings[layer_idx] = process_extracted_embeddings(args, concat_output)
+        # layer_embeddings[layer_idx] = concat_output
 
     return layer_embeddings
 
@@ -496,8 +502,9 @@ def extract_select_vectors_concat(num_windows, start_windows, array):
     # concatenating all windows from start_windows to start_windows + num_windows
     x = array[:, start_windows, :]
 
-    for i in range(1, num_windows):
-        x = torch.cat((x, array[:, start_windows + i, :]), 1)
+    if num_windows > 1:
+        for i in range(1, num_windows):
+            x = torch.cat((x, array[:, start_windows + i, :]), 1)
 
     return x
 
@@ -550,11 +557,11 @@ def speech_model_forward_pass(args, data_dl):
         all_embeddings = []
         all_logits = []
         for batch_idx, batch in enumerate(data_dl):
-            print(batch_idx)
             input_features = batch["input_features"].to(args.device)
             start_windows = batch["start_windows"].item()
+            num_windows = batch["num_windows"].item()
             decoder_input_ids = batch["context_token_ids"].to(args.device)
-            decoder_input_ids2 = batch["context_token_ids2"].to(args.device)
+            print(batch_idx, start_windows, num_windows)
 
             # if batchsize > 1
             # decoder_attention_mask = batch["attention_mask"].to(args.device)
@@ -583,7 +590,8 @@ def speech_model_forward_pass(args, data_dl):
                 elif args.project_id == "tfs":
                     # HACK
                     # num_windows = 6
-                    num_windows = 10
+                    # num_windows = 10
+                    pass
                 model_output = model(
                     input_features=input_features,
                     decoder_input_ids=decoder_input_ids,
@@ -634,6 +642,7 @@ def speech_model_forward_pass(args, data_dl):
 
 
 def generate_speech_embeddings(args, df):
+    print("various windows")
     final_embeddings = []
     final_top1_word = []
     final_top1_prob = []
@@ -646,6 +655,11 @@ def generate_speech_embeddings(args, df):
 
     df["audio_onset"] = (df.onset + 3000) / 512
     df["audio_offset"] = (df.offset + 3000) / 512
+    df = df.dropna(subset=["onset", "offset"])
+    df["word_len"] = df.audio_offset - df.audio_onset
+    df["num_windows"] = ((df["word_len"] - 0.0525) // 0.020 + 2).astype(int)
+    df.loc[df["num_windows"] < 1, "num_windows"] = 1
+
     conversation_df = df.dropna(subset=["onset", "offset"])
     conversation_df.reset_index(drop=True, inplace=True)
 
@@ -673,7 +687,7 @@ def generate_speech_embeddings(args, df):
     token_ids = [tuple(token_ids)]
     embeddings = process_extracted_embeddings_all_layers(args, embeddings)
     for _, item in embeddings.items():
-        assert item.shape[0] == len(token_ids[0])
+        assert len(item) == len(token_ids[0])
     final_embeddings.append(embeddings)
 
     (
