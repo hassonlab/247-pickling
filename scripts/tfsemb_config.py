@@ -47,9 +47,15 @@ def select_tokenizer_and_model(args):
             *tfsemb_dwnld.MLM_MODELS,
             *tfsemb_dwnld.SPEECHSEQ2SEQ_MODELS,
         ]:
-            (args.model, args.tokenizer, args.processor,) = tfsemb_dwnld.download_tokenizers_and_models(
+            (
+                args.model,
+                args.tokenizer,
+                args.processor,
+            ) = tfsemb_dwnld.download_tokenizers_and_models(
                 item, local_files_only=True, debug=False
-            )[item]
+            )[
+                item
+            ]
         case _:
             print(
                 """Model and tokenizer not found. Please download into cache first.
@@ -77,12 +83,16 @@ def process_inputs(args):
 
 
 def setup_environ(args):
-
-    select_tokenizer_and_model(args)
-    process_inputs(args)
-    if args.embedding_type != "glove50":
-        set_layer_idx(args)
-        set_context_length(args)
+    concat = False
+    if not concat:
+        select_tokenizer_and_model(args)
+        process_inputs(args)
+        if args.embedding_type != "glove50":
+            set_layer_idx(args)
+            set_context_length(args)
+    else:
+        process_inputs(args)
+        args.layer_idx = np.arange(0, 33)
 
     DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)
     RESULTS_DIR = os.path.join(os.getcwd(), "results", args.project_id)

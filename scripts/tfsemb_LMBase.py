@@ -61,7 +61,7 @@ def main():
         base_df = add_vocab_columns(args, base_df, column="word")
     else:
         base_df = tokenize_and_explode(args, base_df)
-        base_df = add_vocab_columns(args, base_df, column="token2word")
+        # base_df = add_vocab_columns(args, base_df, column="token2word")
 
     svpkl(base_df, args.base_df_file)
 

@@ -93,7 +93,7 @@ def tokenize_and_explode(args, df):
     df = convert_token_to_idx(args, df)
     df = check_token_is_root(args, df)
 
-    df["token_idx"] = (df.groupby(["adjusted_onset", "word"]).cumcount()).astype(int)
+    df["token_idx"] = df.groupby(["adjusted_onset", "word"]).cumcount()
     df = df.reset_index(drop=True)
 
     return df
