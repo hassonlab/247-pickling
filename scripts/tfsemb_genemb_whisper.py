@@ -21,10 +21,11 @@ class AudioDataset(data.Dataset):
     def __getitem__(self, idx):
         sampling_rate = 16000
 
-        ####################
-        ## for full model ##
-        ####################
+        #####################################
+        ## for full model or decoder- only ##
+        #####################################
         if self.args.model_type == "full" or self.args.model_type == "de-only":
+
             # get word onset and offset
             chunk_offset = self.conversation_df.word_offset.iloc[idx]
             chunk_onset = np.max([0, (chunk_offset - 30)])
@@ -33,22 +34,39 @@ class AudioDataset(data.Dataset):
                 int(chunk_onset * sampling_rate) : int(chunk_offset * sampling_rate)
             ]
 
+            # we don't need those since we are not extracting encoder hidden states
             start_windows = 0
+            num_windows = 0
 
         ###########################
         ## for full-onset model  ##
         ###########################
         elif self.args.model_type == "full-onset":
+
+            # get word onset
             word_onset = self.conversation_df.word_onset.iloc[idx]
-            chunk_offset = word_onset + 0.2325
-            num_windows = 10
+
+            # change this if we want to do 20 ms per unit #TODO 
+            # look at word onset + 252.5 ms (podcast) / 232.5 ms (tfs)
+            if self.args.bin_type == "fixed-bin":
+                if self.args.project_id == "podcast":
+                    chunk_offset = word_onset + 0.2525 
+                    num_windows = 11 
+                elif self.args.project_id == "tfs":
+                    chunk_offset = word_onset + 0.2325
+                    num_windows = 10
+
+            elif self.args.bin_type == "var-bin":
+                
+                chunk_offset = self.conversation_df.word_offset.iloc[idx]
+                num_windows = self.conversation_df.num_windows.iloc[idx]
+
+            # get start of 30 sec audio chunk
             chunk_onset = np.max([0, (chunk_offset - 30)])
 
-            chunk_data = self.audio[
-                int(chunk_onset * sampling_rate) : int(chunk_offset * sampling_rate)
-            ]
-
+            # we don't need those since we are not extracting encoder hidden states
             start_windows = 0
+            num_windows = 0
 
         #########################
         ## for full model n-1 ##
@@ -65,7 +83,9 @@ class AudioDataset(data.Dataset):
                 int(chunk_onset * sampling_rate) : int(chunk_offset * sampling_rate)
             ]
 
+            # we don't need those since we are not extracting encoder hidden states
             start_windows = 0
+            num_windows = 0
 
         ######################
         ## for encoder only ##
@@ -75,7 +95,7 @@ class AudioDataset(data.Dataset):
             # get word onset
             word_onset = self.conversation_df.word_onset.iloc[idx]
 
-            # change this if we want to 20 ms per unit #TODO 
+            # change this if we want to do 20 ms per unit #TODO 
             # look at word onset + 252.5 ms (podcast) / 232.5 ms (tfs)
             if self.args.bin_type == "fixed-bin":
                 if self.args.project_id == "podcast":

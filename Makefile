@@ -94,9 +94,9 @@ download-247-pickles:
 ## settings for targets: generate-embeddings, concatenate-embeddings
 %-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 625
+%-embeddings: SID := 798
 # {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 1)
+%-embeddings: CONV_IDS = $(shell seq 1 15)
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
@@ -116,9 +116,9 @@ download-247-pickles:
 
 
 # Whisper specific args
-%-embeddings: MDL_TYPE := en-only
+%-embeddings: MDL_TYPE := full
 # {full | full-onset | full-n-1 | en-only | de-only}
-%-embeddings: BIN_TYPE := var-bin
+%-embeddings: BIN_TYPE := fixed-bin
 # {var-bin | fixed-bin}
 %-embeddings: SHUFFLE_AUDIO := none
 # {none | samples | phonemes | words | 2-words | flip}
@@ -141,7 +141,7 @@ download-247-pickles:
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 %-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
-%-embeddings: CMD = python
+%-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
 # {echo | python | sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh}
 
 # generate-base-for-embeddings: Generates the base dataframe for embedding generation
