@@ -27,13 +27,13 @@ def main():
     args = arg_parser()
     setup_environ(args)
 
-    # if os.path.exists(args.base_df_file):
-    #     base_df = load_pickle(args.base_df_file)
-    # else:
-    #     raise Exception("Base dataframe does not exist")
+    if os.path.exists(args.base_df_file):
+        base_df = load_pickle(args.base_df_file)
+    else:
+        raise Exception("Base dataframe does not exist")
 
-    base_df_path = args.base_df_file.replace("661/embeddings", "777/pickles/embeddings")
-    base_df = load_pickle(base_df_path)
+    # base_df_path = args.base_df_file.replace("661/embeddings", "777/pickles/embeddings")
+    # base_df = load_pickle(base_df_path)
 
     utterance_df = select_conversation(args, base_df)
     assert len(utterance_df) != 0, "Empty dataframe"
