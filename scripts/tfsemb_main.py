@@ -54,7 +54,7 @@ def check_token_is_root(args, df):
     token_is_root_string = args.embedding_type.split("/")[-1] + "_token_is_root"
     df[token_is_root_string] = (
         df["word"]
-        == df["token"].apply(args.tokenizer.convert_tokens_to_string).str.strip()
+        == df["token"].apply(lambda x: [x]).apply(args.tokenizer.convert_tokens_to_string).str.strip()
     )
 
     return df
@@ -70,6 +70,7 @@ def convert_token_to_word(args, df):
 
     df["token2word"] = (
         df["token"]
+        .apply(lambda x: [x])
         .apply(args.tokenizer.convert_tokens_to_string)
         .str.strip()
         .str.lower()

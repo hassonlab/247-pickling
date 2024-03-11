@@ -1,12 +1,15 @@
 #!/bin/bash
-#SBATCH --time=02:10:00
+#SBATCH --time=00:15:00
 #SBATCH --mem=128GB
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
+#SBATCH --constraint=gpu80
 #SBATCH --nodes=1
 ##SBATCH --cpus-per-task=4
 #SBATCH --open-mode=truncate
-#SBATCH -o './logs/%x.out'
-#SBATCH -e './logs/%x.err'
+#SBATCH -o './perplexity_logs/%x.out'
+#SBATCH -e './perplexity_logs/%x.err'
+#SBATCH --mail-user=hvgazula@umich.edu
+#SBATCH --mail-type=FAIL
  
 if [[ "$HOSTNAME" == *"tiger"* ]]
 then
@@ -34,7 +37,7 @@ if [[ -v SLURM_ARRAY_TASK_ID ]]
 then
     python "$@" --conversation-id $SLURM_ARRAY_TASK_ID
 else
-    python "$@"
+    python -u "$@"
 fi
 
 end=$(date +%s)

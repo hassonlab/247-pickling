@@ -32,7 +32,8 @@ def main():
     # else:
     #     raise Exception("Base dataframe does not exist")
 
-    base_df_path = args.base_df_file.replace("661/embeddings", "777/pickles/embeddings")
+    # base_df_path = args.base_df_file.replace("661/embeddings", "777/pickles/embeddings")
+    base_df_path = args.base_df_file
     base_df = load_pickle(base_df_path)
 
     utterance_df = select_conversation(args, base_df)
@@ -43,7 +44,7 @@ def main():
     except:
         max_length = args.model.config.max_position_embeddings
 
-    strides = [512, 1024, 2048, 4096]
+    strides = [512, 1024, 2048, 4096, 8192]
     encodings = torch.tensor([tuple(utterance_df.token_id.tolist())])
     seq_len = encodings.size(1)
 
@@ -62,7 +63,7 @@ def main():
             target_ids[:, :-trg_len] = -100
 
             with torch.no_grad():
-                model = model.to(device)
+                # model = model.to(device)
                 model.eval()
                 outputs = model(input_ids, labels=target_ids)
 

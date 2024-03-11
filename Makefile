@@ -92,15 +92,15 @@ download-247-pickles:
 	gsutil -m rsync -x "^(?!.*676).*" gs://247-podcast-data/247-pickles/ results/676/
 
 ## settings for targets: generate-embeddings, concatenate-embeddings
-%-embeddings: PRJCT_ID := tfs
+%-embeddings: PRJCT_ID := podcast
 # {tfs | podcast}
-%-embeddings: SID := 625
+%-embeddings: SID := 661
 # {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 54)
+%-embeddings: CONV_IDS = $(shell seq 1 1)
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
-%-embeddings: EMB_TYPE := openai/whisper-tiny.en
+%-embeddings: EMB_TYPE := google/gemma-7b
 # {"gpt2", "gpt2-large", "gpt2-xl", \
 "EleutherAI/gpt-neo-125M", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-neo-2.7B", \
 "EleutherAI/gpt-neox-20b", \
@@ -110,7 +110,7 @@ download-247-pickles:
 "openai/whisper-tiny.en", "openai/whisper-base.en", "openai/whisper-medium.en", \
 "openai/whisper-large", "openai/whisper-large-v2" \
 }
-%-embeddings: CNXT_LEN := 1
+%-embeddings: CNXT_LEN := 8192
 %-embeddings: LAYER := all
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
 
@@ -141,7 +141,7 @@ download-247-pickles:
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 %-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
-%-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
+%-embeddings: CMD = sbatch --job-name=perplexity-$(SID)-$(JOB_NAME)-cnxt-$(CNXT_LEN) submit.sh
 # {echo | python | sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh}
 
 
@@ -200,7 +200,18 @@ copy-embeddings:
 
 # Download huggingface models to cache (before generating embeddings)
 # This target needs to be run on the head node
-cache-models: MODEL := openai/whisper-medium.en
+cache-models: MODEL := causal
 # {causal | seq2seq | mlm | or any model name specified in EMB_TYPE comments}
 cache-models:
 	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"
+
+perp-embeddings:
+	mkdir -p logs
+	for conv_id in $(CONV_IDS); do \
+		python scripts/tfsemb_perplexity.py \
+		--project-id $(PRJCT_ID) \
+		--pkl-identifier $(PKL_IDENTIFIER) \
+		--subject $(SID) \
+		--conversation-id $$conv_id \
+		--embedding-type $(EMB_TYPE); \
+	done;
