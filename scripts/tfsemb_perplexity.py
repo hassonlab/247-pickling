@@ -1,19 +1,8 @@
-import os
-import pickle
-import sys
-
-import gensim.downloader as api
-import numpy as np
-import pandas as pd
-import tfsemb_download as tfsemb_dwnld
 import torch
-import torch.nn.functional as F
-import torch.utils.data as data
-from accelerate import Accelerator, find_executable_batch_size
 from tfsemb_config import setup_environ
 from tfsemb_parser import arg_parser
-from utils import load_pickle, main_timer
 from tqdm import tqdm
+from utils import load_pickle
 
 
 def select_conversation(args, df):
@@ -32,7 +21,8 @@ def main():
     # else:
     #     raise Exception("Base dataframe does not exist")
 
-    base_df_path = args.base_df_file.replace("661/embeddings", "777/pickles/embeddings")
+    # base_df_path = args.base_df_file.replace("661/embeddings", "777/pickles/embeddings")
+    base_df_path = args.base_df_file
     base_df = load_pickle(base_df_path)
 
     utterance_df = select_conversation(args, base_df)
@@ -43,7 +33,7 @@ def main():
     except:
         max_length = args.model.config.max_position_embeddings
 
-    strides = [512, 1024, 2048, 4096]
+    strides = [512, 1024, 2048, 4096, 8192]
     encodings = torch.tensor([tuple(utterance_df.token_id.tolist())])
     seq_len = encodings.size(1)
 
@@ -62,7 +52,7 @@ def main():
             target_ids[:, :-trg_len] = -100
 
             with torch.no_grad():
-                model = model.to(device)
+                # model = model.to(device)
                 model.eval()
                 outputs = model(input_ids, labels=target_ids)
 
