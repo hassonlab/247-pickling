@@ -264,11 +264,9 @@ def create_labels_pickles(args, stitch_index, labels, convs, label_str=None):
     labels_df = add_fine_flag(args, labels_df)
     labels_df = add_signal_length(labels_df, stitch_index)
 
-    # labels_dict = dict(labels=labels_df.to_dict("records"))
     pkl_name = "_".join([args.subject, label_str, "labels"])
     pkl_name = os.path.join(args.PKL_DIR, pkl_name)
-    # save_pickle(labels_dict, pkl_name)
-    labels_df.to_pickle(pkl_name + ".pkl")
+    save_pickle(labels_df, pkl_name, is_dataframe=True)
 
 
 @main_timer
@@ -295,83 +293,83 @@ def main():
         subject_id,
     ) = build_design_matrices(dict(vars(args)))
 
-    # # Create pickle with full signal
-    # full_signal_dict = dict(
-    #     full_signal=full_signal,
-    #     full_stitch_index=full_stitch_index,
-    #     electrode_ids=electrodes,
-    #     electrode_names=electrode_names,
-    #     subject=subject_id,
-    # )
-    # save_pickle(
-    #     full_signal_dict,
-    #     os.path.join(args.PKL_DIR, args.subject + "_full_signal"),
-    # )
+    # Create pickle with full signal
+    full_signal_dict = dict(
+        full_signal=full_signal,
+        full_stitch_index=full_stitch_index,
+        electrode_ids=electrodes,
+        electrode_names=electrode_names,
+        subject=subject_id,
+    )
+    save_pickle(
+        full_signal_dict,
+        os.path.join(args.PKL_DIR, args.subject + "_full_signal"),
+    )
 
-    # # Create pickle with full stitch index
-    # save_pickle(
-    #     full_stitch_index,
-    #     os.path.join(args.PKL_DIR, args.subject + "_full_stitch_index"),
-    # )
+    # Create pickle with full stitch index
+    save_pickle(
+        full_stitch_index,
+        os.path.join(args.PKL_DIR, args.subject + "_full_stitch_index"),
+    )
 
-    # # Create pickle with electrode maps
-    # electrode_map = dict(
-    #     subject=subject_id,
-    #     electrode_id=electrodes,
-    #     electrode_name=electrode_names,
-    # )
-    # save_pickle(
-    #     electrode_map,
-    #     os.path.join(args.PKL_DIR, args.subject + "_electrode_names"),
-    # )
+    # Create pickle with electrode maps
+    electrode_map = dict(
+        subject=subject_id,
+        electrode_id=electrodes,
+        electrode_name=electrode_names,
+    )
+    save_pickle(
+        electrode_map,
+        os.path.join(args.PKL_DIR, args.subject + "_electrode_names"),
+    )
 
-    # # Create pickle with trimmed signal
-    # trimmed_signal_dict = dict(
-    #     trimmed_signal=trimmed_signal,
-    #     trimmed_stitch_index=trimmed_stitch_index,
-    #     electrode_ids=electrodes,
-    #     electrode_names=electrode_names,
-    #     subject=subject_id,
-    # )
-    # save_pickle(
-    #     trimmed_signal_dict,
-    #     os.path.join(args.PKL_DIR, args.subject + "_trimmed_signal"),
-    # )
+    # Create pickle with trimmed signal
+    trimmed_signal_dict = dict(
+        trimmed_signal=trimmed_signal,
+        trimmed_stitch_index=trimmed_stitch_index,
+        electrode_ids=electrodes,
+        electrode_names=electrode_names,
+        subject=subject_id,
+    )
+    save_pickle(
+        trimmed_signal_dict,
+        os.path.join(args.PKL_DIR, args.subject + "_trimmed_signal"),
+    )
 
-    # # Create pickle with full stitch index
-    # save_pickle(
-    #     trimmed_stitch_index,
-    #     os.path.join(args.PKL_DIR, args.subject + "_trimmed_stitch_index"),
-    # )
+    # Create pickle with full stitch index
+    save_pickle(
+        trimmed_stitch_index,
+        os.path.join(args.PKL_DIR, args.subject + "_trimmed_stitch_index"),
+    )
 
-    # # Create pickle with binned signal
-    # binned_signal_dict = dict(
-    #     binned_signal=binned_signal,
-    #     bin_stitch_index=bin_stitch_index,
-    #     electrode_ids=electrodes,
-    #     electrode_names=electrode_names,
-    #     subject=subject_id,
-    # )
-    # save_pickle(
-    #     binned_signal_dict,
-    #     os.path.join(args.PKL_DIR, args.subject + "_binned_signal"),
-    # )
+    # Create pickle with binned signal
+    binned_signal_dict = dict(
+        binned_signal=binned_signal,
+        bin_stitch_index=bin_stitch_index,
+        electrode_ids=electrodes,
+        electrode_names=electrode_names,
+        subject=subject_id,
+    )
+    save_pickle(
+        binned_signal_dict,
+        os.path.join(args.PKL_DIR, args.subject + "_binned_signal"),
+    )
 
-    # # Create pickle with full stitch index
-    # save_pickle(
-    #     bin_stitch_index,
-    #     os.path.join(args.PKL_DIR, args.subject + "_bin_stitch_index"),
-    # )
+    # Create pickle with full stitch index
+    save_pickle(
+        bin_stitch_index,
+        os.path.join(args.PKL_DIR, args.subject + "_bin_stitch_index"),
+    )
 
-    # # Create pickle with trimmed labels
-    # create_labels_pickles(
-    #     args,
-    #     trimmed_stitch_index,
-    #     trimmed_labels,
-    #     conversations,
-    #     "trimmed",
-    # )
-    # print("SUCCESS: Trimmed Labels Pickle")
+    # Create pickle with trimmed labels
+    create_labels_pickles(
+        args,
+        trimmed_stitch_index,
+        trimmed_labels,
+        conversations,
+        "trimmed",
+    )
+    print("SUCCESS: Trimmed Labels Pickle")
 
     create_labels_pickles(
         args,
