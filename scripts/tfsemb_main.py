@@ -36,6 +36,8 @@ def select_conversation(args, df):
     if args.conversation_id:
         print("Selecting conversation", args.conversation_id)
         df = df[df.conversation_id == args.conversation_id]
+        assert df.conversation_id.unique().shape[0] == 1
+        print(f"Conversation Name: {df.conversation_name.unique()[0]}, shape: {df.shape}")
     return df
 
 
