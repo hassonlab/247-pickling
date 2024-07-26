@@ -74,10 +74,10 @@ create-sig-pickle:
 # upload pickles to google cloud bucket
 # on bucket we use 247 not tfs, so manually adjust as needed
 # upload-pickle: pid=247
-upload-pickle: pid=podcast
+upload-pickle: pid=podcast && item=embeddings
 upload-pickle:
 	for sid in $(SID_LIST); do \
-		gsutil -m rsync -rd results/$(PRJCT_ID)/$$sid/pickles/ gs://247-podcast-data/$(pid)-pickles/$$sid; \
+		gsutil -m rsync -rd results/$(PRJCT_ID)/$$sid/$(item)/ gs://247-podcast-data/$(pid)-$(item)/$$sid; \
 	done
 
 # upload raw data to google cloud bucket
