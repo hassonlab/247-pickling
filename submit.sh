@@ -2,6 +2,7 @@
 #SBATCH --time=02:10:00
 #SBATCH --mem=128GB
 #SBATCH --gres=gpu:1
+#SBATCH --constraint=gpu80
 #SBATCH --nodes=1
 ##SBATCH --cpus-per-task=4
 #SBATCH --open-mode=truncate
@@ -34,7 +35,7 @@ if [[ -v SLURM_ARRAY_TASK_ID ]]
 then
     python "$@" --conversation-id $SLURM_ARRAY_TASK_ID
 else
-    python "$@"
+    python -u "$@"
 fi
 
 end=$(date +%s)

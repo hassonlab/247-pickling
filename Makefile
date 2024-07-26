@@ -74,10 +74,10 @@ create-sig-pickle:
 # upload pickles to google cloud bucket
 # on bucket we use 247 not tfs, so manually adjust as needed
 # upload-pickle: pid=247
-upload-pickle: pid=podcast
+upload-pickle: pid=podcast && item=embeddings
 upload-pickle:
 	for sid in $(SID_LIST); do \
-		gsutil -m rsync -rd results/$(PRJCT_ID)/$$sid/pickles/ gs://247-podcast-data/$(pid)-pickles/$$sid; \
+		gsutil -m rsync -rd results/$(PRJCT_ID)/$$sid/$(item)/ gs://247-podcast-data/$(pid)-$(item)/$$sid; \
 	done
 
 # upload raw data to google cloud bucket
@@ -101,7 +101,7 @@ download-247-pickles:
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
 %-embeddings: EMB_TYPE := openai/whisper-tiny.en
-# {"gpt2", "gpt2-large", "gpt2-xl", \
+# {"glove50", "gpt2", "gpt2-large", "gpt2-xl", \
 "EleutherAI/gpt-neo-125M", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-neo-2.7B", \
 "EleutherAI/gpt-neox-20b", \
 "facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", \
@@ -141,7 +141,7 @@ download-247-pickles:
 # Note: embeddings file is the same for all podcast subjects \
 and hence only generate once using subject: 661
 %-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
-%-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
+%-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len-conv-$$conv_id submit.sh
 # {echo | python | sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh}
 
 
@@ -204,3 +204,15 @@ cache-models: MODEL := openai/whisper-medium.en
 # {causal | seq2seq | mlm | or any model name specified in EMB_TYPE comments}
 cache-models:
 	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"
+
+# perp-embeddings: Generate perplexity scores (for more info see issue170)
+perp-embeddings:
+	mkdir -p logs
+	for conv_id in $(CONV_IDS); do \
+		python scripts/tfsemb_perplexity.py \
+		--project-id $(PRJCT_ID) \
+		--pkl-identifier $(PKL_IDENTIFIER) \
+		--subject $(SID) \
+		--conversation-id $$conv_id \
+		--embedding-type $(EMB_TYPE); \
+	done;
