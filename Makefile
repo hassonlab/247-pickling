@@ -53,7 +53,7 @@ endif
 # {echo | python}
 %-pickle: PRJCT_ID := tfs
 # {tfs | podcast}
-%-pickle: SID_LIST = 676
+%-pickle: SID_LIST = 625 676
 # {625 676 7170 798 | 661 662 717 723 741 742 743 763 798 | 777}
 
 create-pickle:
@@ -74,7 +74,8 @@ create-sig-pickle:
 # upload pickles to google cloud bucket
 # on bucket we use 247 not tfs, so manually adjust as needed
 # upload-pickle: pid=247
-upload-pickle: pid=podcast && item=embeddings
+upload-pickle: pid=247
+upload-pickle: item=embeddings
 upload-pickle:
 	for sid in $(SID_LIST); do \
 		gsutil -m rsync -rd results/$(PRJCT_ID)/$$sid/$(item)/ gs://247-podcast-data/$(pid)-$(item)/$$sid; \
@@ -94,13 +95,13 @@ download-247-pickles:
 ## settings for targets: generate-embeddings, concatenate-embeddings
 %-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 625
+%-embeddings: SID := 676
 # {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 54)
+%-embeddings: CONV_IDS = $(shell seq 1 78)
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
-%-embeddings: EMB_TYPE := openai/whisper-tiny.en
+%-embeddings: EMB_TYPE := gpt2-xl
 # {"glove50", "gpt2", "gpt2-large", "gpt2-xl", \
 "EleutherAI/gpt-neo-125M", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-neo-2.7B", \
 "EleutherAI/gpt-neox-20b", \
@@ -110,7 +111,7 @@ download-247-pickles:
 "openai/whisper-tiny.en", "openai/whisper-base.en", "openai/whisper-medium.en", \
 "openai/whisper-large", "openai/whisper-large-v2" \
 }
-%-embeddings: CNXT_LEN := 1
+%-embeddings: CNXT_LEN := 1024
 %-embeddings: LAYER := all
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
 
