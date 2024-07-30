@@ -138,6 +138,7 @@ def process_conversation(CONFIG, conversation):
         sep=" ",
         header=None,
         names=["word", "onset", "offset", "accuracy", "speaker"],
+        keep_default_na=False        
     )
     df["word"] = df["word"].str.strip()
 
