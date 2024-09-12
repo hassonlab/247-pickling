@@ -28,6 +28,15 @@ CAUSAL_MODELS = [
     "facebook/opt-6.7b",
     "facebook/opt-30b",
     "bigscience/bloom",
+    "google/gemma-2b",
+    "google/gemma-7b",
+    "meta-llama/Llama-2-7b-hf",
+    "meta-llama/Llama-2-7b-chat-hf",
+    "meta-llama/Llama-2-13b-hf",
+    "meta-llama/Meta-Llama-3-8B",
+    "meta-llama/Meta-Llama-3-8B-Instruct",
+    "meta-llama/Meta-Llama-3.1-8B",
+    "meta-llama/Meta-Llama-3.1-8B-Instruct",
 ]
 
 SEQ2SEQ_MODELS = ["facebook/blenderbot_small-90M", "facebook/blenderbot-3B"]
@@ -165,6 +174,7 @@ def download_hf_tokenizer(
         add_prefix_space=True,
         cache_dir=cache_dir,
         local_files_only=local_files_only,
+        # token="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",
     )
 
     return tokenizer

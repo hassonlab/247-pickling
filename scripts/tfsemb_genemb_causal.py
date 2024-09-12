@@ -182,7 +182,10 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
             ]
         else:
             predicted_words = [
-                [args.tokenizer.convert_tokens_to_string(token) for token in token_list]
+                [
+                    args.tokenizer.convert_tokens_to_string([token])
+                    for token in token_list
+                ]
                 for token_list in predicted_tokens
             ]
 

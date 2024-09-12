@@ -18,7 +18,9 @@ def set_layer_idx(args):
         case "last":
             args.layer_idx = [max_layers]
         case _:
-            good = np.all((args.layers_idx >= 0) & (args.layers_idx <= max_layers))
+            good = np.all([layer >= 0 for layer in args.layer_idx]) & np.all(
+                [layer <= max_layers for layer in args.layer_idx]
+            )
             assert good, "Invalid layer number"
 
 
@@ -27,6 +29,7 @@ def set_context_length(args):
         max_context_length = args.tokenizer.max_len_single_sentence
     else:
         max_context_length = tfsemb_dwnld.get_max_context_length(args.embedding_type)
+    max_context_length = args.tokenizer.model_max_length
 
     if args.context_length <= 0:
         args.context_length = max_context_length
@@ -39,6 +42,9 @@ def set_context_length(args):
 def select_tokenizer_and_model(args):
     match args.embedding_type:
         case "glove50":
+            args.context_length = 1
+            args.layer_idx = [0]
+        case "Meta-Llama-3-8B-static":
             args.context_length = 1
             args.layer_idx = [0]
         case item if item in [
@@ -87,7 +93,7 @@ def setup_environ(args):
     if not concat:
         select_tokenizer_and_model(args)
         process_inputs(args)
-        if args.embedding_type != "glove50":
+        if args.embedding_type != "glove50" and "static" not in args.embedding_type:
             set_layer_idx(args)
             set_context_length(args)
     else:
@@ -112,7 +118,7 @@ def setup_environ(args):
     args.input_dir = os.path.join(DATA_DIR, args.subject)
     args.conversation_list = sorted(glob.glob1(args.input_dir, "NY*Part*conversation*"))
 
-    stra = f"{args.trimmed_model_name}/{args.pkl_identifier}/cnxt_{args.context_length:04d}"
+    stra = f"{args.trimmed_model_name}/{args.pkl_identifier}/cnxt_{args.context_length:06d}"
 
     # TODO: if multiple conversations are specified in input
     if args.conversation_id:

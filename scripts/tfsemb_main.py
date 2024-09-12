@@ -2,7 +2,6 @@ import os
 import pickle
 import sys
 
-import gensim.downloader as api
 import numpy as np
 import pandas as pd
 import tfsemb_download as tfsemb_dwnld
@@ -19,6 +18,7 @@ from tfsemb_genemb_causal import generate_causal_embeddings
 from tfsemb_genemb_seq2seq import generate_conversational_embeddings
 from tfsemb_genemb_whisper import generate_speech_embeddings
 from tfsemb_genemb_mlm import generate_mlm_embeddings
+from tfsemb_genemb_static import generate_llama3_static_embeddings
 
 
 def save_pickle(args, item, embeddings=None):
@@ -54,9 +54,11 @@ def check_token_is_root(args, df):
     token_is_root_string = args.embedding_type.split("/")[-1] + "_token_is_root"
     df[token_is_root_string] = (
         df["word"]
-        == df["token"].apply(args.tokenizer.convert_tokens_to_string).str.strip()
+        == df["token"]
+        .apply(lambda x: [x])
+        .apply(args.tokenizer.convert_tokens_to_string)
+        .str.strip()
     )
-
     return df
 
 
@@ -69,7 +71,8 @@ def convert_token_to_word(args, df):
     assert "token" in df.columns, "token column is missing"
 
     df["token2word"] = (
-        df["token"]
+        df["token"]  # for gemma .apply(lambda x: [x])
+        .apply(lambda x: [x])
         .apply(args.tokenizer.convert_tokens_to_string)
         .str.strip()
         .str.lower()
@@ -99,13 +102,6 @@ def tokenize_and_explode(args, df):
     return df
 
 
-def printe(example, args):
-    tokenizer = args.tokenizer
-    print(tokenizer.decode(example["encoder_ids"]))
-    print(tokenizer.convert_ids_to_tokens(example["decoder_ids"]))
-    print()
-
-
 # @main_timer
 def main():
     args = arg_parser()
@@ -117,12 +113,17 @@ def main():
         raise Exception("Base dataframe does not exist")
 
     utterance_df = select_conversation(args, base_df)
+    print(
+        args.conversation_id, utterance_df.conversation_name.unique(), len(utterance_df)
+    )
     assert len(utterance_df) != 0, "Empty dataframe"
 
     # Select generation function based on model type
     match args.embedding_type:
         case "glove50":
             generate_func = generate_glove_embeddings
+        case "Meta-Llama-3-8B-static":
+            generate_func = generate_llama3_static_embeddings
         case item if item in tfsemb_dwnld.CAUSAL_MODELS:
             generate_func = generate_causal_embeddings
         case item if item in tfsemb_dwnld.SEQ2SEQ_MODELS:

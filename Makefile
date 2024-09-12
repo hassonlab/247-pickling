@@ -53,7 +53,7 @@ endif
 # {echo | python}
 %-pickle: PRJCT_ID := tfs
 # {tfs | podcast}
-%-pickle: SID_LIST = 676
+%-pickle: SID_LIST = 625
 # {625 676 7170 798 | 661 662 717 723 741 742 743 763 798 | 777}
 
 create-pickle:
@@ -94,13 +94,16 @@ download-247-pickles:
 ## settings for targets: generate-embeddings, concatenate-embeddings
 %-embeddings: PRJCT_ID := tfs
 # {tfs | podcast}
-%-embeddings: SID := 625
-# {625 | 676 | 7170 | 798 | 661} 
-%-embeddings: CONV_IDS = $(shell seq 1 54)
+%-embeddings: SID := 676
+# {625 | 676 | 7170 | 798 | 661}
+%-embeddings: CONV_IDS = $(shell seq 1 78)
+%-embeddings: CONV_IDS = 31 62
 # {54 for 625 | 78 for 676 | 1 for 661 | 24 for 7170 | 15 for 798}
 %-embeddings: PKL_IDENTIFIER := full
 # {full | trimmed | binned}
-%-embeddings: EMB_TYPE := openai/whisper-tiny.en
+%-embeddings: EMB_TYPE := gpt2-xl
+%-embeddings: EMB_TYPE := meta-llama/Meta-Llama-3.1-8B
+%-embeddings: EMB_TYPE := meta-llama/Meta-Llama-3.1-8B-Instruct
 # {"gpt2", "gpt2-large", "gpt2-xl", \
 "EleutherAI/gpt-neo-125M", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-neo-2.7B", \
 "EleutherAI/gpt-neox-20b", \
@@ -110,8 +113,8 @@ download-247-pickles:
 "openai/whisper-tiny.en", "openai/whisper-base.en", "openai/whisper-medium.en", \
 "openai/whisper-large", "openai/whisper-large-v2" \
 }
-%-embeddings: CNXT_LEN := 1
-%-embeddings: LAYER := all
+%-embeddings: CNXT_LEN := 131072
+%-embeddings: LAYER := last
 # {'all' for all layers | 'last' for the last layer | (list of) integer(s) >= 1}
 
 
@@ -142,6 +145,7 @@ download-247-pickles:
 and hence only generate once using subject: 661
 %-embeddings: JOB_NAME = $(subst /,-,$(EMB_TYPE))
 %-embeddings: CMD = sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh
+%-embeddings: CMD = python
 # {echo | python | sbatch --job-name=$(SID)-$(JOB_NAME)-cnxt-$$cnxt_len submit.sh}
 
 
@@ -158,7 +162,7 @@ generate-embeddings:
 	mkdir -p logs
 	for cnxt_len in $(CNXT_LEN); do \
 		for conv_id in $(CONV_IDS); do \
-			 $(CMD) scripts/tfsemb_main.py \
+			$(CMD) scripts/tfsemb_main.py \
 				--project-id $(PRJCT_ID) \
 				--pkl-identifier $(PKL_IDENTIFIER) \
 				--subject $(SID) \
@@ -182,7 +186,7 @@ generate-embeddings:
 # concatenate embeddings from all conversations
 concatenate-embeddings:
 	for cnxt_len in $(CNXT_LEN); do \
-		python scripts/tfsemb_concat.py \
+		$(CMD) scripts/tfsemb_concat.py \
 			--project-id $(PRJCT_ID) \
 			--pkl-identifier $(PKL_IDENTIFIER) \
 			--subject $(SID) \
@@ -197,10 +201,22 @@ copy-embeddings:
 		cp -rpf $$fn $$(echo $$fn | sed "s/661/$$sid/g"); \
 	done; \
 
+perp-embeddings:
+	mkdir -p logs
+	for conv_id in $(CONV_IDS); do \
+		$(CMD) scripts/tfsemb_perplexity.py \
+			--project-id $(PRJCT_ID) \
+			--pkl-identifier $(PKL_IDENTIFIER) \
+			--subject $(SID) \
+			--conversation-id $$conv_id \
+			--embedding-type $(EMB_TYPE); \
+	done;
+
+
 
 # Download huggingface models to cache (before generating embeddings)
 # This target needs to be run on the head node
-cache-models: MODEL := openai/whisper-medium.en
+cache-models: MODEL := meta-llama/Meta-Llama-3.1-8B-Instruct
 # {causal | seq2seq | mlm | or any model name specified in EMB_TYPE comments}
 cache-models:
 	python -c "from scripts import tfsemb_download; tfsemb_download.download_tokenizers_and_models(\"$(MODEL)\")"
