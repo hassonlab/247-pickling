@@ -1,0 +1,6 @@
+
+# Embedding
+emb: gpt2
+context_length: 1024
+context_level: conversation
+layer_idx: last

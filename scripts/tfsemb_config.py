@@ -1,18 +1,19 @@
 import glob
 import os
 import sys
-
+import yaml
+import argparse
+import getpass
+import subprocess
 import numpy as np
 import tfsemb_download as tfsemb_dwnld
 import tfspkl_utils
 import torch
+from utils import get_git_hash
 
 
 def set_layer_idx(args):
-    max_layers = tfsemb_dwnld.get_model_num_layers(args.embedding_type)
-
-    # NOTE: layer_idx is shifted by 1 because the first item in hidden_states
-    # corresponds to the output of the embeddings_layer
+    max_layers = tfsemb_dwnld.get_model_num_layers(args.emb)
     match args.layer_idx:
         case "all":
             args.layer_idx = np.arange(0, max_layers + 1)
@@ -26,10 +27,11 @@ def set_layer_idx(args):
 
 
 def set_context_length(args):
+    breakpoint()
     if getattr(args, "tokenizer", None):
         max_context_length = args.tokenizer.max_len_single_sentence
     else:
-        max_context_length = tfsemb_dwnld.get_max_context_length(args.embedding_type)
+        max_context_length = tfsemb_dwnld.get_max_context_length(args.emb)
     max_context_length = args.tokenizer.model_max_length
 
     if args.context_length <= 0:
@@ -37,17 +39,13 @@ def set_context_length(args):
 
     assert (
         args.context_length <= max_context_length
-    ), "given length is greater than max length"
+    ), f"given length is greater than max length {max_context_length}"
 
 
-def select_tokenizer_and_model(args):
-    match args.embedding_type:
+def select_tokenizer_and_model(args, step):
+    match args.emb:
         case "glove50":
-            args.context_length = 1
-            args.layer_idx = [0]
-        case "Meta-Llama-3-8B-static":
-            args.context_length = 1
-            args.layer_idx = [0]
+            pass
         case item if item in [
             *tfsemb_dwnld.CAUSAL_MODELS,
             *tfsemb_dwnld.SEQ2SEQ_MODELS,
@@ -59,7 +57,7 @@ def select_tokenizer_and_model(args):
                 args.tokenizer,
                 args.processor,
             ) = tfsemb_dwnld.download_tokenizers_and_models(
-                item, local_files_only=True, debug=False
+                step, item, local_files_only=True, debug=False
             )[
                 item
             ]
@@ -89,64 +87,70 @@ def process_inputs(args):
     return
 
 
-def setup_environ(args):
-    concat = False
-    if not concat:
-        select_tokenizer_and_model(args)
-        process_inputs(args)
-        if args.embedding_type != "glove50" and "static" not in args.embedding_type:
+def parse_arguments():
+    """Read arguments from yaml config file
+
+    Returns:
+        namespace: all arguments from yaml config file
+    """
+    # parse yaml config file
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config-file", nargs="*", type=str, default="[config.yml]")
+    parser.add_argument("--conv-id", nargs="*", type=int, required=False, default=1)
+    args = parser.parse_args()
+
+    all_yml_args = {}
+    for config_file in args.config_file:
+        with open(f"configs/{config_file}", "r") as file:
+            yml_args = yaml.safe_load(file)
+            all_yml_args = all_yml_args | yml_args
+
+    # get username
+    user_id = getpass.getuser()
+    all_yml_args["user_id"] = user_id
+    all_yml_args["git_hash"] = get_git_hash()
+    all_yml_args["conv_id"] = args.conv_id
+    args = argparse.Namespace(**all_yml_args)
+
+    return args
+
+
+def setup_environ(args, step):
+
+    # Set up model, tokenizer, processor
+    select_tokenizer_and_model(args, step)
+    if step == "gen-emb":  # generating embeddings
+        if args.emb == "glove50":
+            args.context_length = 1
+            args.layer_idx = [0]
+        else:
             set_layer_idx(args)
             set_context_length(args)
-    else:
-        process_inputs(args)
-        args.layer_idx = np.arange(0, 33)
 
-    DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id)
-    RESULTS_DIR = os.path.join(os.getcwd(), "results", args.project_id)
-
-    args.PKL_DIR = os.path.join(RESULTS_DIR, args.subject, "pickles")
-    args.EMB_DIR = os.path.join(RESULTS_DIR, args.subject, "embeddings")
-
-    args.trimmed_model_name = tfsemb_dwnld.clean_lm_model_name(args.embedding_type)
-
+    args.trimmed_model_name = tfsemb_dwnld.clean_lm_model_name(args.emb)
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    args.labels_pickle = os.path.join(
-        args.PKL_DIR,
-        f"{args.subject}_{args.pkl_identifier}_labels.pkl",
-    )
+    # input directory paths (pickles)
+    RESULTS_DIR = os.path.join(os.getcwd(), "results", args.project_id, str(args.sid))
+    PKL_DIR = os.path.join(RESULTS_DIR, "pickles")
+    args.labels_pickle = os.path.join(PKL_DIR, f"{args.sid}_full_labels.pkl")
 
-    args.input_dir = os.path.join(DATA_DIR, args.subject)
-    args.conversation_list = sorted(
-        glob.glob1(args.input_dir, "NY*Part*conversation*"),
-        key=tfspkl_utils.custom_sort,
-    )
+    # output directory paths for tokenize (base df)
+    MODEL_DIR = os.path.join(RESULTS_DIR, "embeddings", args.trimmed_model_name, "full")
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    args.base_df_path = os.path.join(MODEL_DIR, "base_df.pkl")
 
-    stra = f"{args.trimmed_model_name}/{args.pkl_identifier}/cnxt_{args.context_length:06d}"
-
-    # TODO: if multiple conversations are specified in input
-    if args.conversation_id:
-        args.output_dir = os.path.join(
-            args.EMB_DIR,
-            stra,
-            "layer_%02d",
+    # output directory paths for gen-emb (emb df)
+    if step == "gen-emb":
+        DATA_DIR = os.path.join(os.getcwd(), "data", args.project_id, str(args.sid))
+        conversation_lists = sorted(
+            glob.glob1(DATA_DIR, "NY*Part*conversation*"),
+            key=tfspkl_utils.custom_sort,
         )
-        args.output_file_name = args.conversation_list[args.conversation_id - 1]
-        args.output_file = os.path.join(args.output_dir, args.output_file_name)
-
-    # saving the base dataframe
-    args.base_df_file = os.path.join(
-        args.EMB_DIR,
-        args.trimmed_model_name,
-        args.pkl_identifier,
-        "base_df.pkl",
-    )
-
-    # saving logits as dataframe
-    args.logits_folder = os.path.join(
-        args.EMB_DIR,
-        stra,
-        "logits",
-    )
+        output_file_name = conversation_lists[args.conv_id - 1]
+        EMB_DIR = os.path.join(MODEL_DIR, f"cnxt_{args.context_length:04d}")
+        os.makedirs(EMB_DIR, exist_ok=True)
+        args.emb_df_path = os.path.join(EMB_DIR, "layer_%02d", output_file_name)
+        args.logits_dir = os.path.join(EMB_DIR, "logits")
 
     return

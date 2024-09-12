@@ -1,0 +1,6 @@
+
+# Embedding
+emb: meta-llama/Meta-Llama-3.1-8B
+context_length: 131072
+context_level: conversation
+layer_idx: all

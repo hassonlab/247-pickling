@@ -1,0 +1,6 @@
+
+# Embedding
+emb: glove50
+context_length: 0
+context_level: conversation
+layer_idx: 0

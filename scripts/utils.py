@@ -9,8 +9,8 @@ import tqdm
 from sklearn.model_selection import KFold, StratifiedKFold
 
 
-# https://stackoverflow.com/questions/14989858/get-the-current-git-hash-in-a-python-script
-def get_git_revision_hash() -> str:
+def get_git_hash() -> str:
+    """Get git hash as string"""
     return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
 
 
@@ -31,13 +31,18 @@ def load_pickle(pickle_name, key=None):
     Returns:
         DataFrame: pickle contents returned as dataframe
     """
-    with open(pickle_name, "rb") as fh:
-        datum = pickle.load(fh)
+    try:
+        datum = pd.read_pickle(pickle_name)
+        assert isinstance(datum, pd.DataFrame)
+        print("pickle is datum")
+    except:
+        with open(pickle_name, "rb") as fh:
+            datum = pickle.load(fh)
 
-    if key:
-        df = pd.DataFrame.from_dict(datum[key])
-    else:
-        df = pd.DataFrame.from_dict(datum)
+        if key:
+            df = pd.DataFrame.from_dict(datum[key])
+        else:
+            df = pd.DataFrame.from_dict(datum)
 
     return df
 

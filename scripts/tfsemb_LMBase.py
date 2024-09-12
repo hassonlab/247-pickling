@@ -1,71 +1,80 @@
 import gensim.downloader as api
 import pandas as pd
 import tfsemb_download as tfsemb_dwnld
-from tfsemb_config import setup_environ
-from tfsemb_main import tokenize_and_explode
-from tfsemb_parser import arg_parser
+from tfsemb_config import parse_arguments, setup_environ
 from utils import load_pickle, main_timer
 from utils import save_pickle as svpkl
 
 
-def add_vocab_columns(args, df, column=None):
-    """Add columns to the dataframe indicating whether each word is in the
-    vocabulary of the language models we're using.
+def add_token_to_word(args, df):
+    assert "token" in df.columns, "token column is missing"
+
+    df["token2word"] = (
+        df["token"]
+        .apply(lambda x: [x])
+        .apply(args.tokenizer.convert_tokens_to_string)
+        .str.strip()
+        .str.lower()
+    )
+    return df
+
+
+def add_token_id(args, df):
+    df["token_id"] = df["token"].apply(args.tokenizer.convert_tokens_to_ids)
+    return df
+
+
+def add_token_is_root(args, df):
+    token_is_root_string = args.trimmed_model_name + "_token_is_root"
+    df[token_is_root_string] = (
+        df["word"]
+        == df["token"]
+        .apply(lambda x: [x])
+        .apply(args.tokenizer.convert_tokens_to_string)
+        .str.strip()
+    )
+    return df
+
+
+def tokenize_and_explode(args, df):
+    """Tokenizes the words/labels and creates a row for each token
+
+    Args:
+        df (DataFrame): dataframe of labels
+        tokenizer (tokenizer): from transformers
+
+    Returns:
+        DataFrame: a new dataframe object with the words tokenized
     """
+    df["token"] = df.word.apply(args.tokenizer.tokenize)
+    df = df.explode("token", ignore_index=False)
+    df = add_token_to_word(args, df)
+    df = add_token_id(args, df)
+    df = add_token_is_root(args, df)
 
-    # Add language models
-    for model in [
-        *tfsemb_dwnld.CAUSAL_MODELS,
-        *tfsemb_dwnld.SEQ2SEQ_MODELS,
-        *tfsemb_dwnld.SPEECHSEQ2SEQ_MODELS,
-        *tfsemb_dwnld.MLM_MODELS,
-    ]:
-        try:
-            tokenizer = tfsemb_dwnld.download_hf_tokenizer(model, local_files_only=True)
-        except:
-            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
-                model, local_files_only=False
-            )
-
-        key = tfsemb_dwnld.clean_lm_model_name(model)
-        print(f"Adding column: (token) in_{key}")
-
-        try:
-            curr_vocab = tokenizer.vocab
-        except AttributeError:
-            curr_vocab = tokenizer.get_vocab()
-
-        def helper(x):
-            if len(tokenizer.tokenize(x)) == 1:
-                return isinstance(curr_vocab.get(tokenizer.tokenize(x)[0]), int)
-            return False
-
-        df[f"in_{key}"] = df[column].apply(helper)
+    df["token_idx"] = df.groupby(["adjusted_onset", "word"]).cumcount()
+    df = df.reset_index(drop=True)
 
     return df
 
 
 @main_timer
 def main():
-    args = arg_parser()
-    setup_environ(args)
+    args = parse_arguments()
+    setup_environ(args, "tokenize")
 
-    # base_df = load_pickle(args.labels_pickle, "labels")
-    base_df = pd.read_pickle(args.labels_pickle)
+    base_df = load_pickle(args.labels_pickle, "labels")
 
+    # check if word in glove
     glove = api.load("glove-wiki-gigaword-50")
     base_df["in_glove50"] = base_df.word.str.lower().apply(
         lambda x: isinstance(glove.key_to_index.get(x), int)
     )
 
-    if args.embedding_type == "glove50":
-        # base_df = base_df[base_df["in_glove50"]]  # turning off to ensure glove base_df has same shape as datum
-        base_df = add_vocab_columns(args, base_df, column="word")
-    else:
+    if "glove" not in args.emb:  # tokenize
         base_df = tokenize_and_explode(args, base_df)
-        # base_df = add_vocab_columns(args, base_df, column="token2word")  #FIXME: should we include this here?
 
-    svpkl(base_df, args.base_df_file, is_dataframe=True)
+    svpkl(base_df, args.base_df_path, is_dataframe=True)
 
 
 if __name__ == "__main__":

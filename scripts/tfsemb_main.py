@@ -1,14 +1,12 @@
 import os
 import tfsemb_download as tfsemb_dwnld
-from tfsemb_config import setup_environ
+from tfsemb_config import parse_arguments, setup_environ
 from tfsemb_genemb_causal import generate_causal_embeddings
 from tfsemb_genemb_glove import generate_glove_embeddings
 from tfsemb_genemb_mlm import generate_mlm_embeddings
 from tfsemb_genemb_seq2seq import generate_conversational_embeddings
 from tfsemb_genemb_whisper import generate_speech_embeddings
 from tfsemb_genemb_mlm import generate_mlm_embeddings
-from tfsemb_genemb_static import generate_llama3_static_embeddings
-from tfsemb_parser import arg_parser
 from utils import load_pickle
 from utils import save_pickle as svpkl
 
@@ -44,58 +42,6 @@ def select_conversation(args, df):
     return df
 
 
-def check_token_is_root(args, df):
-    token_is_root_string = args.embedding_type.split("/")[-1] + "_token_is_root"
-    df[token_is_root_string] = (
-        df["word"]
-        == df["token"]
-        .apply(lambda x: [x])
-        .apply(args.tokenizer.convert_tokens_to_string)
-        .str.strip()
-    )
-    return df
-
-
-def convert_token_to_idx(args, df):
-    df["token_id"] = df["token"].apply(args.tokenizer.convert_tokens_to_ids)
-    return df
-
-
-def convert_token_to_word(args, df):
-    assert "token" in df.columns, "token column is missing"
-
-    df["token2word"] = (
-        df["token"]
-        .apply(lambda x: [x])
-        .apply(args.tokenizer.convert_tokens_to_string)
-        .str.strip()
-        .str.lower()
-    )
-    return df
-
-
-def tokenize_and_explode(args, df):
-    """Tokenizes the words/labels and creates a row for each token
-
-    Args:
-        df (DataFrame): dataframe of labels
-        tokenizer (tokenizer): from transformers
-
-    Returns:
-        DataFrame: a new dataframe object with the words tokenized
-    """
-    df["token"] = df.word.apply(args.tokenizer.tokenize)
-    df = df.explode("token", ignore_index=False)
-    df = convert_token_to_word(args, df)
-    df = convert_token_to_idx(args, df)
-    df = check_token_is_root(args, df)
-
-    df["token_idx"] = df.groupby(["adjusted_onset", "word"]).cumcount()
-    df = df.reset_index(drop=True)
-
-    return df
-
-
 def printe(example, args):
     tokenizer = args.tokenizer
     print(tokenizer.decode(example["encoder_ids"]))
@@ -105,11 +51,12 @@ def printe(example, args):
 
 # @main_timer
 def main():
-    args = arg_parser()
-    setup_environ(args)
+    args = parse_arguments()
+    setup_environ(args, "gen-emb")
+    breakpoint()
 
-    if os.path.exists(args.base_df_file):
-        base_df = load_pickle(args.base_df_file)
+    if os.path.exists(args.base_df_path):
+        base_df = load_pickle(args.base_df_path)
     else:
         raise Exception("Base dataframe does not exist")
 
@@ -123,8 +70,6 @@ def main():
     match args.embedding_type:
         case "glove50":
             generate_func = generate_glove_embeddings
-        case "Meta-Llama-3-8B-static":
-            generate_func = generate_llama3_static_embeddings
         case item if item in tfsemb_dwnld.CAUSAL_MODELS:
             generate_func = generate_causal_embeddings
         case item if item in tfsemb_dwnld.SEQ2SEQ_MODELS:

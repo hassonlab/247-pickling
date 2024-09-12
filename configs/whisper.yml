@@ -1,0 +1,15 @@
+
+# Embedding
+emb: openai/whisper-tiny.en
+context_length: 1024
+context_level: conversation
+layer_idx: all
+
+whisper_model_type: en-only
+# {full | full-onset | full_n-1 | en-only | de-only}
+whisper_shuffle_audio: none
+# {none | samples | phonemes | words | 2-words | flip}
+whisper_shuffle_words: none
+# {none | flip}
+whisper_audio_cutoff: 30
+# 30 - x seconds of intact audio

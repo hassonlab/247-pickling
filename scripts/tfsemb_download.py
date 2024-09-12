@@ -1,5 +1,4 @@
 import os
-
 import torch
 from transformers import (
     AutoConfig,
@@ -83,6 +82,12 @@ bnb_config = BitsAndBytesConfig(
 )
 
 
+def set_cache_dir():
+    CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), ".cache")
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    return CACHE_DIR
+
+
 def clean_lm_model_name(item):
     """Remove unnecessary parts from the language model name.
 
@@ -102,6 +107,33 @@ def clean_lm_model_name(item):
         return [clean_lm_model_name(i) for i in item]
 
     print("Invalid input. Please check.")
+
+
+def get_models_and_class(model_name):
+    """Return the appropriate model class and model to download
+    Args:
+        model_name (str): Model name as seen on https://hugginface.co/models.
+
+    Returns:
+        models (list): model name or models in the same class
+        mod_class (Huggingface Model): Model class corresponding to model_name.
+
+    """
+    models, mod_class = None, None
+    for model_key, (model_list, model_class) in MODEL_CLASS_MAP.items():
+        if model_name == model_key:
+            models, mod_class = model_list, model_class
+            break
+        elif model_name in model_list:
+            models, mod_class = [model_name], model_class
+            break
+        else:
+            continue
+
+    if not models or not model_class:
+        print("Invalid Model List or Model Class")
+
+    return models, mod_class
 
 
 def get_max_context_length(model_name, tokenizer_class=None):
@@ -217,7 +249,7 @@ def download_hf_processor(
 
 
 def download_tokenizer_and_model(
-    CACHE_DIR, tokenizer_class, model_class, model_name, local_files_only
+    CACHE_DIR, tokenizer_class, model_class, model_name, step, local_files_only
 ):
     """Cache (or load) the model and tokenizer from the model repository (or cache).
 
@@ -232,15 +264,21 @@ def download_tokenizer_and_model(
     Returns:
         tuple: (tokenizer, model)
     """
-    print("Downloading model")
-    model = download_hf_model(model_name, model_class, CACHE_DIR, local_files_only)
+    if step == "gen-emb":
+        print("Downloading model")
+        model = download_hf_model(model_name, model_class, CACHE_DIR, local_files_only)
+    else:
+        model = None
 
-    print("Downloading tokenizer")
-    tokenizer = download_hf_tokenizer(
-        model_name, tokenizer_class, CACHE_DIR, local_files_only
-    )
+    if step == "gen-emb" or step == "tokenize":
+        print("Downloading tokenizer")
+        tokenizer = download_hf_tokenizer(
+            model_name, tokenizer_class, CACHE_DIR, local_files_only
+        )
+    else:
+        tokenizer = None
 
-    if model_name in SPEECHSEQ2SEQ_MODELS:
+    if step == "gen-emb" and model_name in SPEECHSEQ2SEQ_MODELS:
         print("Downloading preprocessor")
         preprocessor = download_hf_processor(
             model_name, None, CACHE_DIR, local_files_only
@@ -251,43 +289,13 @@ def download_tokenizer_and_model(
     return (model, tokenizer, preprocessor)
 
 
-def set_cache_dir():
-    CACHE_DIR = os.path.join(os.path.dirname(os.getcwd()), ".cache")
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    return CACHE_DIR
-
-
-def get_models_and_class(model_name):
-    """Return the appropriate model class and model to download
-    Args:
-        model_name (str): Model name as seen on https://hugginface.co/models.
-
-    Returns:
-        models (list): model name or models in the same class
-        mod_class (Huggingface Model): Model class corresponding to model_name.
-
-    """
-    models, mod_class = None, None
-    for model_key, (model_list, model_class) in MODEL_CLASS_MAP.items():
-        if model_name == model_key:
-            models, mod_class = model_list, model_class
-            break
-        elif model_name in model_list:
-            models, mod_class = [model_name], model_class
-            break
-        else:
-            continue
-
-    if not models or not model_class:
-        print("Invalid Model List or Model Class")
-
-    return models, mod_class
-
-
-def download_tokenizers_and_models(model_name=None, local_files_only=False, debug=True):
+def download_tokenizers_and_models(
+    step, model_name=None, local_files_only=False, debug=True
+):
     """This function downloads the tokenizer and model for the specified model name.
 
     Args:
+        model_parts (str): tokenizer, model, both, none
         model_name (str, optional): Model name as seen on https://hugginface.co/models.
                                     Defaults to None.
         local_files_only (bool, optional): False (Default) if caching.
@@ -314,6 +322,7 @@ def download_tokenizers_and_models(model_name=None, local_files_only=False, debu
             AutoTokenizer,
             model_class,
             model_name,
+            step,
             local_files_only,
         )
 
@@ -335,4 +344,4 @@ def download_tokenizers_and_models(model_name=None, local_files_only=False, debu
 
 
 if __name__ == "__main__":
-    download_tokenizers_and_models("causal", local_files_only=False, debug=True)
+    download_tokenizers_and_models("gpt2-xl", local_files_only=False, debug=True)

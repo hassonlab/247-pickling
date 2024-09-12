@@ -1,0 +1,10 @@
+
+# Embedding
+emb: bert-base-uncased
+context_length: 512
+context_level: conversation
+layer_idx: all
+
+masked: True
+left_context: True
+right_context: True
