@@ -38,17 +38,17 @@ def arg_parser():
 
     if gettrace():
         sys.argv = [
-            "scripts/tfsemb_main.py",
+            "scripts/tfsemb_LMBase.py",
             "--project-id",
-            "podcast",
+            "tfs",
             "--pkl-identifier",
             "full",
             "--subject",
-            "661",
+            "625",
             "--conversation-id",
             "1",
             "--embedding-type",
-            "gpt2-xl",
+            "glove50",
             "--layer-idx",
             "last",
             "--context-length",

@@ -1,24 +1,16 @@
 import os
-import pickle
-import sys
-
-import numpy as np
-import pandas as pd
 import tfsemb_download as tfsemb_dwnld
-import torch
-import torch.nn.functional as F
-import torch.utils.data as data
-from accelerate import Accelerator, find_executable_batch_size
 from tfsemb_config import setup_environ
-from tfsemb_parser import arg_parser
-from utils import load_pickle, main_timer
-from utils import save_pickle as svpkl
-from tfsemb_genemb_glove import generate_glove_embeddings
 from tfsemb_genemb_causal import generate_causal_embeddings
+from tfsemb_genemb_glove import generate_glove_embeddings
+from tfsemb_genemb_mlm import generate_mlm_embeddings
 from tfsemb_genemb_seq2seq import generate_conversational_embeddings
 from tfsemb_genemb_whisper import generate_speech_embeddings
 from tfsemb_genemb_mlm import generate_mlm_embeddings
 from tfsemb_genemb_static import generate_llama3_static_embeddings
+from tfsemb_parser import arg_parser
+from utils import load_pickle
+from utils import save_pickle as svpkl
 
 
 def save_pickle(args, item, embeddings=None):
@@ -33,13 +25,11 @@ def save_pickle(args, item, embeddings=None):
             item["embeddings"] = embedding.tolist()
             filename = file_name % layer_idx
             os.makedirs(os.path.dirname(filename), exist_ok=True)
-            with open(filename, "wb") as fh:
-                pickle.dump(item.to_dict("records"), fh)
+            item.to_pickle(filename)
     else:
         filename = file_name % args.layer_idx[0]
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-        with open(filename, "wb") as fh:
-            pickle.dump(item.to_dict("records"), fh)
+        item.to_pickle(filename)
     return
 
 
@@ -47,6 +37,10 @@ def select_conversation(args, df):
     if args.conversation_id:
         print("Selecting conversation", args.conversation_id)
         df = df[df.conversation_id == args.conversation_id]
+        assert df.conversation_id.unique().shape[0] == 1
+        print(
+            f"Conversation Name: {df.conversation_name.unique()[0]}, shape: {df.shape}"
+        )
     return df
 
 
@@ -71,7 +65,7 @@ def convert_token_to_word(args, df):
     assert "token" in df.columns, "token column is missing"
 
     df["token2word"] = (
-        df["token"]  # for gemma .apply(lambda x: [x])
+        df["token"]
         .apply(lambda x: [x])
         .apply(args.tokenizer.convert_tokens_to_string)
         .str.strip()
@@ -100,6 +94,13 @@ def tokenize_and_explode(args, df):
     df = df.reset_index(drop=True)
 
     return df
+
+
+def printe(example, args):
+    tokenizer = args.tokenizer
+    print(tokenizer.decode(example["encoder_ids"]))
+    print(tokenizer.convert_ids_to_tokens(example["decoder_ids"]))
+    print()
 
 
 # @main_timer
@@ -145,6 +146,7 @@ def main():
             svpkl(
                 df_logits,
                 os.path.join(args.logits_folder, args.output_file_name),
+                is_dataframe=True,
             )
     else:
         df = output

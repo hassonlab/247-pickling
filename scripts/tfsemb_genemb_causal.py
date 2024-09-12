@@ -70,7 +70,7 @@ def model_forward_pass(args, data_dl):
         for batch_idx, batch in enumerate(data_dl):
             if batch_idx % 10 == 0:
                 print(f"Batch ID: {batch_idx}")
-            batch = batch.to(args.device)
+            batch = batch.to(device)
             model_output = model(batch)
 
             logits = model_output.logits.cpu()
@@ -151,7 +151,7 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
             sti = torch.tensor(sentence_token_ids)
             true_y = torch.cat([sti[0, 1:], sti[1:, -1]]).unsqueeze(-1)
 
-    prediction_probabilities = F.softmax(prediction_scores, dim=1)
+    prediction_probabilities = F.softmax(prediction_scores.float(), dim=1)
 
     logp = np.log2(prediction_probabilities)
     entropy = [None] + torch.sum(-prediction_probabilities * logp, dim=1).tolist()
@@ -177,7 +177,7 @@ def process_extracted_logits(args, concat_logits, sentence_token_ids):
     if args.embedding_type in tfsemb_dwnld.CAUSAL_MODELS:
         if k == 1:
             predicted_words = [
-                args.tokenizer.convert_tokens_to_string(token)
+                args.tokenizer.convert_tokens_to_string([token])
                 for token in predicted_tokens
             ]
         else:

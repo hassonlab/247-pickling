@@ -1,5 +1,6 @@
 import os
 
+import torch
 from transformers import (
     AutoConfig,
     AutoModel,
@@ -7,12 +8,13 @@ from transformers import (
     AutoModelForMaskedLM,
     AutoModelForSeq2SeqLM,
     AutoModelForSpeechSeq2Seq,
-    AutoTokenizer,
     AutoProcessor,
+    AutoTokenizer,
+    BitsAndBytesConfig,
 )
 
 CAUSAL_MODELS = [
-    "distilgpt2",
+    "distilgpt2",  # distilbert/distilgpt2
     "gpt2",
     "gpt2-medium",
     "gpt2-large",
@@ -21,12 +23,15 @@ CAUSAL_MODELS = [
     "EleutherAI/gpt-neo-1.3B",
     "EleutherAI/gpt-neo-2.7B",
     "EleutherAI/gpt-neox-20b",
+    "EleutherAI/gpt-neox-20b",  # quantized for A100-80GB
     "facebook/opt-125m",
     "facebook/opt-350m",
     "facebook/opt-1.3b",
     "facebook/opt-2.7b",
     "facebook/opt-6.7b",
+    "facebook/opt-13b",
     "facebook/opt-30b",
+    "facebook/opt-66b",  # quantized for A100-80GB
     "bigscience/bloom",
     "google/gemma-2b",
     "google/gemma-7b",
@@ -67,6 +72,15 @@ MODEL_CLASS_MAP = {
     "speechseq2seq": (SPEECHSEQ2SEQ_MODELS, AutoModelForSpeechSeq2Seq),
     "mlm": (MLM_MODELS, AutoModelForMaskedLM),
 }
+
+# set quantization configuration to load large model with less GPU memory
+# this requires the `bitsandbytes` library
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+)
 
 
 def clean_lm_model_name(item):
@@ -154,6 +168,8 @@ def download_hf_model(
         output_hidden_states=True,
         cache_dir=cache_dir,
         local_files_only=local_files_only,
+        # device_map="auto",
+        # quantization_config=bnb_config,
     )
 
     return model
