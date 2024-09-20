@@ -1,0 +1,12 @@
+
+# Embedding
+emb: symbolic-lang
+context_level: conversation # does not matter, don't change
+pos_nltk: True # 12-d
+pos_spacy: False # 17-d
+prefix: True # 30-d
+suffix: True # 44-d
+shape: False
+is_stop: True # 1-d
+dependency: True # 45-d
+

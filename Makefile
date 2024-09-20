@@ -93,6 +93,7 @@ generate-base:
 	python scripts/tfsemb_LMBase.py \
 		--config-file $(SID).yml glove.yml
 
+
 generate-embeddings:
 	mkdir -p logs
 	for conv_id in $(CONV_IDS); do \
@@ -146,17 +147,6 @@ copy-embeddings:
 	for sid in 662 717 723 741 742 763 798 777; do \
 		cp -rpf $$fn $$(echo $$fn | sed "s/661/$$sid/g"); \
 	done; \
-
-perp-embeddings:
-	mkdir -p logs
-	for conv_id in $(CONV_IDS); do \
-		$(CMD) scripts/tfsemb_perplexity.py \
-			--project-id $(PRJCT_ID) \
-			--pkl-identifier $(PKL_IDENTIFIER) \
-			--subject $(SID) \
-			--conversation-id $$conv_id \
-			--embedding-type $(EMB_TYPE); \
-	done;
 
 
 

@@ -13,9 +13,8 @@ def get_vector(x, glove):
 
 def generate_glove_embeddings(args, df):
     # TODO implement new glove (issue 157)
-
-    df1 = pd.DataFrame()
+    df1 = pd.DataFrame(index=df.index)
     glove = api.load("glove-wiki-gigaword-50")
     df1["embeddings"] = df["word"].apply(lambda x: get_vector(x.lower(), glove))
 
-    return df1
+    return df1, None, None

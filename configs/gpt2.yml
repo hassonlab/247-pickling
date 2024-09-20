@@ -2,5 +2,12 @@
 # Embedding
 emb: gpt2
 context_length: 1024
-context_level: conversation
-layer_idx: last
+context_level: utterance
+# {part | conversation | utterance}
+convo_cutoff: 1 # number of minutes to cutoff if context_level is "conversation"
+layer_idx: np.array([1,12])
+# {last | all | np.array([]) | np.arange([])}
+emb_type: n-1
+# {n | n-1}
+topk: 5
+logits: False

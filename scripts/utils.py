@@ -32,8 +32,8 @@ def load_pickle(pickle_name, key=None):
         DataFrame: pickle contents returned as dataframe
     """
     try:
-        datum = pd.read_pickle(pickle_name)
-        assert isinstance(datum, pd.DataFrame)
+        df = pd.read_pickle(pickle_name)
+        assert isinstance(df, pd.DataFrame)
         print("pickle is datum")
     except:
         with open(pickle_name, "rb") as fh:

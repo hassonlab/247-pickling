@@ -155,7 +155,7 @@ def get_max_context_length(model_name, tokenizer_class=None):
         local_files_only=False,
     )
 
-    return tokenizer.max_len_single_sentence
+    return max(tokenizer.max_len_single_sentence, tokenizer.model_max_length)
 
 
 def get_model_num_layers(model_name):

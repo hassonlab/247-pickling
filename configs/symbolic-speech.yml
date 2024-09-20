@@ -1,0 +1,9 @@
+
+# Embedding
+emb: symbolic-speech
+context_level: conversation # does not matter, don't change
+phoneme: True # 39-d
+place_of_articulation: True # 9-d
+manner_of_articulation: True # 9-d
+voiced_or_voiceless: True # 3-d
+

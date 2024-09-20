@@ -15,24 +15,24 @@ from utils import get_git_hash
 def set_layer_idx(args):
     max_layers = tfsemb_dwnld.get_model_num_layers(args.emb)
     match args.layer_idx:
-        case "all":
-            args.layer_idx = np.arange(0, max_layers + 1)
-        case "last":
-            args.layer_idx = [max_layers]
-        case _:
+        case item if isinstance(item, np.ndarray):
             good = np.all([layer >= 0 for layer in args.layer_idx]) & np.all(
                 [layer <= max_layers for layer in args.layer_idx]
             )
             assert good, "Invalid layer number"
+        case "all":
+            args.layer_idx = np.arange(0, max_layers + 1)
+        case "last":
+            args.layer_idx = [max_layers]
 
 
 def set_context_length(args):
-    breakpoint()
     if getattr(args, "tokenizer", None):
-        max_context_length = args.tokenizer.max_len_single_sentence
+        max_context_length = max(
+            args.tokenizer.max_len_single_sentence, args.tokenizer.model_max_length
+        )
     else:
         max_context_length = tfsemb_dwnld.get_max_context_length(args.emb)
-    max_context_length = args.tokenizer.model_max_length
 
     if args.context_length <= 0:
         args.context_length = max_context_length
@@ -96,7 +96,7 @@ def parse_arguments():
     # parse yaml config file
     parser = argparse.ArgumentParser()
     parser.add_argument("--config-file", nargs="*", type=str, default="[config.yml]")
-    parser.add_argument("--conv-id", nargs="*", type=int, required=False, default=1)
+    parser.add_argument("--conv-id", nargs="?", type=int, required=False, default=1)
     args = parser.parse_args()
 
     all_yml_args = {}
@@ -111,7 +111,10 @@ def parse_arguments():
     all_yml_args["git_hash"] = get_git_hash()
     all_yml_args["conv_id"] = args.conv_id
     args = argparse.Namespace(**all_yml_args)
-
+    try:  # eval lists
+        args.layer_idx = eval(args.layer_idx)
+    except:
+        print("List parameter failed to eval")
     return args
 
 
@@ -150,7 +153,9 @@ def setup_environ(args, step):
         output_file_name = conversation_lists[args.conv_id - 1]
         EMB_DIR = os.path.join(MODEL_DIR, f"cnxt_{args.context_length:04d}")
         os.makedirs(EMB_DIR, exist_ok=True)
-        args.emb_df_path = os.path.join(EMB_DIR, "layer_%02d", output_file_name)
-        args.logits_dir = os.path.join(EMB_DIR, "logits")
+        args.emb_df_path = os.path.join(
+            EMB_DIR, "layer_%02d", f"{output_file_name}.pkl"
+        )
+        args.logits_path = os.path.join(EMB_DIR, "logits", f"{output_file_name}.pkl")
 
     return
