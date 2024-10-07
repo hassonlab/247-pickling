@@ -18,22 +18,37 @@ def arg_parser():
     parser.add_argument("--project-id", type=str, default=None)
     parser.add_argument("--layer-idx", nargs="*", default=["all"])
 
+    # whisper specific args
+    parser.add_argument("--model-type", type=str, default="full")
+    parser.add_argument("--shuffle-audio", type=str, default="none")
+    parser.add_argument("--shuffle-words", type=str, default="none")
+    parser.add_argument("--cutoff", type=float, default=0)
+    parser.add_argument("--prod-comp-split", action="store_true", default=False)
+
+    # mlm specific args
+    parser.add_argument("--masked", action="store_true", default=False)
+    parser.add_argument("--lctx", action="store_true", default=False)
+    parser.add_argument("--rctx", action="store_true", default=False)
+    parser.add_argument("--rctxp", action="store_true", default=False)
+    parser.add_argument("--utt", action="store_true", default=False)
+
+
     # If running the code in debug mode
     gettrace = getattr(sys, "gettrace", None)
 
     if gettrace():
         sys.argv = [
-            "scripts/tfsemb_main.py",
+            "scripts/tfsemb_LMBase.py",
             "--project-id",
-            "podcast",
+            "tfs",
             "--pkl-identifier",
             "full",
             "--subject",
-            "661",
+            "625",
             "--conversation-id",
             "1",
             "--embedding-type",
-            "gpt2-xl",
+            "glove50",
             "--layer-idx",
             "last",
             "--context-length",

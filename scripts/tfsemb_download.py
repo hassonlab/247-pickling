@@ -1,37 +1,65 @@
 import os
 
+import torch
 from transformers import (
     AutoConfig,
     AutoModel,
     AutoModelForCausalLM,
     AutoModelForMaskedLM,
     AutoModelForSeq2SeqLM,
+    AutoModelForSpeechSeq2Seq,
+    AutoProcessor,
     AutoTokenizer,
+    BitsAndBytesConfig,
 )
 
 CAUSAL_MODELS = [
+    "distilgpt2",  # distilbert/distilgpt2
     "gpt2",
+    "gpt2-medium",
     "gpt2-large",
     "gpt2-xl",
     "EleutherAI/gpt-neo-125M",
     "EleutherAI/gpt-neo-1.3B",
     "EleutherAI/gpt-neo-2.7B",
     "EleutherAI/gpt-neox-20b",
+    "EleutherAI/gpt-neox-20b",  # quantized for A100-80GB
     "facebook/opt-125m",
     "facebook/opt-350m",
     "facebook/opt-1.3b",
     "facebook/opt-2.7b",
     "facebook/opt-6.7b",
+    "facebook/opt-13b",
     "facebook/opt-30b",
+    "facebook/opt-66b",  # quantized for A100-80GB
     "bigscience/bloom",
+    "google/gemma-2b",
+    "google/gemma-7b",
+    "meta-llama/Llama-2-7b-hf",
+    "meta-llama/Llama-2-7b-chat-hf",
+    "meta-llama/Llama-2-13b-hf",
+    "meta-llama/Meta-Llama-3-8B",
+    "meta-llama/Meta-Llama-3-8B-Instruct",
+    "meta-llama/Meta-Llama-3.1-8B",
+    "meta-llama/Meta-Llama-3.1-8B-Instruct",
 ]
+
 SEQ2SEQ_MODELS = ["facebook/blenderbot_small-90M", "facebook/blenderbot-3B"]
 
+SPEECHSEQ2SEQ_MODELS = [
+    "openai/whisper-tiny.en",
+    "openai/whisper-tiny",
+    "openai/whisper-base.en",
+    "openai/whisper-small.en",
+    "openai/whisper-medium.en",
+    "openai/whisper-large",
+    "openai/whisper-large-v2",
+]
+
 MLM_MODELS = [
-    # "gpt2-xl", # uncomment to run this model with MLM input
-    # "gpt2-medium", # uncomment to run this model with MLM input
     "bert-base-uncased",
     "bert-large-uncased",
+    "bert-large-uncased-whole-word-masking",
     "bert-base-cased",
     "bert-large-cased",
     "roberta-base",
@@ -41,8 +69,18 @@ MLM_MODELS = [
 MODEL_CLASS_MAP = {
     "causal": (CAUSAL_MODELS, AutoModelForCausalLM),
     "seq2seq": (SEQ2SEQ_MODELS, AutoModelForSeq2SeqLM),
+    "speechseq2seq": (SPEECHSEQ2SEQ_MODELS, AutoModelForSpeechSeq2Seq),
     "mlm": (MLM_MODELS, AutoModelForMaskedLM),
 }
+
+# set quantization configuration to load large model with less GPU memory
+# this requires the `bitsandbytes` library
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+)
 
 
 def clean_lm_model_name(item):
@@ -130,6 +168,8 @@ def download_hf_model(
         output_hidden_states=True,
         cache_dir=cache_dir,
         local_files_only=local_files_only,
+        # device_map="auto",
+        # quantization_config=bnb_config,
     )
 
     return model
@@ -150,9 +190,30 @@ def download_hf_tokenizer(
         add_prefix_space=True,
         cache_dir=cache_dir,
         local_files_only=local_files_only,
+        # token="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",
     )
 
     return tokenizer
+
+
+def download_hf_processor(
+    model_name, processor_class=None, cache_dir=None, local_files_only=False
+):
+    """Download a Huggingface processor from the model repository (cache)."""
+    if processor_class is None:
+        processor_class = AutoProcessor
+
+    if cache_dir is None:
+        cache_dir = set_cache_dir()
+
+    processor = processor_class.from_pretrained(
+        model_name,
+        # language="english",
+        # task="transcribe",
+        cache_dir=cache_dir,
+        local_files_only=local_files_only,
+    )
+    return processor
 
 
 def download_tokenizer_and_model(
@@ -179,7 +240,15 @@ def download_tokenizer_and_model(
         model_name, tokenizer_class, CACHE_DIR, local_files_only
     )
 
-    return (model, tokenizer)
+    if model_name in SPEECHSEQ2SEQ_MODELS:
+        print("Downloading preprocessor")
+        preprocessor = download_hf_processor(
+            model_name, None, CACHE_DIR, local_files_only
+        )
+    else:
+        preprocessor = None
+
+    return (model, tokenizer, preprocessor)
 
 
 def set_cache_dir():

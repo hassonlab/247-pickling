@@ -1,0 +1,80 @@
+import os
+import torch
+from tfsemb_config import setup_environ
+from tfsemb_parser import arg_parser
+from tqdm import tqdm
+from utils import load_pickle
+
+
+def select_conversation(args, df):
+    if args.conversation_id:
+        print("Selecting conversation", args.conversation_id)
+        df = df[df.conversation_id == args.conversation_id]
+    return df
+
+
+def main():
+    args = arg_parser()
+    setup_environ(args)
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
+
+    # if os.path.exists(args.base_df_file):
+    #     base_df = load_pickle(args.base_df_file)
+    # else:
+    #     raise Exception("Base dataframe does not exist")
+
+    # base_df_path = args.base_df_file.replace("661/embeddings", "777/pickles/embeddings")
+    base_df_path = args.base_df_file  # for new ones
+    base_df = load_pickle(base_df_path)
+
+    utterance_df = select_conversation(args, base_df)
+    assert len(utterance_df) != 0, "Empty dataframe"
+
+    try:
+        max_length = args.model.config.n_positions
+    except:
+        max_length = args.model.config.max_position_embeddings
+    print(f"Max Length: {max_length}")
+    breakpoint()
+
+    strides = [512, 1024, 2048, 4096, 8192]
+    encodings = torch.tensor([tuple(utterance_df.token_id.tolist())])
+    seq_len = encodings.size(1)
+
+    for stride in strides:
+        nlls = []
+        prev_end_loc = 0
+        model = args.model
+        device = args.device
+        for begin_loc in tqdm(range(0, seq_len, stride)):
+            print(f"begin_loc: {begin_loc}")
+            end_loc = min(begin_loc + max_length, seq_len)
+            # if begin_loc == 0:
+            #     prev_end_loc = stride
+            trg_len = (
+                end_loc - prev_end_loc
+            )  # may be different from stride on last loop
+            input_ids = encodings[:, begin_loc:end_loc].to(device)
+            target_ids = input_ids.clone().to(device)
+            target_ids[:, :-trg_len] = -100
+
+            with torch.no_grad():
+                # model = model.to(device)
+                model.eval()
+                outputs = model(input_ids, labels=target_ids)
+                neg_log_likelihood = outputs.loss
+
+            nlls.append(neg_log_likelihood)
+            prev_end_loc = end_loc
+            if end_loc == seq_len:
+                break
+        print(nlls)
+
+        ppl = torch.exp(torch.stack(nlls).mean())
+        print(f"Emb: {args.embedding_type}, Stride: {stride}, Perplexity: {ppl}")
+
+    return
+
+
+if __name__ == "__main__":
+    main()
