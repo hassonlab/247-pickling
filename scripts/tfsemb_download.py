@@ -190,7 +190,6 @@ def download_hf_tokenizer(
         add_prefix_space=True,
         cache_dir=cache_dir,
         local_files_only=local_files_only,
-        # token="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",
     )
 
     return tokenizer
