@@ -1,4 +1,5 @@
 import gensim.downloader as api
+import pandas as pd
 import tfsemb_download as tfsemb_dwnld
 from tfsemb_config import setup_environ
 from tfsemb_main import tokenize_and_explode
@@ -16,12 +17,11 @@ def add_vocab_columns(args, df, column=None):
     for model in [
         *tfsemb_dwnld.CAUSAL_MODELS,
         *tfsemb_dwnld.SEQ2SEQ_MODELS,
+        *tfsemb_dwnld.SPEECHSEQ2SEQ_MODELS,
         *tfsemb_dwnld.MLM_MODELS,
     ]:
         try:
-            tokenizer = tfsemb_dwnld.download_hf_tokenizer(
-                model, local_files_only=True
-            )
+            tokenizer = tfsemb_dwnld.download_hf_tokenizer(model, local_files_only=True)
         except:
             tokenizer = tfsemb_dwnld.download_hf_tokenizer(
                 model, local_files_only=False
@@ -50,7 +50,8 @@ def main():
     args = arg_parser()
     setup_environ(args)
 
-    base_df = load_pickle(args.labels_pickle, "labels")
+    # base_df = load_pickle(args.labels_pickle, "labels")
+    base_df = pd.read_pickle(args.labels_pickle)
 
     glove = api.load("glove-wiki-gigaword-50")
     base_df["in_glove50"] = base_df.word.str.lower().apply(
@@ -58,13 +59,13 @@ def main():
     )
 
     if args.embedding_type == "glove50":
-        base_df = base_df[base_df["in_glove50"]]
+        # base_df = base_df[base_df["in_glove50"]]  # turning off to ensure glove base_df has same shape as datum
         base_df = add_vocab_columns(args, base_df, column="word")
     else:
         base_df = tokenize_and_explode(args, base_df)
-        base_df = add_vocab_columns(args, base_df, column="token2word")
+        # base_df = add_vocab_columns(args, base_df, column="token2word")  #FIXME: should we include this here?
 
-    svpkl(base_df, args.base_df_file)
+    svpkl(base_df, args.base_df_file, is_dataframe=True)
 
 
 if __name__ == "__main__":

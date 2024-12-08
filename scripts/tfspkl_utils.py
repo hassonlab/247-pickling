@@ -26,7 +26,7 @@ def get_electrode_ids(CONFIG, conversation):
     )
 
     if not electrode_folder:
-        print("Incorrect Project ID or Subject")
+        print("ELECTRODE_FOLDER_MAP: Incorrect Project ID or Subject")
         exit()
 
     elec_files = glob.glob(os.path.join(conversation, electrode_folder, "*.mat"))
@@ -84,6 +84,27 @@ def get_all_electrodes(CONFIG, convs):
     return common_electrodes, common_labels
 
 
+def custom_sort(string: str) -> tuple[int | str, ...]:
+    """Split a string by underscores and return a tuple of integers and strings.
+
+    Args:
+        string: The input string to be split.
+
+    Returns:
+        A tuple containing integers and strings.
+
+    Examples:
+        >>> custom_sort("1_2_3_a_b_c")
+        (1, 2, 3, 'a', 'b', 'c')
+        >>> custom_sort("x_y_z")
+        ('x', 'y', 'z')
+    """
+    string = os.path.basename(string)
+    result = tuple(part for part in string.split("_"))
+
+    return result
+
+
 def get_conversation_list(CONFIG, subject=None):
     """Returns list of conversations
 
@@ -95,7 +116,7 @@ def get_conversation_list(CONFIG, subject=None):
         list -- List of tuples (directory, file, idx, common_electrode_list)
     """
     conversations = sorted(
-        glob.glob(os.path.join(CONFIG["CONV_DIRS"], "*conversation*"))
+        glob.glob(os.path.join(CONFIG["CONV_DIRS"], "*conversation*")), key=custom_sort
     )
 
     return conversations
@@ -117,6 +138,7 @@ def process_conversation(CONFIG, conversation):
         sep=" ",
         header=None,
         names=["word", "onset", "offset", "accuracy", "speaker"],
+        keep_default_na=False        
     )
     df["word"] = df["word"].str.strip()
 
@@ -130,6 +152,22 @@ def process_conversation(CONFIG, conversation):
     df = df.drop_duplicates()
     df = df.drop_duplicates(subset=["word", "onset"])
 
+    # drop rows with duplicate onset and offset
+    # to avoid cases like {audible} and audible that have the same onset & offset
+    df = df.drop_duplicates(subset=["onset", "offset"])
+
+    # split words with underscores and explode
+    df["word"] = df.word.str.split("_")
+    df = df.explode("word")
+    df.loc[df.index.duplicated(), ("onset", "offset")] = np.nan
+
+    # remove asterisk and double quotes
+    df["word"] = df.word.str.strip('*"')
+
+    # remove words enclosed in curly brackets
+    df["word"] = df["word"].str.replace(r"\{.*\}", "", regex=True)
+    df = df[df["word"] != ""]
+
     # drop empty words in datum
     df = df[~df.word.isnull()]
 
@@ -139,7 +177,6 @@ def process_conversation(CONFIG, conversation):
 
 
 def first_level_alignment(args, df):
-
     # Remove punctuations from conversation datum (because cloze datum doesn't have it)
     datum_without_punctuation = df["word"].apply(
         lambda x: x.translate(str.maketrans("", "", string.punctuation))

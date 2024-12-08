@@ -11,11 +11,7 @@ from sklearn.model_selection import KFold, StratifiedKFold
 
 # https://stackoverflow.com/questions/14989858/get-the-current-git-hash-in-a-python-script
 def get_git_revision_hash() -> str:
-    return (
-        subprocess.check_output(["git", "rev-parse", "HEAD"])
-        .decode("ascii")
-        .strip()
-    )
+    return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
 
 
 def get_git_revision_short_hash() -> str:
@@ -46,7 +42,7 @@ def load_pickle(pickle_name, key=None):
     return df
 
 
-def save_pickle(item, file_name):
+def save_pickle(item, file_name, is_dataframe=False):
     """Write 'item' to 'file_name.pkl'"""
     add_ext = "" if file_name.endswith(".pkl") else ".pkl"
 
@@ -54,8 +50,11 @@ def save_pickle(item, file_name):
 
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
 
-    with open(file_name, "wb") as fh:
-        pickle.dump(item, fh)
+    if is_dataframe:
+        item.to_pickle(file_name)
+    else:
+        with open(file_name, "wb") as fh:
+            pickle.dump(item, fh)
     return
 
 

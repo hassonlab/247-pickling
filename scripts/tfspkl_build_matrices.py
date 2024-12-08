@@ -6,8 +6,8 @@ import pandas as pd
 from electrode_utils import return_electrode_array
 from tfspkl_config import DATUM_FILE_MAP
 from tfspkl_utils import (
-    get_conversation_contents,
     get_all_electrodes,
+    get_conversation_contents,
     get_conversation_list,
 )
 
@@ -49,9 +49,7 @@ def build_design_matrices(CONFIG):
     if CONFIG["sig_elec_file"]:
         try:
             # If the electrode file is in Bobbi's original format
-            sigelec_list = pd.read_csv(CONFIG["sig_elec_file"], header=None)[
-                0
-            ].tolist()
+            sigelec_list = pd.read_csv(CONFIG["sig_elec_file"], header=None)[0].tolist()
             sigelec_list = [
                 extract_subject_and_electrode(item) for item in sigelec_list
             ]
@@ -63,9 +61,7 @@ def build_design_matrices(CONFIG):
                 dtype={"subject": str, "electrode": str},
             )
         finally:
-            electrodes_dict = (
-                df.groupby("subject")["electrode"].apply(list).to_dict()
-            )
+            electrodes_dict = df.groupby("subject")["electrode"].apply(list).to_dict()
 
         full_signal = []
         trimmed_signal = []
@@ -130,7 +126,7 @@ def get_datum_suffix(CONFIG):
     )
 
     if not datum_file_suffix:
-        print("Incorrect Project ID or Subject")
+        print("DATUM_FILE_MAP: Incorrect Project ID or Subject")
         exit()
 
     return datum_file_suffix
@@ -144,9 +140,7 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
     electrodes, electrode_names = get_all_electrodes(CONFIG, conversations)
 
     if electrode_labels:
-        idx = [
-            i for i, e in enumerate(electrode_names) if e in electrode_labels
-        ]
+        idx = [i for i, e in enumerate(electrode_names) if e in electrode_labels]
 
         electrodes, electrode_names = zip(
             *[(electrodes[i], electrode_names[i]) for i in idx]
@@ -164,9 +158,9 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
 
     for conv_idx, conversation in enumerate(conversations, 1):
         try:  # Check if files exists
-            datum_fn = glob.glob(
-                os.path.join(conversation, "misc", datum_file_suffix)
-            )[0]
+            datum_fn = glob.glob(os.path.join(conversation, "misc", datum_file_suffix))[
+                0
+            ]
         except IndexError:
             print(
                 "File DNE: ",
@@ -213,9 +207,7 @@ def process_data_for_pickles(CONFIG, electrode_labels=None):
         trimmed_signal.append(ecogs)
         trimmed_stitch_index.append(signal_length)
 
-        mean_binned_signal = [
-            np.mean(split, axis=0) for split in convo_binned_signal
-        ]
+        mean_binned_signal = [np.mean(split, axis=0) for split in convo_binned_signal]
 
         mean_binned_signal = np.vstack(mean_binned_signal)
         bin_stitch_index.append(mean_binned_signal.shape[0])

@@ -18,7 +18,7 @@ def confirm_prompt(question: str) -> bool:
 
 
 def removeEmptyfolders(path):
-    for (_path, _, _files) in os.walk(path, topdown=False):
+    for _path, _, _files in os.walk(path, topdown=False):
         if _files:
             continue  # skip remove
         try:
@@ -40,6 +40,8 @@ def main():
         num_convs = 78
     elif args.subject == "7170":
         num_convs = 24
+    elif args.subject == "798":
+        num_convs = 15
     else:
         num_convs = 1
 
@@ -75,9 +77,7 @@ def main():
             [x for x in pathlib.Path(args.output_dir).glob("*") if x.is_dir()]
         )
 
-    for layer_folder in tqdm(
-        layer_folders, bar_format="Merging Layer..{n_fmt}"
-    ):
+    for layer_folder in tqdm(layer_folders, bar_format="Merging Layer..{n_fmt}"):
         conversation_pickles = sorted(
             [x for x in layer_folder.glob("*") if x.is_file()]
         )
@@ -90,9 +90,7 @@ def main():
             )
             continue
 
-        all_df = [
-            load_pickle(conversation) for conversation in conversation_pickles
-        ]
+        all_df = [load_pickle(conversation) for conversation in conversation_pickles]
 
         all_df = pd.concat(all_df, ignore_index=True)
         all_exs = all_df.to_dict("records")

@@ -7,6 +7,7 @@ Description: Contains code to pickle 247 data
 
 Copyright (c) 2020 Your Company
 """
+
 import os
 
 import nltk
@@ -155,7 +156,6 @@ def process_labels(args, stitch_index, labels, conversations):
     for conv_id, (conversation_name, start, sub_list) in enumerate(
         zip(conversations, stitch_index, labels), 1
     ):
-
         sub_list = create_sentence(args, sub_list)
         sub_list = shift_onsets(sub_list, start)
         sub_list = add_conversation_id(sub_list, conv_id)
@@ -171,9 +171,7 @@ def add_word_freqs(df):
     grouped = df.word.str.lower().to_frame().groupby("word")
     df["word_freq_overall"] = grouped.word.transform("count")
 
-    first = df[["word", "production"]].applymap(
-        lambda x: x.lower() if type(x) == str else x
-    )
+    first = df[["word", "production"]].map(lambda x: x.lower() if type(x) == str else x)
     grouped = first.groupby(["word", "production"])
     df["word_freq_phase"] = grouped.word.transform("count")
     return df
@@ -214,9 +212,7 @@ def apply_stemming(word):
 
 
 def add_lemmatize_stemming(df):
-    df["lemmatized_word"] = df.word.str.strip().apply(
-        lambda x: apply_lemmatize(x)
-    )
+    df["lemmatized_word"] = df.word.str.strip().apply(lambda x: apply_lemmatize(x))
     df["stemmed_word"] = df.word.str.strip().apply(lambda x: apply_stemming(x))
 
     return df
@@ -268,10 +264,9 @@ def create_labels_pickles(args, stitch_index, labels, convs, label_str=None):
     labels_df = add_fine_flag(args, labels_df)
     labels_df = add_signal_length(labels_df, stitch_index)
 
-    labels_dict = dict(labels=labels_df.to_dict("records"))
     pkl_name = "_".join([args.subject, label_str, "labels"])
     pkl_name = os.path.join(args.PKL_DIR, pkl_name)
-    save_pickle(labels_dict, pkl_name)
+    save_pickle(labels_df, pkl_name, is_dataframe=True)
 
 
 @main_timer
